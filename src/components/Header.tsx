@@ -1,6 +1,6 @@
 'use client';
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -10,8 +10,24 @@ import {
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [atTop, setAtTop] = useState(true);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setAtTop(window.scrollY < 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-30 w-full bg-white border-b border-[#f3ede7] shadow-lg">
+    <header
+      className={`sticky top-0 z-30 w-full transition-all duration-300 ${
+        atTop
+          ? 'bg-[#fdf6f1] border-b-0 shadow-none'
+          : 'bg-white border-b border-[#f3ede7] shadow-lg'
+      }`}
+    >
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-8 py-4">
         <Link href="/" className="text-3xl font-extrabold tracking-tight text-[#18181a]">
           Mortdash
