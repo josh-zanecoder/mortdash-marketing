@@ -57,14 +57,14 @@ export default function ListsPage() {
             <h1 className="text-4xl font-extrabold tracking-tight text-[#232323] mb-1 text-left">Marketing Lists</h1>
             <p className="text-lg text-[#6d6d6d] text-left">Manage and track your marketing lists.</p>
           </div>
-          <Button className="flex items-center gap-2 px-6 py-2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold rounded-lg shadow transition-all text-lg">
+          <Button className="flex items-center gap-2 px-4 py-2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold rounded-lg shadow transition-all">
             <Plus size={22} /> Add Marketing List
           </Button>
         </div>
 
         {/* Custom Table Section */}
         <div className="w-full">
-          <div className="flex flex-col mt-6">
+          <div className="w-full flex flex-col mt-6">
             <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
               <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
                 <div className="overflow-hidden border border-gray-200 dark:border-gray-700 md:rounded-lg">
