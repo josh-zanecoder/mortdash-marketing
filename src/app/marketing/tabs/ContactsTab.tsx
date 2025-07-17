@@ -9,28 +9,28 @@ type ContactsTabProps = {
 export default function ContactsTab({ columns, rows }: ContactsTabProps) {
   return (
     <>
-      <div className="flex flex-row items-center justify-end gap-2 mb-4 w-full">
+      <div className="flex flex-col w-full gap-2 sm:flex-row sm:justify-end sm:items-center sm:gap-2 flex-wrap mb-4">
         <input
           type="text"
           placeholder="Search keyword"
-          className="w-64 rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="w-full sm:w-64 rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
         <Button
-          className="px-4 bg-[#ff8a4c] hover:bg-[#ff7a2f] text-white shadow-none border-none"
+          className="w-full sm:w-auto px-4 bg-[#ff8a4c] hover:bg-[#ff7a2f] text-white shadow-none border-none"
           style={{ boxShadow: "none" }}
         >
           Detach Account Executive
         </Button>
-        <Button variant="default" className="px-4">
+        <Button variant="default" className="w-full sm:w-auto px-4">
           Upload Contacts
         </Button>
       </div>
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               {columns.map((col: string) => (
-                <TableHead key={col}>{col}</TableHead>
+                <TableHead key={col} className="min-w-[100px]">{col}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -38,7 +38,7 @@ export default function ContactsTab({ columns, rows }: ContactsTabProps) {
             {rows.map((row: string[], i: number) => (
               <TableRow key={i}>
                 {row.map((cell: string, j: number) => (
-                  <TableCell key={j}>{cell}</TableCell>
+                  <TableCell key={j} className="min-w-[100px]">{cell}</TableCell>
                 ))}
               </TableRow>
             ))}

@@ -1,15 +1,15 @@
 export default function CampaignTab() {
   return (
-    <div className="flex flex-col md:flex-row gap-8 flex-1">
+    <div className="flex flex-col md:flex-row gap-4 md:gap-8 flex-1 w-full">
       {/* Preview Section */}
-      <div className="flex-1 p-4">
+      <div className="flex-1 p-2 md:p-4 overflow-x-auto">
         <div className="text-xl font-semibold mb-4">Preview</div>
-        <div className="border rounded-xl bg-white flex items-center justify-center h-80 md:h-full min-h-[300px] text-center">
+        <div className="border rounded-xl bg-white flex items-center justify-center h-80 md:h-full min-h-[300px] text-center w-full">
           <span className="text-gray-500">No Template Selected</span>
         </div>
       </div>
       {/* Build Campaign Form */}
-      <div className="w-full md:w-[350px] flex-shrink-0">
+      <div className="w-full md:w-[350px] flex-shrink-0 p-2 md:p-0">
         <div className="text-xl font-semibold mb-4">Build Your Campaign</div>
         <div className="flex flex-col gap-4">
           <div>

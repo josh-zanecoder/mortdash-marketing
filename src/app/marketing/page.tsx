@@ -87,7 +87,7 @@ export default function MarketingPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto min-h-screen flex flex-col py-0 px-2">
+    <div className="w-full max-w-7xl mx-auto min-h-screen flex flex-col py-0 px-2 sm:px-4 md:px-8">
       <Card className="shadow-sm border rounded-xl flex flex-col flex-1 min-h-0 mt-8 mb-8">
         <CardHeader>
           <CardTitle className="text-4xl font-extrabold tracking-tight">Marketing</CardTitle>
@@ -95,9 +95,9 @@ export default function MarketingPage() {
             Build Targeted Marketing Lists, Launch Effective Campaigns, and Track Performance.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col flex-1 min-h-0">
+        <CardContent className="flex flex-col flex-1 min-h-0 p-2 sm:p-4 md:p-8 min-w-0">
           <Tabs defaultValue="contacts" className="w-full flex flex-col flex-1 min-h-0" onValueChange={setActiveTab}>
-            <TabsList className="mb-6">
+            <TabsList className="mb-6 overflow-x-auto whitespace-nowrap px-1 scrollbar-hide">
               {tabData.map((tab) => {
                 const Icon = tab.icon;
                 return (

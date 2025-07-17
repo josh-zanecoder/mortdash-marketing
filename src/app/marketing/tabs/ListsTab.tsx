@@ -10,20 +10,20 @@ type ListsTabProps = {
 export default function ListsTab({ columns, rows }: ListsTabProps) {
   return (
     <>
-      <div className="flex justify-end mb-4">
+      <div className="flex flex-col w-full gap-2 sm:flex-row sm:justify-end sm:items-center mb-4">
         <Button
-          className="px-6 bg-[#ff8a4c] hover:bg-[#ff7a2f] text-white shadow-none border-none"
+          className="w-full sm:w-auto px-6 bg-[#ff8a4c] hover:bg-[#ff7a2f] text-white shadow-none border-none"
           style={{ boxShadow: "none" }}
         >
           Add new Marketing List
         </Button>
       </div>
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               {columns.map((col: string) => (
-                <TableHead key={col}>{col}</TableHead>
+                <TableHead key={col} className="min-w-[100px]">{col}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -31,9 +31,9 @@ export default function ListsTab({ columns, rows }: ListsTabProps) {
             {rows.map((row: string[], i: number) => (
               <TableRow key={i}>
                 {row.map((cell: string, j: number) => (
-                  <TableCell key={j}>{cell}</TableCell>
+                  <TableCell key={j} className="min-w-[100px]">{cell}</TableCell>
                 ))}
-                <TableCell>
+                <TableCell className="min-w-[100px]">
                   <button aria-label="Delete list" className="text-destructive hover:bg-destructive/10 p-1 rounded">
                     <Trash2 size={18} />
                   </button>
