@@ -6,31 +6,31 @@ const dashboardOptions = [
     title: 'Contact',
     icon: <Contact className="w-8 h-8 text-[#ff6600]" />, // orange accent
     description: 'Manage your contacts and keep your audience up to date.',
-    href: '#',
+    href: '/marketing/contacts',
   },
   {
     title: 'Lists',
     icon: <ListTodo className="w-8 h-8 text-[#ff6600]" />, // orange accent
     description: 'Organize your contacts into targeted lists for campaigns.',
-    href: '#',
+    href: '/marketing/lists',
   },
   {
     title: 'Campaign',
     icon: <MailOpen className="w-8 h-8 text-[#ff6600]" />, // orange accent
     description: 'Create and send engaging email campaigns to your audience.',
-    href: '#',
+    href: '/marketing/campaigns',
   },
   {
     title: 'Tracking',
     icon: <LineChart className="w-8 h-8 text-[#ff6600]" />, // orange accent
     description: 'Track campaign performance and audience engagement.',
-    href: '#',
+    href: '/marketing/tracking',
   },
   {
     title: 'Email Builder',
     icon: <PencilRuler className="w-8 h-8 text-[#ff6600]" />, // orange accent
     description: 'Design beautiful emails with our drag-and-drop builder.',
-    href: '/email-builder',
+    href: '/marketing/email-builder',
   },
 ];
 
@@ -40,9 +40,9 @@ export default function DashboardPage() {
       <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-center text-[#232323] mb-3 sm:mb-4 drop-shadow-sm leading-tight px-2 sm:px-0">
        Welcome to Mortdash Marketing
       </h1>
-      <p className="text-base sm:text-lg md:text-xl text-[#232323] text-center mb-6 sm:mb-8 max-w-xl sm:max-w-2xl font-medium px-2 sm:px-0">
+      <h2 className="text-base sm:text-lg md:text-xl text-[#232323] text-center mb-6 sm:mb-8 max-w-xl sm:max-w-2xl font-medium px-2 sm:px-0 font-normal">
         Build Targeted Marketing Lists, Launch Effective Campaigns, and Track Performance
-      </p>
+      </h2>
       <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 flex-1">
         {dashboardOptions.map((option) => (
           <a
