@@ -109,7 +109,7 @@ export default function MarketingPage() {
                   <CampaignTab />
                 )}
                 {tab.value === "tracking" && (
-                  <TrackingTab columns={tab.columns} rows={tab.rows} />
+                  <TrackingTab />
                 )}
               </TabsContent>
             ))}
