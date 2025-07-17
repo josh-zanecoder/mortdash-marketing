@@ -3,6 +3,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Search } from "lucide-react";
 
 const columns = [
   "First name",
@@ -20,60 +21,58 @@ const rows = [
 
 export default function ContactsPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#fafafa]">
-      <div className="flex-1 flex flex-col">
-        <div className="w-full max-w-7xl mx-auto mt-12 mb-12">
-          <div
-            className="shadow-sm border rounded-xl bg-white p-8 sm:p-14"
-            style={{ minHeight: "700px" }}
-          >
-            <CardHeader>
-              <CardTitle className="text-4xl font-extrabold tracking-tight">Contacts</CardTitle>
-              <CardDescription className="mt-2 text-lg">Manage your contacts and account executives.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col flex-1 min-h-0">
-              <div className="flex flex-row items-center justify-end gap-2 mb-4 w-full">
-                <input
-                  type="text"
-                  placeholder="Search keyword"
-                  className="w-64 rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-                <Button
-                  className="px-4 bg-[#ff8a4c] hover:bg-[#ff7a2f] text-white shadow-none border-none"
-                  style={{ boxShadow: "none" }}
-                >
-                  Detach Account Executive
-                </Button>
-                <Button variant="default" className="px-4">
-                  Upload Contacts
-                </Button>
-              </div>
-              <div className="flex-1 min-h-0 flex flex-col w-full">
-                <Table className="w-full border border-gray-200 rounded-lg">
+    <div className="min-h-screen flex flex-col bg-[#fdf6f1]">
+      <div className="flex-1 flex flex-col items-center justify-start">
+        <div className="w-full max-w-5xl mx-auto mt-16 mb-16 px-2 sm:px-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+            <div>
+              <h1 className="text-4xl font-extrabold tracking-tight text-[#232323] mb-1">Contacts</h1>
+              <p className="text-lg text-[#6d6d6d]">Manage your contacts and account executives.</p>
+            </div>
+            <div className="flex gap-2">
+              <Button className="px-4 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold rounded-lg shadow transition-all">
+                Detach Account Executive
+              </Button>
+              <Button variant="default" className="px-4 font-bold rounded-lg shadow transition-all">
+                Upload Contacts
+              </Button>
+            </div>
+          </div>
+          <div className="mb-4 flex items-center w-full max-w-md bg-white border border-[#ffe3d1] rounded-lg shadow-sm px-4 py-2">
+            <Search className="text-[#ff6600] mr-2" size={20} />
+            <input
+              type="text"
+              placeholder="Search contacts..."
+              className="flex-1 bg-transparent outline-none text-base text-[#232323] placeholder-[#bdbdbd]"
+            />
+          </div>
+          <Card className="shadow-xl border border-[#ffe3d1] rounded-2xl bg-white p-0">
+            <CardContent className="flex flex-col flex-1 min-h-0 px-0 pb-0">
+              <div className="flex-1 min-h-0 flex flex-col w-full overflow-x-auto">
+                <Table className="w-full border-0 rounded-2xl overflow-hidden">
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-[#fff7f0] border-b border-[#ffe3d1]">
                       {columns.map((col: string) => (
-                        <TableHead key={col}>{col}</TableHead>
+                        <TableHead key={col} className="text-base font-bold text-[#232323] py-4 px-4 uppercase tracking-wide">{col}</TableHead>
                       ))}
                     </TableRow>
-                  </TableHeader><TableBody>
+                  </TableHeader>
+                  <TableBody>
                     {rows.map((row: string[], i: number) => (
-                      <TableRow key={i}>
+                      <TableRow key={i} className="border-b border-[#f3ede7] last:border-0 hover:bg-[#fff3e6]/60 transition">
                         {row.map((cell: string, j: number) => {
                           // If this is the "Account Executive" column (last column)
                           if (j === 5 && cell !== "-") {
                             return (
-                              <TableCell key={j}>
-                                <Badge>{cell}</Badge>
-                              </TableCell>
+                              <TableCell key={j} className="py-4 px-4"><Badge>{cell}</Badge></TableCell>
                             );
                           }
                           // If no account executive, just show "-"
                           if (j === 5 && cell === "-") {
-                            return <TableCell key={j}>-</TableCell>;
+                            return <TableCell key={j} className="py-4 px-4">-</TableCell>;
                           }
                           // All other cells
-                          return <TableCell key={j}>{cell}</TableCell>;
+                          return <TableCell key={j} className="py-4 px-4 text-base text-[#232323]">{cell}</TableCell>;
                         })}
                       </TableRow>
                     ))}
@@ -81,7 +80,7 @@ export default function ContactsPage() {
                 </Table>
               </div>
             </CardContent>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

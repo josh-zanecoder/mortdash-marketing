@@ -17,6 +17,12 @@ export async function POST(req: NextRequest) {
       { headers: { 'Content-Type': 'application/json' } }
     );
 
+    console.log('BEE Token Request:', {
+      client_id: clientId,
+      client_secret: clientSecret,
+      uid: uid || 'demo-user',
+    });
+
     return NextResponse.json(response.data);
   } catch (error: any) {
     return NextResponse.json({ error: 'Failed to authenticate', details: error.message }, { status: 500 });

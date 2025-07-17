@@ -1,54 +1,60 @@
 'use client'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus, Search } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 
-const columns = ["List name", "Audience", "Count", "Actions"];
+const columns = ["Status", "List name", "Audience", "Count", "Actions"];
 const rows = [
-  ["Newsletter", "All Users", "1200"],
-  ["VIP Clients", "Premium", "50"],
+  ["New", "Newsletter", "All Users", "1200"],
+  ["New", "VIP Clients", "Premium", "50"],
 ];
 
 export default function ListsPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#fafafa]">
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="w-full max-w-7xl mx-auto mt-12 mb-12">
-          <div
-            className="shadow-sm border rounded-xl bg-white p-8 sm:p-14"
-            style={{ minHeight: "700px" }}
-          >
-            <CardHeader>
-              <CardTitle className="text-4xl font-extrabold tracking-tight">Lists</CardTitle>
-              <CardDescription className="mt-2 text-lg">Create and manage marketing lists.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col flex-1 min-h-0">
-              <div className="flex justify-end mb-4 w-full">
-                <Button
-                  className="px-6 bg-[#ff8a4c] hover:bg-[#ff7a2f] text-white shadow-none border-none"
-                  style={{ boxShadow: "none" }}
-                >
-                  Add new Marketing List
-                </Button>
-              </div>
-              <div className="flex-1 min-h-0 flex flex-col w-full">
-                <Table className="w-full border border-gray-200 rounded-lg">
+    <div className="min-h-screen flex flex-col bg-[#fdf6f1]">
+      <div className="flex-1 flex flex-col items-center justify-start">
+        <div className="w-full max-w-5xl mx-auto mt-16 mb-8 px-2 sm:px-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+            <div>
+              <h1 className="text-4xl font-extrabold tracking-tight text-[#232323] mb-1">Marketing Lists</h1>
+              <p className="text-lg text-[#6d6d6d]">Manage and track your marketing lists.</p>
+            </div>
+            <Button className="flex items-center gap-2 px-6 py-2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold rounded-lg shadow transition-all text-lg">
+              <Plus size={22} /> Add Marketing List
+            </Button>
+          </div>
+          <div className="mb-4 flex items-center w-full max-w-md bg-white border border-[#ffe3d1] rounded-lg shadow-sm px-4 py-2">
+            <Search className="text-[#ff6600] mr-2" size={20} />
+            <input
+              type="text"
+              placeholder="Search lists..."
+              className="flex-1 bg-transparent outline-none text-base text-[#232323] placeholder-[#bdbdbd]"
+            />
+          </div>
+          <Card className="shadow-xl border border-[#ffe3d1] rounded-2xl bg-white p-0">
+            <CardContent className="flex flex-col flex-1 min-h-0 px-0 pb-0">
+              <div className="flex-1 min-h-0 flex flex-col w-full overflow-x-auto">
+                <Table className="w-full border-0 rounded-2xl overflow-hidden">
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-[#fff7f0] border-b border-[#ffe3d1]">
                       {columns.map((col: string) => (
-                        <TableHead key={col}>{col}</TableHead>
+                        <TableHead key={col} className="text-base font-bold text-[#232323] py-4 px-4 uppercase tracking-wide">{col}</TableHead>
                       ))}
                     </TableRow>
-                  </TableHeader><TableBody>
+                  </TableHeader>
+                  <TableBody>
                     {rows.map((row: string[], i: number) => (
-                      <TableRow key={i}>
-                        {row.map((cell: string, j: number) => (
-                          <TableCell key={j}>{cell}</TableCell>
-                        ))}
-                        <TableCell>
-                          <button aria-label="Delete list" className="text-destructive hover:bg-destructive/10 p-1 rounded">
-                            <Trash2 size={18} />
+                      <TableRow key={i} className="border-b border-[#f3ede7] last:border-0 hover:bg-[#fff3e6]/60 transition">
+                        <TableCell className="py-4 px-4">
+                          <span className="inline-block px-3 py-1 text-xs font-bold rounded-full bg-[#fff3e6] text-[#ff6600] border border-[#ff6600]">{row[0]}</span>
+                        </TableCell>
+                        <TableCell className="py-4 px-4 text-base font-semibold text-[#232323]">{row[1]}</TableCell>
+                        <TableCell className="py-4 px-4 text-base text-[#232323]">{row[2]}</TableCell>
+                        <TableCell className="py-4 px-4 text-base text-[#232323]">{row[3]}</TableCell>
+                        <TableCell className="py-4 px-4">
+                          <button aria-label="Delete list" className="text-[#ff6600] hover:bg-[#fff0e6] p-2 rounded-full transition-all">
+                            <Trash2 size={20} />
                           </button>
                         </TableCell>
                       </TableRow>
@@ -57,8 +63,15 @@ export default function ListsPage() {
                 </Table>
               </div>
             </CardContent>
-          </div>
+          </Card>
         </div>
+        {/* Floating action button for mobile */}
+        <button
+          className="fixed bottom-8 right-8 z-50 sm:hidden bg-[#ff6600] hover:bg-[#ff7a2f] text-white rounded-full shadow-lg p-4 flex items-center justify-center transition-all"
+          aria-label="Add new Marketing List"
+        >
+          <Plus size={28} />
+        </button>
       </div>
     </div>
   );
