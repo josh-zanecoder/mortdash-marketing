@@ -2,7 +2,7 @@ name: Marketing Deployment
 
 on:
   push:
-    branches: [infra/MM-66] # TODO: Change to main
+    branches: [infra/MM-6] # TODO: Change to main
   workflow_dispatch:
 
 env:
