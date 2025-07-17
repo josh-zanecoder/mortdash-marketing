@@ -53,22 +53,22 @@ export default function Header() {
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuLink asChild>
-                  <Link href="#" className="px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors">Contact</Link>
+                  <Link href="/marketing/contacts" className="px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors">Contact</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuLink asChild>
-                  <Link href="#" className="px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors">Lists</Link>
+                  <Link href="/marketing/lists" className="px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors">Lists</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuLink asChild>
-                  <Link href="#" className="px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors">Campaign</Link>
+                  <Link href="/marketing/campaign" className="px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors">Campaign</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuLink asChild>
-                  <Link href="#" className="px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors">Tracking</Link>
+                  <Link href="/marketing/tracking" className="px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors">Tracking</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
