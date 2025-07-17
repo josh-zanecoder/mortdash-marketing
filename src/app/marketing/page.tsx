@@ -17,6 +17,11 @@ import ContactsTab from "./tabs/ContactsTab";
 import ListsTab from "./tabs/ListsTab";
 import CampaignTab from "./tabs/CampaignTab";
 import TrackingTab from "./tabs/TrackingTab";
+import ContactsSkeleton from "./skeletons/ContactsSkeleton";
+import ListsSkeleton from "./skeletons/ListsSkeleton";
+import CampaignSkeleton from "./skeletons/CampaignSkeleton";
+import TrackingSkeleton from "./skeletons/TrackingSkeleton";
+import PageSkeleton from "./skeletons/PageSkeleton";
 
 const tabData = [
   {
@@ -75,6 +80,12 @@ export default function MarketingPage() {
   const [listsPage, setListsPage] = useState(1);
   const listsPageCount = 1; // Static for now, update as needed
   const [activeTab, setActiveTab] = useState("contacts");
+  const [loading, setLoading] = useState(false); // Set to true to demo skeletons
+
+  if (loading) {
+    return <PageSkeleton />;
+  }
+
   return (
     <div className="max-w-5xl mx-auto min-h-screen flex flex-col py-0 px-2">
       <Card className="shadow-sm border rounded-xl flex flex-col flex-1 min-h-0 mt-8 mb-8">
@@ -99,16 +110,20 @@ export default function MarketingPage() {
             </TabsList>
             {tabData.map((tab) => (
               <TabsContent key={tab.value} value={tab.value} className="flex flex-col flex-1 min-h-0">
-                {tab.value === "contacts" && (
+                {loading && tab.value === "contacts" && <ContactsSkeleton />}
+                {loading && tab.value === "lists" && <ListsSkeleton />}
+                {loading && tab.value === "campaign" && <CampaignSkeleton />}
+                {loading && tab.value === "tracking" && <TrackingSkeleton />}
+                {!loading && tab.value === "contacts" && (
                   <ContactsTab columns={tab.columns} rows={tab.rows} />
                 )}
-                {tab.value === "lists" && (
+                {!loading && tab.value === "lists" && (
                   <ListsTab columns={tab.columns} rows={tab.rows} />
                 )}
-                {tab.value === "campaign" && (
+                {!loading && tab.value === "campaign" && (
                   <CampaignTab />
                 )}
-                {tab.value === "tracking" && (
+                {!loading && tab.value === "tracking" && (
                   <TrackingTab />
                 )}
               </TabsContent>
