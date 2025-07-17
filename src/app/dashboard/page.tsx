@@ -38,7 +38,7 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center py-16 px-4">
       <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-center text-[#232323] mb-3 sm:mb-4 drop-shadow-sm leading-tight px-2 sm:px-0">
-        Marketing
+       Welcome to Mortdash Marketing
       </h1>
       <p className="text-base sm:text-lg md:text-xl text-[#232323] text-center mb-6 sm:mb-8 max-w-xl sm:max-w-2xl font-medium px-2 sm:px-0">
         Build Targeted Marketing Lists, Launch Effective Campaigns, and Track Performance
