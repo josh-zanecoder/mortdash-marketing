@@ -3,12 +3,14 @@ import { X, UploadCloud } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-export default function UploadContactsModal({ open, onClose, onSubmit }: {
+export default function UploadContactsModal({ open, onClose, onSuccess }: {
   open: boolean;
   onClose: () => void;
-  onSubmit?: (file: File | null) => void;
+  onSuccess?: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -32,10 +34,30 @@ export default function UploadContactsModal({ open, onClose, onSubmit }: {
     fileInputRef.current?.click();
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (onSubmit) onSubmit(file);
-    onClose();
+    setError(null);
+    if (!file) return;
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/contacts/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to upload contacts');
+      }
+      setFile(null);
+      if (onSuccess) onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload contacts');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -68,6 +90,7 @@ export default function UploadContactsModal({ open, onClose, onSubmit }: {
               <div className="mt-2 text-gray-500 text-sm">XSLX (MAX FILE SIZE 100MB)</div>
               {file && <div className="mt-2 text-sm text-green-700">Selected: {file.name}</div>}
             </div>
+            {error && <div className="mt-2 text-sm text-red-600">{error}</div>}
           </div>
           <div className="flex gap-2 mt-4">
             <Button
@@ -75,15 +98,16 @@ export default function UploadContactsModal({ open, onClose, onSubmit }: {
               variant="secondary"
               className="w-1/2 bg-white text-[#ff6600] border border-[#ff6600] hover:bg-[#fff7ed] font-bold py-3 rounded-lg shadow transition-all text-lg"
               onClick={onClose}
+              disabled={loading}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               className="w-1/2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold py-3 rounded-lg shadow transition-all text-lg"
-              disabled={!file}
+              disabled={!file || loading}
             >
-              Submit
+              {loading ? 'Uploading...' : 'Submit'}
             </Button>
           </div>
         </form>
