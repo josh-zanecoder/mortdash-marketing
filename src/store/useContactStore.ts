@@ -28,6 +28,14 @@ interface ContactStore {
   fetchContacts: (opts?: { token?: string; page?: number; limit?: number; search?: string }) => Promise<void>;
   fetchChannels: (token?: string) => Promise<void>;
   addContact: (contact: any, token?: string) => Promise<boolean>;
+  prospects: { company: string; members: any[] }[] | null;
+  prospectsLoading: boolean;
+  prospectsError: string | null;
+  fetchProspects: () => Promise<void>;
+  clients: { company: string; members: any[] }[] | null;
+  clientsLoading: boolean;
+  clientsError: string | null;
+  fetchClients: () => Promise<void>;
 }
 
 export const useContactStore = create<ContactStore>((set, get) => ({
@@ -133,6 +141,34 @@ export const useContactStore = create<ContactStore>((set, get) => ({
     } catch (err: any) {
       set({ error: err.message || 'Unknown error', loading: false });
       return false;
+    }
+  },
+  prospects: null,
+  prospectsLoading: false,
+  prospectsError: null,
+  fetchProspects: async () => {
+    set({ prospectsLoading: true, prospectsError: null });
+    try {
+      const res = await fetch('/api/contacts/prospects');
+      if (!res.ok) throw new Error('Failed to fetch prospects');
+      const data = await res.json();
+      set({ prospects: Array.isArray(data.data) ? data.data : [], prospectsLoading: false });
+    } catch (err: any) {
+      set({ prospectsError: err.message || 'Unknown error', prospectsLoading: false });
+    }
+  },
+  clients: null,
+  clientsLoading: false,
+  clientsError: null,
+  fetchClients: async () => {
+    set({ clientsLoading: true, clientsError: null });
+    try {
+      const res = await fetch('/api/contacts/clients');
+      if (!res.ok) throw new Error('Failed to fetch clients');
+      const data = await res.json();
+      set({ clients: Array.isArray(data.data) ? data.data : [], clientsLoading: false });
+    } catch (err: any) {
+      set({ clientsError: err.message || 'Unknown error', clientsLoading: false });
     }
   },
 }));

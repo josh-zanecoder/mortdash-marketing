@@ -9,29 +9,6 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 
-// Prospect Members data (read-only, from API)
-const prospectMembers = {
-  totalCount: 1250,
-  companies: [
-    { name: "TechCorp Solutions", count: 45 },
-    { name: "Innovate Labs", count: 32 },
-    { name: "Digital Dynamics", count: 28 },
-    { name: "Future Systems", count: 25 },
-    { name: "NextGen Tech", count: 22 },
-  ]
-};
-
-// Client Members data (read-only, from API)
-const clientMembers = {
-  totalCount: 850,
-  companies: [
-    { name: "Enterprise Solutions Inc", count: 38 },
-    { name: "Global Tech Partners", count: 35 },
-    { name: "Premier Systems", count: 30 },
-    { name: "Advanced Technologies", count: 28 },
-    { name: "Strategic Innovations", count: 25 },
-  ]
-};
 
 type ContactType = 'marketing' | 'prospects' | 'clients';
 
@@ -40,12 +17,14 @@ export default function ContactsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
-  const { marketingContacts, loading, error, fetchContacts, channels, fetchChannels, page, limit, total, setPage, search, setSearch } = useContactStore();
+  const { marketingContacts, loading, error, fetchContacts, channels, fetchChannels, page, limit, total, setPage, search, setSearch, prospects, prospectsLoading, prospectsError, fetchProspects, clients, clientsLoading, clientsError, fetchClients } = useContactStore();
 
   useEffect(() => {
     fetchContacts({ page, limit, search });
     fetchChannels();
-  }, [fetchContacts, fetchChannels, page, limit, search]);
+    fetchProspects();
+    fetchClients();
+  }, [fetchContacts, fetchChannels, fetchProspects, fetchClients, page, limit, search]);
 
   const pageCount = Math.ceil(total / limit) || 1;
 
@@ -107,7 +86,7 @@ export default function ContactsPage() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Prospect Members ({prospectMembers.totalCount})
+              Prospect Members ({prospects ? prospects.length : 0})
             </button>
             <button
               onClick={() => setActiveTab('clients')}
@@ -117,7 +96,7 @@ export default function ContactsPage() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Client Members ({clientMembers.totalCount})
+              Client Members ({clients ? clients.filter(c => c.members && c.members.length > 0).length : 0})
             </button>
           </div>
         </div>
@@ -231,21 +210,55 @@ export default function ContactsPage() {
                 <h3 className="text-lg font-semibold text-blue-900">Prospect Members</h3>
               </div>
               <p className="text-blue-700 mb-4">Read-only view of prospect member data from external API.</p>
-              <div className="text-2xl font-bold text-blue-900">{prospectMembers.totalCount} Total Prospects</div>
+              {prospectsLoading ? (
+                <div className="text-blue-700">Loading prospects...</div>
+              ) : prospectsError ? (
+                <div className="text-red-600">{prospectsError}</div>
+              ) : prospects ? (
+                <div className="text-2xl font-bold text-blue-900">{prospects.length} Companies</div>
+              ) : null}
             </div>
 
             <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Breakdown by Company</h4>
-              <div className="space-y-3">
-                {prospectMembers.companies.map((company, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Building className="w-5 h-5 text-gray-500" />
-                      <span className="font-medium text-gray-900">{company.name}</span>
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Companies & Members</h4>
+              <div className="space-y-6">
+                {prospectsLoading ? (
+                  <div className="text-blue-700">Loading companies...</div>
+                ) : prospectsError ? (
+                  <div className="text-red-600">{prospectsError}</div>
+                ) : prospects && prospects.length > 0 ? (
+                  prospects.filter(p => p.members && p.members.length > 0).map((prospect, idx) => (
+                    <div key={idx} className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Building className="w-5 h-5 text-gray-500" />
+                        <span className="font-medium text-gray-900 text-lg">{prospect.company || 'Unknown Company'}</span>
+                        <span className="ml-2 text-xs text-blue-700 bg-blue-100 rounded-full px-2 py-0.5">{prospect.members.length} members</span>
+                      </div>
+                      <table className="w-full text-sm border-t border-gray-200 mt-2">
+                        <thead>
+                          <tr>
+                            <th className="py-1 px-2 text-left font-semibold text-gray-600">First Name</th>
+                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Last Name</th>
+                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Email</th>
+                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Phone</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {prospect.members.map((member, mIdx) => (
+                            <tr key={mIdx}>
+                              <td className="py-1 px-2">{member.first_name}</td>
+                              <td className="py-1 px-2">{member.last_name}</td>
+                              <td className="py-1 px-2">{member.email}</td>
+                              <td className="py-1 px-2">{member.phone}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <span className="text-sm font-semibold text-gray-600">{company.count} prospects</span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-gray-500">No companies found.</div>
+                )}
               </div>
             </div>
           </div>
@@ -260,35 +273,55 @@ export default function ContactsPage() {
                 <h3 className="text-lg font-semibold text-green-900">Client Members</h3>
               </div>
               <p className="text-green-700 mb-4">Read-only view of client member data from external API.</p>
-              <div className="text-2xl font-bold text-green-900">{clientMembers.totalCount} Total Clients</div>
+              {clientsLoading ? (
+                <div className="text-green-700">Loading clients...</div>
+              ) : clientsError ? (
+                <div className="text-red-600">{clientsError}</div>
+              ) : clients ? (
+                <div className="text-2xl font-bold text-green-900">{clients.filter(c => c.members && c.members.length > 0).length} Companies</div>
+              ) : null}
             </div>
 
             <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Breakdown by Company</h4>
-              <div className="space-y-3">
-                {clientMembers.companies.map((company, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Building className="w-5 h-5 text-gray-500" />
-                      <span className="font-medium text-gray-900">{company.name}</span>
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Companies & Members</h4>
+              <div className="space-y-6">
+                {clientsLoading ? (
+                  <div className="text-green-700">Loading companies...</div>
+                ) : clientsError ? (
+                  <div className="text-red-600">{clientsError}</div>
+                ) : clients && clients.length > 0 ? (
+                  clients.filter(c => c.members && c.members.length > 0).map((client, idx) => (
+                    <div key={idx} className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Building className="w-5 h-5 text-gray-500" />
+                        <span className="font-medium text-gray-900 text-lg">{client.company || 'Unknown Company'}</span>
+                        <span className="ml-2 text-xs text-green-700 bg-green-100 rounded-full px-2 py-0.5">{client.members.length} members</span>
+                      </div>
+                      <table className="w-full text-sm border-t border-gray-200 mt-2">
+                        <thead>
+                          <tr>
+                            <th className="py-1 px-2 text-left font-semibold text-gray-600">First Name</th>
+                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Last Name</th>
+                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Email</th>
+                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Phone</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {client.members.map((member, mIdx) => (
+                            <tr key={mIdx}>
+                              <td className="py-1 px-2">{member.first_name}</td>
+                              <td className="py-1 px-2">{member.last_name}</td>
+                              <td className="py-1 px-2">{member.email}</td>
+                              <td className="py-1 px-2">{member.phone}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <span className="text-sm font-semibold text-gray-600">{company.count} clients</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Breakdown by Company</h4>
-              <div className="space-y-3">
-                {clientMembers.companies.map((company, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Building className="w-5 h-5 text-gray-500" />
-                      <span className="font-medium text-gray-900">{company.name}</span>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-600">{company.count} clients</span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-gray-500">No companies found.</div>
+                )}
               </div>
             </div>
           </div>
