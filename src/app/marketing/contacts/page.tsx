@@ -1,11 +1,13 @@
 'use client'
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, MoreVertical, User, Search, Download, Upload, UserCheck, UserX, Building, Users, X } from "lucide-react";
+import { Trash2, Plus, MoreVertical, User, Search, Download, Upload, UserCheck, UserX, Building, Users, X, CheckCircle2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import AddContactModal from '@/components/AddContactModal';
 import UploadContactsModal from '@/components/UploadContactsModal';
 import { useContactStore } from '@/store/useContactStore';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from '@/components/ui/pagination';
+import { Toaster } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 // Prospect Members data (read-only, from API)
 const prospectMembers = {
@@ -50,6 +52,9 @@ export default function ContactsPage() {
   // Handler to refresh contacts after upload
   const handleUploadSuccess = () => {
     fetchContacts({ page, limit, search });
+    toast.success('Contacts uploaded successfully!', {
+      icon: <CheckCircle2 className="text-green-600" />,
+    });
   };
 
   // Debounced search handler
@@ -63,8 +68,14 @@ export default function ContactsPage() {
 
   return (
     <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center pt-16 px-4">
-      <AddContactModal open={showAddModal} onClose={() => setShowAddModal(false)} channels={channels} />
+      <AddContactModal open={showAddModal} onClose={() => {
+        setShowAddModal(false);
+        toast.success('Contact added successfully!', {
+          icon: <CheckCircle2 className="text-green-600" />,
+        });
+      }} channels={channels} />
       <UploadContactsModal open={showUploadModal} onClose={() => setShowUploadModal(false)} onSuccess={handleUploadSuccess} />
+      <Toaster />
       <div
         className="w-full max-w-6xl bg-white rounded-2xl shadow-xl p-12 flex flex-col items-center"
         style={{ minHeight: "700px" }}
