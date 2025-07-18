@@ -1,7 +1,9 @@
 'use client'
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, MoreVertical, User, Search, Download, Upload, UserCheck, UserX, Building, Users } from "lucide-react";
+import { Trash2, Plus, MoreVertical, User, Search, Download, Upload, UserCheck, UserX, Building, Users, X } from "lucide-react";
 import { useState } from "react";
+import AddContactModal from '@/components/AddContactModal';
+import UploadContactsModal from '@/components/UploadContactsModal';
 
 // Marketing contacts data (editable)
 const marketingContacts = [
@@ -57,11 +59,23 @@ const clientMembers = {
 
 type ContactType = 'marketing' | 'prospects' | 'clients';
 
+const channels = [
+  { value: '', label: 'Select Channel' },
+  { value: 'email', label: 'Email' },
+  { value: 'sms', label: 'SMS' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'social', label: 'Social Media' },
+];
+
 export default function ContactsPage() {
   const [activeTab, setActiveTab] = useState<ContactType>('marketing');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   return (
     <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center pt-16 px-4">
+      <AddContactModal open={showAddModal} onClose={() => setShowAddModal(false)} />
+      <UploadContactsModal open={showUploadModal} onClose={() => setShowUploadModal(false)} />
       <div
         className="w-full max-w-6xl bg-white rounded-2xl shadow-xl p-12 flex flex-col items-center"
         style={{ minHeight: "700px" }}
@@ -123,10 +137,10 @@ export default function ContactsPage() {
                   />
                 </div>
               </div>
-              <Button className="px-4 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold rounded-lg shadow transition-all">
+              <Button className="px-4 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold rounded-lg shadow transition-all" onClick={() => setShowAddModal(true)}>
                 Add a New Contact
               </Button>
-              <Button variant="default" className="px-4 font-bold rounded-lg shadow transition-all">
+              <Button variant="default" className="px-4 font-bold rounded-lg shadow transition-all" onClick={() => setShowUploadModal(true)}>
                 Upload Contacts
               </Button>
             </div>
