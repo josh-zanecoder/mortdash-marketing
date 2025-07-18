@@ -1,6 +1,10 @@
 'use client'
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus, MoreVertical, FileText, Users, Download, Upload } from "lucide-react";
+import { useEffect } from "react";
+import axios from "axios";
+
+const baseUrl = process.env.MORTDASH_BASE_URL || 'http://localhost:1005'
 
 // Updated data structure to match the new table design
 const marketingLists = [
@@ -14,37 +18,40 @@ const marketingLists = [
     createdBy: "John Doe",
     accountExecutive: null, // or undefined if none
   },
-  {
-    id: 2,
-    status: "Draft",
-    name: "VIP Clients",
-    audience: "Premium",
-    count: "50",
-    lastUpdated: "Jan 3, 2024",
-    createdBy: "Jane Smith",
-    accountExecutive: "Hello Me", // example with AE
-  },
-  {
-    id: 3,
-    status: "Active",
-    name: "Product Updates",
-    audience: "Customers",
-    count: "850",
-    lastUpdated: "Jan 2, 2024",
-    createdBy: "Mike Johnson"
-  },
-  {
-    id: 4,
-    status: "Inactive",
-    name: "Promotional Offers",
-    audience: "Subscribers",
-    count: "2,100",
-    lastUpdated: "Dec 28, 2023",
-    createdBy: "Sarah Wilson"
-  }
-];
+]
+
+interface MarketingList {
+  id: number;
+  status: string;
+  name: string;
+  audience: string;
+  count: string;
+  lastUpdated: string;
+  createdBy: string;
+  accountExecutive: string | null;
+}
 
 export default function ListsPage() {
+  function getTokenFromUrl() {
+    if (typeof window === 'undefined') return null;
+    const url = new URL(window.location.href);
+    return url.searchParams.get('token');
+  }
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      const token = getTokenFromUrl();
+      if (!token) return;
+      try {
+        const response = await axios.get(`/api/marketing/lists/${token}`);
+        console.log('Fetched marketing lists:', response.data);
+      } catch (error) {
+        console.error('Error fetching marketing lists:', error);
+      }
+    };
+    fetchData();
+  }, []);
+  
   return (
     <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center pt-16 px-4">
       <div
