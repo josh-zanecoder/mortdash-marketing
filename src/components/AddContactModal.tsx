@@ -4,19 +4,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { useContactStore } from '@/store/useContactStore';
 
-const channels = [
-  { value: '', label: 'Select Channel' },
-  { value: 'email', label: 'Email' },
-  { value: 'sms', label: 'SMS' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'social', label: 'Social Media' },
-];
-
-export default function AddContactModal({ open, onClose, onSubmit }: {
+export default function AddContactModal({ open, onClose, onSubmit, channels }: {
   open: boolean;
   onClose: () => void;
   onSubmit?: (form: any) => void;
+  channels: { value: string; label: string }[];
 }) {
   const [form, setForm] = useState({
     channel: '',
@@ -27,15 +21,37 @@ export default function AddContactModal({ open, onClose, onSubmit }: {
     phone: '',
     title: '',
   });
+  const [submitting, setSubmitting] = useState(false);
+  const addContact = useContactStore((s) => s.addContact);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    // Find the label for the selected channel value
+    const selectedChannel = channels.find(c => c.value === form.channel);
+    const payload = {
+      branch: selectedChannel ? selectedChannel.label : form.channel, // send the label (e.g., "Wholesale")
+      company: form.company,
+      first_name: form.firstName,
+      last_name: form.lastName,
+      email_address: form.email,
+      title: form.title,
+    };
+    const success = await addContact(payload);
+    setSubmitting(false);
+    if (success) {
+      setForm({ channel: '', company: '', firstName: '', lastName: '', email: '', phone: '', title: '' });
+      if (onSubmit) onSubmit(form);
+      onClose();
+      console.log('Contact added successfully');
+    } else {
+      // Optionally show error
+      console.error('Failed to add contact');
+    }
+  }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (onSubmit) onSubmit(form);
-    onClose();
   }
 
   return (
@@ -138,14 +154,16 @@ export default function AddContactModal({ open, onClose, onSubmit }: {
               variant="secondary"
               className="w-1/2 bg-white text-[#ff6600] border border-[#ff6600] hover:bg-[#fff7ed] font-bold py-3 rounded-lg shadow transition-all text-lg"
               onClick={onClose}
+              disabled={submitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               className="w-1/2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold py-3 rounded-lg shadow transition-all text-lg"
+              disabled={submitting}
             >
-              Submit
+              {submitting ? 'Submitting...' : 'Submit'}
             </Button>
           </div>
         </form>
