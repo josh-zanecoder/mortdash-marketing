@@ -85,6 +85,7 @@ export default function BeefreeEditor() {
     version: number;
     language: string | null;
     email_template_id?: number;
+    fields?: Array<{ parameter: string; type: string; db_name: string; is_required: boolean }>;
   }) => {
     setIsSaving(true);
     try {
@@ -104,6 +105,11 @@ export default function BeefreeEditor() {
       // Add email_template_id if provided (for updates)
       if (templateData.email_template_id) {
         formData.append('email_template_id', templateData.email_template_id.toString());
+      }
+      
+      // Add fields as JSON string if present
+      if (templateData.fields) {
+        formData.append('fields', JSON.stringify(templateData.fields));
       }
       
       // Create a file from the HTML content
