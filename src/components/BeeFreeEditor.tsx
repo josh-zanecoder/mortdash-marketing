@@ -123,9 +123,10 @@ export default function BeefreeEditor() {
       if (detectedMergeTags.length > 0) {
         const fields = detectedMergeTags.map(tag => {
           const dbName = getTagDescription(tag);
+          const tagType = getTagType(tag);
           return {
             parameter: tag, // The merge tag itself (e.g., "{{first_name}}")
-            type: dbName, // Type matches the db_name for consistency
+            type: tagType, // Type in kebab-case (e.g., "first-name")
             db_name: dbName, // Description/name for the tag
             is_required: false
           };
@@ -189,6 +190,11 @@ export default function BeefreeEditor() {
     };
     
     return commonTags[tag] || tag.replace(/[{}]/g, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  // Helper function to convert merge tag to kebab-case for type field
+  const getTagType = (tag: string): string => {
+    return tag.replace(/[{}]/g, '').replace(/_/g, '-');
   };
 
   // Helper function to get audience type ID from template type value
