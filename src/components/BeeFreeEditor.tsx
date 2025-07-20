@@ -59,10 +59,11 @@ export default function BeefreeEditor() {
           body: JSON.stringify({ uid: 'demo-user' })
         }).then(res => res.json());
 
-        // Initialize the Beefree SDK with the authentication token
-        const bee = new BeefreeSDK(token);
-        // Start the editor with our configuration
-        bee.start(beeConfig, {});
+              // Initialize the Beefree SDK with the authentication token
+      const bee = new BeefreeSDK(token);
+      
+      // Start the editor (merge tags will be detected automatically from content)
+      bee.start(beeConfig, {});
       } catch (error) {
         console.error('Failed to initialize Beefree editor:', error);
         toast.error('Failed to initialize editor', {
@@ -85,7 +86,6 @@ export default function BeefreeEditor() {
     version: number;
     language: string | null;
     email_template_id?: number;
-    fields?: Array<{ parameter: string; type: string; db_name: string; is_required: boolean }>;
   }) => {
     setIsSaving(true);
     try {
@@ -107,9 +107,37 @@ export default function BeefreeEditor() {
         formData.append('email_template_id', templateData.email_template_id.toString());
       }
       
-      // Add fields as JSON string if present
-      if (templateData.fields) {
-        formData.append('fields', JSON.stringify(templateData.fields));
+      // Automatically extract merge tags from HTML content
+      const extractMergeTags = (html: string): string[] => {
+        const mergeTagRegex = /\{\{([^}]+)\}\}/g;
+        const matches = html.match(mergeTagRegex);
+        return matches ? [...new Set(matches)] : []; // Remove duplicates
+      };
+
+      const detectedMergeTags = extractMergeTags(templateData.html);
+      
+      // Log detected merge tags for debugging
+      console.log('🔍 Detected Merge Tags:', detectedMergeTags);
+      
+      // Add detected merge tags as fields in the original database format
+      if (detectedMergeTags.length > 0) {
+        const fields = detectedMergeTags.map(tag => {
+          const dbName = getTagDescription(tag);
+          return {
+            parameter: tag, // The merge tag itself (e.g., "{{first_name}}")
+            type: dbName, // Type matches the db_name for consistency
+            db_name: dbName, // Description/name for the tag
+            is_required: false
+          };
+        });
+        
+        // Log the fields that will be saved to database
+        console.log('💾 Fields to be saved:', fields);
+        console.log('📊 Total fields detected:', fields.length);
+        
+        formData.append('fields', JSON.stringify(fields));
+      } else {
+        console.log('ℹ️ No merge tags detected in template');
       }
       
       // Create a file from the HTML content
@@ -141,6 +169,26 @@ export default function BeefreeEditor() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Helper function to get description for merge tags
+  const getTagDescription = (tag: string): string => {
+    const commonTags: Record<string, string> = {
+      '{{first_name}}': 'First Name',
+      '{{last_name}}': 'Last Name', 
+      '{{email}}': 'Email Address',
+      '{{company_name}}': 'Company Name',
+      '{{account_executive}}': 'Account Executive',
+      '{{account_executive_phone}}': 'Account Executive Phone',
+      '{{account_executive_email}}': 'Account Executive Email',
+      '{{bank_name}}': 'Bank Name',
+      '{{date}}': 'Current Date',
+      '{{unsubscribe_link}}': 'Unsubscribe Link',
+      '{{preview_text}}': 'Preview Text',
+      '{{custom_field}}': 'Custom Field'
+    };
+    
+    return commonTags[tag] || tag.replace(/[{}]/g, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   // Helper function to get audience type ID from template type value
