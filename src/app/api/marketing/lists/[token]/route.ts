@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-const baseUrl = process.env.MORTDASH_BASE_URL || 'http://localhost:1005/api/bank/v1/marketing';
+const baseUrl = 'http://localhost:1005/api/bank/v1/marketing';
 
 export async function GET(request: NextRequest, context: { params: { token: string } }) {
   const { token } = await context.params;
