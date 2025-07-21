@@ -1,7 +1,7 @@
 'use client'
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import axios from "axios";
 import { useListsStore } from "@/store/listsStore";
 import Link from 'next/link';
@@ -10,7 +10,7 @@ import ConfirmModal from "@/components/ui/confirm-modal";
 import LoadingModal from "@/components/ui/loading-modal";
 import Toast from "@/components/ui/toast";
 
-export default function ListsPage() {
+function ListsPageContent() {
   const { setLists, setAudienceTypes, setBankChannels, setAudienceTypeFilters } = useListsStore((state) => state);
   const lists = useListsStore((state) => state.lists);
   const audienceTypes = useListsStore((state) => state.audienceTypes);
@@ -276,5 +276,13 @@ export default function ListsPage() {
         type={toast.type}
       />
     </main>
+  );
+}
+
+export default function ListsPage() {
+  return (
+    <Suspense fallback={<LoadingModal isOpen={true} title="Loading Marketing Lists" message="Please wait while we load your marketing lists..." />}>
+      <ListsPageContent />
+    </Suspense>
   );
 } 
