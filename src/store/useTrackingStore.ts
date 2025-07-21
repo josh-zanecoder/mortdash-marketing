@@ -38,14 +38,13 @@ interface TrackingStore {
     currentPage: number;
     totalPages: number;
     totalRecords: number;
-    perPage: number;
   };
   loading: boolean;
   error: string | null;
   selectedRatesheetId: string | null;
   
   // Actions
-  fetchTrackingData: (startDate: string, endDate: string, page?: number, limit?: number, ratesheetId?: string) => Promise<void>;
+  fetchTrackingData: (startDate: string, endDate: string, page?: number, ratesheetId?: string) => Promise<void>;
   setSelectedRatesheetId: (ratesheetId: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -65,8 +64,7 @@ const initialState = {
   pagination: {
     currentPage: 1,
     totalPages: 1,
-    totalRecords: 0,
-    perPage: 10
+    totalRecords: 0
   },
   loading: false,
   error: null,
@@ -76,7 +74,7 @@ const initialState = {
 export const useTrackingStore = create<TrackingStore>((set, get) => ({
   ...initialState,
 
-  fetchTrackingData: async (startDate: string, endDate: string, page = 1, limit = 10, ratesheetId?: string) => {
+  fetchTrackingData: async (startDate: string, endDate: string, page = 1, ratesheetId?: string) => {
     set({ loading: true, error: null });
     
     try {
@@ -84,7 +82,7 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
         start_date: startDate,
         end_date: endDate,
         page: page.toString(),
-        limit: limit.toString()
+        limit: '10'
       });
 
       // Use ratesheet endpoint if ratesheetId is provided
@@ -107,8 +105,7 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
         pagination: {
           currentPage: result.pagination?.current_page || 1,
           totalPages: result.pagination?.total_pages || 1,
-          totalRecords: result.pagination?.total_records || 0,
-          perPage: result.pagination?.per_page || 10
+          totalRecords: result.pagination?.total_records || 0
         },
         loading: false,
         error: null

@@ -1,16 +1,51 @@
 'use client'
+
 import { useState, useEffect } from "react";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { useTrackingStore } from "@/store/useTrackingStore";
+import { Loader2, Calendar, Search, Filter } from "lucide-react";
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { getDateRange } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
-  PaginationPrevious,
   PaginationNext,
+  PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { useTrackingStore } from "@/store/useTrackingStore";
-import { Loader2 } from "lucide-react";
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 export default function TrackingPage() {
   const { 
@@ -23,7 +58,6 @@ export default function TrackingPage() {
   } = useTrackingStore();
 
   const [dateRange, setDateRange] = useState("Today");
-  const [perPage, setPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
 
@@ -63,33 +97,69 @@ export default function TrackingPage() {
   // Fetch data when component mounts or when date range changes
   useEffect(() => {
     const { startDate, endDate } = getDateRange(dateRange);
-    fetchTrackingData(startDate, endDate, pagination.currentPage, perPage);
-  }, [dateRange, pagination.currentPage, perPage, fetchTrackingData]);
+    fetchTrackingData(startDate, endDate, pagination.currentPage);
+  }, [dateRange, pagination.currentPage, fetchTrackingData]);
 
-  // Handle page change
-  const handlePageChange = (newPage: number) => {
-    const { startDate, endDate } = getDateRange(dateRange);
-    fetchTrackingData(startDate, endDate, newPage, perPage);
+  // Transform the nested data structure into a flat array for display
+  const transformData = (data: any) => {
+    if (!data) return [];
+    
+    const flattenedData: any[] = [];
+    
+    // Process each category (delivered, bounced, etc.)
+    Object.entries(data).forEach(([category, categoryData]: [string, any]) => {
+      if (categoryData.emails) {
+        // Convert emails object to array and add category info
+        Object.values(categoryData.emails).forEach((email: any) => {
+          flattenedData.push({
+            ...email,
+            category,
+            count: categoryData.count,
+            percentage: categoryData.percentage
+          });
+        });
+      }
+    });
+    
+    return flattenedData;
   };
 
-  // Handle per page change
-  const handlePerPageChange = (newPerPage: number) => {
-    setPerPage(newPerPage);
-    const { startDate, endDate } = getDateRange(dateRange);
-    fetchTrackingData(startDate, endDate, 1, newPerPage); // Reset to page 1
-  };
-
-  // Filter data based on search term and status
-  const filteredData = data.filter(item => {
-    const matchesSearch = item.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.to.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.event.toLowerCase().includes(searchTerm.toLowerCase());
+  // Transform and filter data
+  const transformedData = transformData(data);
+  const filteredData = transformedData.filter(item => {
+    if (!item) return false;
+    
+    const matchesSearch = 
+      (item.subject?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
+      (item.from?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
+      (item.to?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
+      (item.email?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
+      (item.event?.toLowerCase().includes(searchTerm.toLowerCase()) || '');
     
     const matchesStatus = selectedStatus === 'all' || item.event === selectedStatus;
     
     return matchesSearch && matchesStatus;
   });
+
+  // Calculate pagination
+  const ITEMS_PER_PAGE = 10;
+  const totalFilteredRecords = filteredData.length;
+  const totalFilteredPages = Math.ceil(totalFilteredRecords / ITEMS_PER_PAGE);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Get current page's data
+  const getCurrentPageData = () => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredData.slice(startIndex, endIndex);
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  const currentPageData = getCurrentPageData();
 
   // Calculate percentages for stats
   const total = stats.total || 1; // Avoid division by zero
@@ -103,210 +173,520 @@ export default function TrackingPage() {
     { label: "Blocked", value: stats.blocked, color: "bg-pink-300", percentage: getPercentage(stats.blocked) },
   ];
 
+  // Prepare chart data
+  const prepareChartData = (data: any) => {
+    if (!data) return null;
+
+    const { startDate, endDate } = getDateRange(dateRange);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Generate all dates in the range
+    const dates = [];
+    const currentDate = new Date(start);
+    while (currentDate <= end) {
+      dates.push(currentDate.toISOString().split('T')[0]);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Initialize counts for each date
+    const eventCounts: { [key: string]: { [key: string]: number } } = {};
+    dates.forEach(date => {
+      eventCounts[date] = {
+        sent: 0,
+        delivered: 0,
+        opened: 0,
+        clicked: 0,
+        soft_bounced: 0,
+        hard_bounced: 0,
+        blocked: 0
+      };
+    });
+
+    // Fill in the counts
+    Object.entries(data).forEach(([category, categoryData]: [string, any]) => {
+      if (categoryData.emails) {
+        Object.values(categoryData.emails).forEach((email: any) => {
+          const emailDate = new Date(email.parse_date);
+          // Check if the email date is within the selected range
+          if (emailDate >= start && emailDate <= end) {
+            const dateKey = email.parse_date;
+            if (dateKey && eventCounts[dateKey]) {
+              eventCounts[dateKey][email.event] = (eventCounts[dateKey][email.event] || 0) + 1;
+            }
+          }
+        });
+      }
+    });
+
+    return {
+      labels: dates,
+      datasets: [
+        {
+          label: 'Sent',
+          data: dates.map(date => eventCounts[date].sent),
+          borderColor: '#ff8ba7',
+          backgroundColor: '#ff8ba7',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointHoverBackgroundColor: '#ff8ba7',
+          pointBorderColor: '#ff8ba7',
+          pointBorderWidth: 2,
+          pointHoverBorderWidth: 2,
+          stack: 'stack1'
+        },
+        {
+          label: 'Delivered',
+          data: dates.map(date => eventCounts[date].delivered),
+          borderColor: '#33a1fd',
+          backgroundColor: '#33a1fd',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointHoverBackgroundColor: '#33a1fd',
+          pointBorderColor: '#33a1fd',
+          pointBorderWidth: 2,
+          pointHoverBorderWidth: 2,
+          stack: 'stack1'
+        },
+        {
+          label: 'Opened',
+          data: dates.map(date => eventCounts[date].opened),
+          borderColor: '#4cc9f0',
+          backgroundColor: '#4cc9f0',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointHoverBackgroundColor: '#4cc9f0',
+          pointBorderColor: '#4cc9f0',
+          pointBorderWidth: 2,
+          pointHoverBorderWidth: 2,
+          stack: 'stack1'
+        },
+        {
+          label: 'Clicks',
+          data: dates.map(date => eventCounts[date].clicked),
+          borderColor: '#ffd60a',
+          backgroundColor: '#ffd60a',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointHoverBackgroundColor: '#ffd60a',
+          pointBorderColor: '#ffd60a',
+          pointBorderWidth: 2,
+          pointHoverBorderWidth: 2,
+          stack: 'stack1'
+        },
+        {
+          label: 'Soft Bounces',
+          data: dates.map(date => eventCounts[date].soft_bounced),
+          borderColor: '#fb8500',
+          backgroundColor: '#fb8500',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointHoverBackgroundColor: '#fb8500',
+          pointBorderColor: '#fb8500',
+          pointBorderWidth: 2,
+          pointHoverBorderWidth: 2,
+          stack: 'stack1'
+        },
+        {
+          label: 'Hard Bounces',
+          data: dates.map(date => eventCounts[date].hard_bounced),
+          borderColor: '#219ebc',
+          backgroundColor: '#219ebc',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointHoverBackgroundColor: '#219ebc',
+          pointBorderColor: '#219ebc',
+          pointBorderWidth: 2,
+          pointHoverBorderWidth: 2,
+          stack: 'stack1'
+        },
+        {
+          label: 'Blocked',
+          data: dates.map(date => eventCounts[date].blocked),
+          borderColor: '#8338ec',
+          backgroundColor: '#8338ec',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointHoverBackgroundColor: '#8338ec',
+          pointBorderColor: '#8338ec',
+          pointBorderWidth: 2,
+          pointHoverBorderWidth: 2,
+          stack: 'stack1'
+        },
+      ],
+    };
+  };
+
+  // Update the chart options
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'nearest' as const,
+      axis: 'x' as const,
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        position: 'top' as const,
+        align: 'start' as const,
+        labels: {
+          padding: 25,
+          usePointStyle: true,
+          pointStyle: 'circle',
+          boxWidth: 8,
+          boxHeight: 8,
+          font: {
+            size: 12,
+            weight: 500,
+            family: 'Inter, system-ui, sans-serif',
+          }
+        }
+      },
+      title: {
+        display: false,
+      },
+      tooltip: {
+        backgroundColor: 'white',
+        titleColor: '#0f172a',
+        bodyColor: '#475569',
+        borderColor: '#e2e8f0',
+        borderWidth: 1,
+        padding: 14,
+        boxPadding: 8,
+        usePointStyle: true,
+        titleFont: {
+          size: 14,
+          weight: 600,
+          family: 'Inter, system-ui, sans-serif',
+        },
+        bodyFont: {
+          size: 13,
+          family: 'Inter, system-ui, sans-serif',
+        },
+        bodySpacing: 8,
+        callbacks: {
+          title: (context: any) => {
+            const date = new Date(context[0].label);
+            return date.toLocaleDateString('en-US', { 
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            });
+          },
+          label: (context: any) => {
+            return `  ${context.dataset.label}: ${context.parsed.y.toLocaleString()}`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        border: {
+          display: false,
+        },
+        grid: {
+          color: 'rgba(226, 232, 240, 0.4)',
+          drawBorder: false,
+          tickLength: 0,
+        },
+        stacked: true,
+        ticks: {
+          padding: 12,
+          color: '#64748b',
+          font: {
+            size: 12,
+            family: 'Inter, system-ui, sans-serif',
+          },
+          callback: (value: any) => {
+            return value.toLocaleString();
+          }
+        }
+      },
+      x: {
+        border: {
+          display: false,
+        },
+        grid: {
+          display: false,
+        },
+        stacked: true,
+        ticks: {
+          maxRotation: 0,
+          padding: 12,
+          color: '#64748b',
+          font: {
+            size: 12,
+            family: 'Inter, system-ui, sans-serif',
+          },
+          callback: function(this: any, value: any): string {
+            const date = new Date(this.getLabelForValue(value));
+            return date.toLocaleDateString('en-US', { 
+              month: 'short',
+              day: 'numeric'
+            });
+          }
+        }
+      },
+    },
+  };
+
+  // Replace the chart placeholder with actual chart
+  const chartData = prepareChartData(data);
+
   return (
-    <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center justify-center py-16 px-4">
-      <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl p-12 flex flex-col items-center" style={{ minHeight: "700px" }}>
-        <CardHeader className="w-full items-start">
-          <CardTitle className="text-4xl font-extrabold tracking-tight text-left">Tracking</CardTitle>
-          <CardDescription className="mt-2 text-lg text-left">Track campaign performance and analytics.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col flex-1 min-h-0 w-full">
-          <div className="flex flex-col gap-6 flex-1">
-            {/* Filters */}
-            <div className="flex items-center gap-4 mt-2">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium">Date Range</label>
-                <div className="relative">
-                  <select
-                    value={dateRange}
-                    onChange={(e) => setDateRange(e.target.value)}
-                    className="border rounded-md pl-9 pr-3 py-2 text-sm w-32 bg-white cursor-pointer"
-                  >
-                    <option value="Today">Today</option>
-                    <option value="Yesterday">Yesterday</option>
-                    <option value="Last 7 Days">Last 7 Days</option>
-                    <option value="Last 30 Days">Last 30 Days</option>
-                    <option value="This Month">This Month</option>
-                  </select>
-                  <span className="absolute left-2 top-2.5 text-gray-400">
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"/></svg>
-                  </span>
+    <div className="min-h-screen bg-[#fdf6f1]">
+      <div className="max-w-[1400px] mx-auto p-6 space-y-6">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight">Tracking</h1>
+          <p className="text-gray-500">Track campaign performance and analytics.</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-100 shadow-sm px-3 py-2">
+            <Calendar className="w-4 h-4 text-blue-500" />
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-[120px]"
+            >
+              <option value="Today">Today</option>
+              <option value="Yesterday">Yesterday</option>
+              <option value="Last 7 Days">Last 7 Days</option>
+              <option value="Last 30 Days">Last 30 Days</option>
+              <option value="This Month">This Month</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-100 shadow-sm px-3 py-2">
+            <Filter className="w-4 h-4 text-purple-500" />
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-[100px]"
+            >
+              <option value="all">All Status</option>
+              <option value="sent">Sent</option>
+              <option value="delivered">Delivered</option>
+              <option value="opened">Opened</option>
+              <option value="clicked">Clicked</option>
+              <option value="soft_bounced">Soft Bounces</option>
+              <option value="hard_bounced">Hard Bounces</option>
+              <option value="blocked">Blocked</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Update the stats cards section */}
+        <div className="grid grid-cols-5 gap-3">
+          {statsConfig.map((stat) => (
+            <div 
+              key={stat.label} 
+              className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm"
+            >
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-gray-500">{stat.label}</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xl font-semibold">{stat.value}</span>
+                  <span className="text-xs text-gray-500">emails</span>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium">Select Status</label>
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="border rounded-md px-3 py-2 text-sm w-48 bg-white cursor-pointer"
-                >
-                  <option value="all">✓ All</option>
-                  <option value="sent">Sent</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="opened">Opened</option>
-                  <option value="clicked">Unique Clickers</option>
-                  <option value="soft_bounced">Soft Bounces</option>
-                  <option value="hard_bounced">Hard Bounces</option>
-                  <option value="blocked">Blocked</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Error Display */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-700 text-sm">{error}</p>
-              </div>
-            )}
-
-            {/* Stats Progress Bars */}
-            <div className="flex flex-wrap gap-6">
-              {statsConfig.map((stat) => (
-                <div key={stat.label} className="flex-1 min-w-[120px]">
-                  <div className="flex justify-between text-xs font-medium mb-1">
-                    <span>{stat.label}</span>
-                    <span>{stat.percentage}%</span>
-                  </div>
-                  <div className="w-full h-2 rounded bg-gray-100 overflow-hidden">
+                <div className="mt-2 flex items-center gap-1.5">
+                  <div className="flex-1 h-1 rounded-full bg-gray-100 overflow-hidden">
                     <div 
-                      className={`h-2 rounded ${stat.color}`} 
+                      className={`h-full rounded-full ${stat.color}`} 
                       style={{ width: `${stat.percentage}%` }} 
                     />
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">{stat.value} emails</div>
+                  <span className="text-xs font-medium text-gray-600">{stat.percentage}%</span>
                 </div>
-              ))}
-            </div>
-
-            {/* Chart Placeholder */}
-            <div className="border rounded-xl bg-white h-64 flex flex-col items-center justify-center">
-              <div className="flex gap-4 mb-2">
-                <span className="flex items-center gap-1 text-xs"><span className="inline-block w-4 h-2 rounded bg-green-200" />Delivered</span>
-                <span className="flex items-center gap-1 text-xs"><span className="inline-block w-4 h-2 rounded bg-blue-200" />Clicks</span>
-                <span className="flex items-center gap-1 text-xs"><span className="inline-block w-4 h-2 rounded bg-orange-200" />Soft Bounces</span>
-                <span className="flex items-center gap-1 text-xs"><span className="inline-block w-4 h-2 rounded bg-gray-400" />Hard Bounces</span>
-                <span className="flex items-center gap-1 text-xs"><span className="inline-block w-4 h-2 rounded bg-pink-300" />Blocked</span>
               </div>
-              <div className="text-gray-400 text-sm">[Chart Placeholder]</div>
             </div>
+          ))}
+        </div>
 
-            {/* Table and Controls */}
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <select 
-                    className="border rounded px-2 py-1 text-xs"
-                    value={perPage}
-                    onChange={(e) => handlePerPageChange(Number(e.target.value))}
-                  >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                  </select>
-                  <span className="text-xs">entries per page</span>
+        <Card className="bg-white border-0 shadow-sm">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-base font-medium">Email Campaign Performance</CardTitle>
+            <CardDescription className="text-sm text-gray-500">Tracking metrics over time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[350px] w-full">
+              {chartData ? (
+                <Line 
+                  options={chartOptions} 
+                  data={chartData}
+                  className="[canvas-important]:!rounded-lg"
+                />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center">
+                  <div className="text-sm text-gray-500 flex flex-col items-center gap-2">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                    <span>Loading chart data...</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs">Search:</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-0 shadow-sm overflow-hidden">
+          <CardHeader className="border-b bg-white">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Campaign Details</CardTitle>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input 
-                    className="border rounded px-2 py-1 text-xs bg-gray-50" 
+                    type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search emails..."
+                    placeholder="Search campaigns..."
+                    className="pl-9 pr-4 py-2 text-sm border rounded-lg w-[250px] focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                   />
                 </div>
               </div>
-
-              <div className="overflow-x-auto border rounded-xl bg-white">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="p-2 font-semibold text-left">Event</th>
-                      <th className="p-2 font-semibold text-left">Date</th>
-                      <th className="p-2 font-semibold text-left">Subject</th>
-                      <th className="p-2 font-semibold text-left">From</th>
-                      <th className="p-2 font-semibold text-left">To</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan={5} className="text-center p-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Loading tracking data...</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : filteredData.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="text-center text-gray-400 p-4">
-                          {searchTerm ? 'No results found' : 'No tracking data available'}
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredData.map((item) => (
-                        <tr key={item.id} className="border-b hover:bg-gray-50">
-                          <td className="p-2">
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              item.event === 'delivered' ? 'bg-green-100 text-green-800' :
-                              item.event === 'clicked' ? 'bg-blue-100 text-blue-800' :
-                              item.event === 'bounced' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {item.event}
-                            </span>
-                          </td>
-                          <td className="p-2">{new Date(item.date).toLocaleDateString()}</td>
-                          <td className="p-2 font-medium">{item.subject}</td>
-                          <td className="p-2">{item.from}</td>
-                          <td className="p-2">{item.to}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              <div className="flex justify-between items-center mt-4">
-                <div className="text-xs text-gray-500">
-                  Showing {((pagination.currentPage - 1) * pagination.perPage) + 1} to {Math.min(pagination.currentPage * pagination.perPage, pagination.totalRecords)} of {pagination.totalRecords} entries
-                </div>
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        onClick={e => { e.preventDefault(); handlePageChange(pagination.currentPage - 1); }}
-                        aria-disabled={pagination.currentPage === 1}
-                      />
-                    </PaginationItem>
-                    {[...Array(pagination.totalPages)].map((_, idx) => (
-                      <PaginationItem key={idx}>
-                        <PaginationLink
-                          href="#"
-                          isActive={pagination.currentPage === idx + 1}
-                          onClick={e => { e.preventDefault(); handlePageChange(idx + 1); }}
-                        >
-                          {idx + 1}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ))}
-                    <PaginationItem>
-                      <PaginationNext
-                        href="#"
-                        onClick={e => { e.preventDefault(); handlePageChange(pagination.currentPage + 1); }}
-                        aria-disabled={pagination.currentPage === pagination.totalPages}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
             </div>
-          </div>
-        </CardContent>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-gray-50">
+                  <TableRow>
+                    <TableHead>Event</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>From</TableHead>
+                    <TableHead>To</TableHead>
+                    <TableHead>Message ID</TableHead>
+                    <TableHead>IP</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <div className="flex items-center justify-center gap-2 text-gray-500">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Loading tracking data...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                        {searchTerm ? 'No results found' : 'No tracking data available'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    currentPageData.map((item, index) => (
+                      <TableRow key={`${item.messageId}-${index}`}>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            item.event === 'delivered' ? 'bg-green-50 text-green-700' :
+                            item.event === 'clicked' ? 'bg-blue-50 text-blue-700' :
+                            item.event === 'bounced' ? 'bg-red-50 text-red-700' :
+                            'bg-gray-50 text-gray-700'
+                          }`}>
+                            {item.event}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {item.date_time || new Date(item.date).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">{item.subject}</TableCell>
+                        <TableCell className="text-sm text-gray-600">{item.from}</TableCell>
+                        <TableCell className="text-sm text-gray-600">{item.email}</TableCell>
+                        <TableCell className="text-xs text-gray-500 font-mono">{item.messageId}</TableCell>
+                        <TableCell className="text-xs text-gray-500">{item.ip}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex items-center justify-between py-4">
+          <p className="text-sm text-gray-500">
+            Showing {filteredData.length > 0 ? ((currentPage - 1) * ITEMS_PER_PAGE) + 1 : 0} to {Math.min(currentPage * ITEMS_PER_PAGE, totalFilteredRecords)} of {totalFilteredRecords} entries
+          </p>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                      handlePageChange(currentPage - 1);
+                    }
+                  }}
+                  aria-disabled={currentPage === 1}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+              {[...Array(totalFilteredPages)].map((_, idx) => (
+                <PaginationItem key={idx}>
+                  <PaginationLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handlePageChange(idx + 1);
+                    }}
+                    isActive={currentPage === idx + 1}
+                  >
+                    {idx + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalFilteredPages) {
+                      handlePageChange(currentPage + 1);
+                    }
+                  }}
+                  aria-disabled={currentPage === totalFilteredPages}
+                  className={currentPage === totalFilteredPages ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       </div>
-    </main>
+    </div>
   );
 } 
