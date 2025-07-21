@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const baseUrl = process.env.MORTDASH_BASE_URL || 'http://localhost:1005/api/bank/v1/marketing';
 
-export async function GET(request: NextRequest, context: { params: { token: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ token: string }> }) {
   const { token } = await context.params;
   console.log('Proxying with token:', token);
 
