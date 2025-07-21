@@ -2,17 +2,11 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
-import { BarChart2, Users, ListTodo, MailOpen, FileText } from 'lucide-react';
+import { BarChart2, Users, ListTodo, MailOpen, FileText, ArrowLeft } from 'lucide-react';
 import { useContactStore } from '@/store/useContactStore';
+import { useTrackingStore } from '@/store/useTrackingStore';
+import { mortdash_url, mortdash_ae_url } from '@/config/mortdash';
 import { useEffect } from 'react';
-
-const stats = [
-  { label: 'Delivered', value: 1200, color: 'bg-green-100', icon: <BarChart2 className="w-6 h-6 text-green-600" />, href: '/marketing/tracking' },
-  { label: 'Unique Clickers', value: 350, color: 'bg-blue-100', icon: <BarChart2 className="w-6 h-6 text-blue-600" />, href: '/marketing/tracking' },
-  { label: 'Soft Bounces', value: 25, color: 'bg-orange-100', icon: <BarChart2 className="w-6 h-6 text-orange-500" />, href: '/marketing/tracking' },
-  { label: 'Hard Bounces', value: 10, color: 'bg-gray-200', icon: <BarChart2 className="w-6 h-6 text-gray-500" />, href: '/marketing/tracking' },
-  { label: 'Blocked', value: 5, color: 'bg-pink-100', icon: <BarChart2 className="w-6 h-6 text-pink-500" />, href: '/marketing/tracking' },
-];
 
 const marketingLinks = [
   { label: 'Prospect Lists', description: 'Manage potential clients and leads in your pipeline.', href: '/marketing/contacts', icon: <Users className="w-5 h-5 text-slate-500" /> },
@@ -36,23 +30,28 @@ export default function DashboardPage() {
     fetchContacts, 
     fetchProspects, 
     fetchClients,
-    loading 
+    loading: contactsLoading 
   } = useContactStore();
 
+  const {
+    dashboardStats,
+    fetchDashboardStats,
+    loading: statsLoading
+  } = useTrackingStore();
+
   // Calculate actual contact statistics
-  const marketingOnly = total; // Total from store represents marketing-only contacts
+  const marketingOnly = total;
   const totalProspects = prospects ? prospects.reduce((sum, group) => sum + group.members.length, 0) : 0;
   const totalClients = clients ? clients.reduce((sum, group) => sum + group.members.length, 0) : 0;
-  const totalContacts = marketingOnly + totalProspects + totalClients; // Sum of all categories
-
-
+  const totalContacts = marketingOnly + totalProspects + totalClients;
 
   // Fetch data on component mount
   useEffect(() => {
     fetchContacts();
     fetchProspects();
     fetchClients();
-  }, [fetchContacts, fetchProspects, fetchClients]);
+    fetchDashboardStats();
+  }, [fetchContacts, fetchProspects, fetchClients, fetchDashboardStats]);
 
   const contactStats = [
     { label: 'Total Contacts', value: totalContacts, color: 'bg-blue-100', icon: <Users className="w-6 h-6 text-blue-600" /> },
@@ -61,8 +60,27 @@ export default function DashboardPage() {
     { label: 'Marketing Only', value: marketingOnly, color: 'bg-orange-100', icon: <Users className="w-6 h-6 text-orange-500" /> },
   ];
 
+  const trackingStats = [
+    { label: 'Delivered', value: dashboardStats.delivered, color: 'bg-green-100', icon: <BarChart2 className="w-6 h-6 text-green-600" />, href: '/marketing/tracking' },
+    { label: 'Unique Clickers', value: dashboardStats.unique_clickers, color: 'bg-blue-100', icon: <BarChart2 className="w-6 h-6 text-blue-600" />, href: '/marketing/tracking' },
+    { label: 'Soft Bounces', value: dashboardStats.soft_bounces, color: 'bg-orange-100', icon: <BarChart2 className="w-6 h-6 text-orange-500" />, href: '/marketing/tracking' },
+    { label: 'Hard Bounces', value: dashboardStats.hard_bounces, color: 'bg-gray-200', icon: <BarChart2 className="w-6 h-6 text-gray-500" />, href: '/marketing/tracking' },
+    { label: 'Blocked', value: dashboardStats.blocked, color: 'bg-pink-100', icon: <BarChart2 className="w-6 h-6 text-pink-500" />, href: '/marketing/tracking' },
+  ];
+
   return (
     <main className="flex flex-col flex-1 min-h-screen bg-[#fdf6f1] items-center py-16 px-4 gap-8">
+      {/* Back to AE Dashboard Button */}
+      <div className="w-full max-w-6xl">
+        <a 
+          href={`${mortdash_ae_url}/account-executive/dashboard`}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white text-[#ff6600] rounded-lg border-2 border-[#ff6600] hover:bg-[#fff7ed] transition-colors font-medium"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to AE Dashboard
+        </a>
+      </div>
+
       {/* Hero Section */}
       <section className="w-full max-w-4xl text-center mb-8">
         <h1 className="text-4xl md:text-5xl font-extrabold text-[#232323] mb-2 drop-shadow-sm leading-tight">Welcome to Mortdash Marketing</h1>
@@ -111,7 +129,7 @@ export default function DashboardPage() {
           <CardContent>
             {/* Contact Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              {loading ? (
+              {contactsLoading ? (
                 // Loading skeleton
                 Array.from({ length: 4 }).map((_, index) => (
                   <div key={index} className="rounded-lg p-3 shadow-sm border border-slate-200 bg-white flex flex-col items-center gap-1">
@@ -176,15 +194,28 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
-              {stats.map((stat) => (
-                <Link href={stat.href} key={stat.label} className="group block cursor-pointer">
-                  <div className={`rounded-xl p-5 shadow border border-slate-200 bg-white hover:shadow-md transition flex flex-col items-center gap-2 ${stat.color} hover:scale-105 active:scale-100 duration-150`}>
-                    {stat.icon}
-                    <span className="text-2xl font-extrabold text-[#232323]">{stat.value}</span>
-                    <span className="text-sm text-[#6d6d6d] group-hover:underline">{stat.label}</span>
+              {statsLoading ? (
+                // Loading skeleton for stats
+                Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="rounded-xl p-5 shadow border border-slate-200 bg-white">
+                    <div className="flex flex-col items-center gap-2 animate-pulse">
+                      <div className="w-6 h-6 bg-gray-200 rounded-full"></div>
+                      <div className="w-12 h-6 bg-gray-200 rounded"></div>
+                      <div className="w-16 h-4 bg-gray-200 rounded"></div>
+                    </div>
                   </div>
-                </Link>
-              ))}
+                ))
+              ) : (
+                trackingStats.map((stat) => (
+                  <Link href={stat.href} key={stat.label} className="group block cursor-pointer">
+                    <div className={`rounded-xl p-5 shadow border border-slate-200 bg-white hover:shadow-md transition flex flex-col items-center gap-2 ${stat.color} hover:scale-105 active:scale-100 duration-150`}>
+                      {stat.icon}
+                      <span className="text-2xl font-extrabold text-[#232323]">{stat.value}</span>
+                      <span className="text-sm text-[#6d6d6d] group-hover:underline">{stat.label}</span>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

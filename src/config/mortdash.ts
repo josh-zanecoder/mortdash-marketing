@@ -1,5 +1,11 @@
-export const mortdash_url = process.env.MORTDASH_BASE_URL;
+export const mortdash_url = process.env.NEXT_PUBLIC_MORTDASH_BASE_URL || 'http://localhost:1005';
+export const mortdash_ae_url = process.env.NEXT_PUBLIC_MORTDASH_AE_URL || 'https://local.mortdash.localhost';
 
-if (!mortdash_url) {
-  throw new Error('MORTDASH_BASE_URL environment variable is not set');
-} 
+// Validate URL format
+if (typeof mortdash_url !== 'string' || !mortdash_url.startsWith('http')) {
+  console.warn('NEXT_PUBLIC_MORTDASH_BASE_URL should be a valid URL starting with http:// or https://');
+}
+
+if (typeof mortdash_ae_url !== 'string' || !mortdash_ae_url.startsWith('http')) {
+  console.warn('NEXT_PUBLIC_MORTDASH_AE_URL should be a valid URL starting with http:// or https://');
+}

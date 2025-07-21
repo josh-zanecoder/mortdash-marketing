@@ -42,9 +42,11 @@ interface TrackingStore {
   loading: boolean;
   error: string | null;
   selectedRatesheetId: string | null;
+  dashboardStats: TrackingStats;
   
   // Actions
   fetchTrackingData: (startDate: string, endDate: string, page?: number, ratesheetId?: string) => Promise<void>;
+  fetchDashboardStats: () => Promise<void>;
   setSelectedRatesheetId: (ratesheetId: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -54,6 +56,14 @@ interface TrackingStore {
 const initialState = {
   data: [],
   stats: {
+    delivered: 0,
+    unique_clickers: 0,
+    soft_bounces: 0,
+    hard_bounces: 0,
+    blocked: 0,
+    total: 0
+  },
+  dashboardStats: {
     delivered: 0,
     unique_clickers: 0,
     soft_bounces: 0,
@@ -116,6 +126,37 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
         loading: false,
         error: error instanceof Error ? error.message : 'An error occurred'
       });
+    }
+  },
+
+  fetchDashboardStats: async () => {
+    try {
+      // Get today's date
+      const today = new Date();
+      const startDate = today.toISOString().split('T')[0];
+      const endDate = startDate;
+
+      const params = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate,
+        page: '1',
+        limit: '1' // We only need stats, not the actual data
+      });
+
+      const response = await fetch(`/api/tracking/by-range?${params.toString()}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch dashboard stats');
+      }
+
+      const result: TrackingResponse = await response.json();
+      
+      set({
+        dashboardStats: result.stats || initialState.stats
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
     }
   },
 
