@@ -103,10 +103,10 @@ export default function Header() {
               AE Dashboard
             </a>
             <Link href="/dashboard" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Dashboard</Link>
-            <Link href="#" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Contact</Link>
-            <Link href="#" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Lists</Link>
-            <Link href="#" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Campaign</Link>
-            <Link href="#" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Tracking</Link>
+            <Link href="/marketing/contacts" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Contact</Link>
+            <Link href="/marketing/lists" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Lists</Link>
+            <Link href="/marketing/campaign" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Campaign</Link>
+            <Link href="/marketing/tracking" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Tracking</Link>
             <Link href="/email-builder" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Email Builder</Link>
           </div>
         )}
