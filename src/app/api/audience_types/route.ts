@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Proxy the request to your backend
-    const backendRes = await fetch(`${mortdash_url}/api/bank/v1/marketing/audience-types`, {
+    const backendRes = await fetch(`${mortdash_url}/api/bank/v1/account-executive/audience-types`, {
       method: 'GET',
       headers,
     });
