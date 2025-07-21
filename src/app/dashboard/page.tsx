@@ -45,16 +45,7 @@ export default function DashboardPage() {
   const totalClients = clients ? clients.reduce((sum, group) => sum + group.members.length, 0) : 0;
   const totalContacts = marketingOnly + totalProspects + totalClients; // Sum of all categories
 
-  // Debug logging
-  console.log('📊 Dashboard Contact Stats:', {
-    totalContacts,
-    totalProspects,
-    totalClients,
-    marketingOnly,
-    prospectsCount: prospects?.length || 0,
-    clientsCount: clients?.length || 0,
-    marketingContactsLength: marketingContacts.length
-  });
+
 
   // Fetch data on component mount
   useEffect(() => {
@@ -142,12 +133,12 @@ export default function DashboardPage() {
             {/* Contact Lists */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {marketingLinks.map((item) => (
-                <Link href={item.href} key={item.label} className="block group">
+                <div key={item.label} className="block group">
                   <div className="rounded-lg p-4 shadow-sm border border-slate-200 bg-[#fdf6f1] hover:shadow-md transition h-full flex flex-col justify-between hover:bg-[#fff7ed] hover:scale-[1.03] active:scale-100 duration-150">
                     <div className="flex items-center gap-2 mb-1">{item.icon}<span className="font-semibold text-[#232323] group-hover:underline">{item.label}</span></div>
                     <span className="text-xs text-[#6d6d6d] mt-1">{item.description}</span>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           </CardContent>
