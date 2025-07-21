@@ -1,6 +1,10 @@
+'use client';
+
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import { BarChart2, Users, ListTodo, MailOpen, FileText } from 'lucide-react';
+import { useContactStore } from '@/store/useContactStore';
+import { useEffect } from 'react';
 
 const stats = [
   { label: 'Delivered', value: 1200, color: 'bg-green-100', icon: <BarChart2 className="w-6 h-6 text-green-600" />, href: '/marketing/tracking' },
@@ -16,12 +20,7 @@ const marketingLinks = [
   { label: 'Marketing Only Contacts', description: 'Contacts for marketing campaigns and newsletters.', href: '/marketing/contacts', icon: <Users className="w-5 h-5 text-slate-500" /> },
 ];
 
-const contactStats = [
-  { label: 'Total Contacts', value: 2450, color: 'bg-blue-100', icon: <Users className="w-6 h-6 text-blue-600" /> },
-  { label: 'Prospects', value: 1200, color: 'bg-green-100', icon: <Users className="w-6 h-6 text-green-600" /> },
-  { label: 'Clients', value: 850, color: 'bg-purple-100', icon: <Users className="w-6 h-6 text-purple-600" /> },
-  { label: 'Marketing Only', value: 400, color: 'bg-orange-100', icon: <Users className="w-6 h-6 text-orange-500" /> },
-];
+
 
 const rateSheets = [
   { name: 'Standard Rate Sheet', lastUpdated: '2024-06-01', link: '#' },
@@ -29,6 +28,48 @@ const rateSheets = [
 ];
 
 export default function DashboardPage() {
+  const { 
+    marketingContacts, 
+    prospects, 
+    clients, 
+    total,
+    fetchContacts, 
+    fetchProspects, 
+    fetchClients,
+    loading 
+  } = useContactStore();
+
+  // Calculate actual contact statistics
+  const marketingOnly = total; // Total from store represents marketing-only contacts
+  const totalProspects = prospects ? prospects.reduce((sum, group) => sum + group.members.length, 0) : 0;
+  const totalClients = clients ? clients.reduce((sum, group) => sum + group.members.length, 0) : 0;
+  const totalContacts = marketingOnly + totalProspects + totalClients; // Sum of all categories
+
+  // Debug logging
+  console.log('📊 Dashboard Contact Stats:', {
+    totalContacts,
+    totalProspects,
+    totalClients,
+    marketingOnly,
+    prospectsCount: prospects?.length || 0,
+    clientsCount: clients?.length || 0,
+    marketingContactsLength: marketingContacts.length
+  });
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchContacts();
+    fetchProspects();
+    fetchClients();
+  }, [fetchContacts, fetchProspects, fetchClients]);
+
+  const contactStats = [
+    { label: 'Total Contacts', value: totalContacts, color: 'bg-blue-100', icon: <Users className="w-6 h-6 text-blue-600" /> },
+    { label: 'Prospects', value: totalProspects, color: 'bg-green-100', icon: <Users className="w-6 h-6 text-green-600" /> },
+    { label: 'Clients', value: totalClients, color: 'bg-purple-100', icon: <Users className="w-6 h-6 text-purple-600" /> },
+    { label: 'Marketing Only', value: marketingOnly, color: 'bg-orange-100', icon: <Users className="w-6 h-6 text-orange-500" /> },
+  ];
+
   return (
     <main className="flex flex-col flex-1 min-h-screen bg-[#fdf6f1] items-center py-16 px-4 gap-8">
       {/* Hero Section */}
@@ -70,21 +111,33 @@ export default function DashboardPage() {
       {/* Main Content Row: Marketing + Rate Sheets */}
       <section className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
         {/* Marketing Section */}
-        <Card className="col-span-2 p-6 shadow-lg border-2 border-[#ffe3d1] bg-white">
-          <CardHeader className="flex flex-row items-center gap-2 mb-4">
-            <Users className="w-6 h-6 text-[#ff6600]" />
-            <CardTitle className="text-2xl font-bold">Summary of Contacts</CardTitle>
-          </CardHeader>
+        <Link href="/marketing/contacts" className="col-span-2 block group">
+          <Card className="p-6 shadow-lg border-2 border-[#ffe3d1] bg-white hover:shadow-xl transition-all duration-200 hover:scale-[1.01] cursor-pointer">
+            <CardHeader className="flex flex-row items-center gap-2 mb-4">
+              <Users className="w-6 h-6 text-[#ff6600]" />
+              <CardTitle className="text-2xl font-bold group-hover:text-[#ff6600] transition-colors">Summary of Contacts</CardTitle>
+            </CardHeader>
           <CardContent>
             {/* Contact Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              {contactStats.map((stat) => (
-                <div key={stat.label} className={`rounded-lg p-3 shadow-sm border border-slate-200 bg-white flex flex-col items-center gap-1 ${stat.color}`}>
-                  {stat.icon}
-                  <span className="text-lg font-bold text-[#232323]">{stat.value}</span>
-                  <span className="text-xs text-[#6d6d6d] text-center">{stat.label}</span>
-                </div>
-              ))}
+              {loading ? (
+                // Loading skeleton
+                Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="rounded-lg p-3 shadow-sm border border-slate-200 bg-white flex flex-col items-center gap-1">
+                    <div className="w-6 h-6 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-8 h-6 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-16 h-3 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ))
+              ) : (
+                contactStats.map((stat) => (
+                  <div key={stat.label} className={`rounded-lg p-3 shadow-sm border border-slate-200 bg-white flex flex-col items-center gap-1 ${stat.color}`}>
+                    {stat.icon}
+                    <span className="text-lg font-bold text-[#232323]">{stat.value}</span>
+                    <span className="text-xs text-[#6d6d6d] text-center">{stat.label}</span>
+                  </div>
+                ))
+              )}
             </div>
             {/* Contact Lists */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -99,6 +152,7 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+        </Link>
         {/* Rate Sheets Section */}
         <Card className="col-span-1 p-6 shadow-lg border-2 border-[#ffe3d1] bg-white flex flex-col justify-between">
           <CardHeader className="flex flex-row items-center gap-2 mb-4">
