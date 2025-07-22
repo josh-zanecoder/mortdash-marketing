@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-const baseUrl = 'http://localhost:1005/api/bank/v1/marketing';
+const mortdash_url = process.env.NEXT_PUBLIC_MORTDASH_BASE_URL || 'http://localhost:1005';
+const baseUrl = `${mortdash_url}/api/bank/v1/marketing`;
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ token: string; id: string }> }) {
   const { token, id } = await context.params;
