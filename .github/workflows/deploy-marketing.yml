@@ -50,15 +50,17 @@ jobs:
       - name: Set all environment variables for build process
         run: |
           echo "Setting environment variables for build"
-          # Use grep to ensure we process all lines, including the last one without newline
-          grep -v '^$' .env | grep -v '^#' | while IFS='=' read -r key value; do
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -z "$line" || "$line" == \#* || "$line" == "PORT="* ]] && continue
+            key="${line%%=*}"
+            value="${line#*=}"
             # Skip empty lines and comments
             [[ -z "$key" ]] && continue
             # Mask sensitive values in GitHub Actions
             echo "::add-mask::$value"
             echo "$key=$value" >> $GITHUB_ENV
             echo "Added masked build variable: $key"
-          done
+          done < .env
 
       - name: Configure Docker for Artifact Registry
         run: |
@@ -72,9 +74,10 @@ jobs:
         run: |
           # Create build args string from environment variables
           BUILD_ARGS=()
-          while IFS='=' read -r key value; do
-            # Skip empty lines, comments, and PORT variable
-            [[ -z "$key" || "$key" == \#* || "$key" == "PORT" ]] && continue
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -z "$line" || "$line" == \#* || "$line" == "PORT="* ]] && continue
+            key="${line%%=*}"
+            value="${line#*=}"
             escaped_value=$(printf '%s' "$value" | sed 's/"/\\"/g' | sed 's/\$/\\$/g' | sed 's/,/\\,/g')
             BUILD_ARGS+=(--build-arg "$key=$escaped_value")
           done < .env
@@ -112,8 +115,10 @@ jobs:
         run: |
           echo "Converting .env to env.yaml"
           echo "---" > env.yaml
-          while IFS='=' read -r key value; do
-            [[ -z "$key" || "$key" == \#* || "$key" == "PORT" ]] && continue
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -z "$line" || "$line" == \#* || "$line" == "PORT="* ]] && continue
+            key="${line%%=*}"
+            value="${line#*=}"
             # Escape double quotes and backslashes for YAML
             safe_value=$(printf '%s' "$value" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
             echo "$key: \"$safe_value\"" >> env.yaml
@@ -124,9 +129,8 @@ jobs:
         run: |
           # Create env vars string for deployment
           ENV_VARS=""
-          while IFS='=' read -r key value; do
-            # Skip empty lines, comments, and PORT variable
-            [[ -z "$key" || "$key" == \#* || "$key" == "PORT" ]] && continue
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -z "$line" || "$line" == \#* || "$line" == "PORT="* ]] && continue
             
             # For Firebase private key, preserve the \\n as is
             if [[ "$key" == "FIREBASE_PRIVATE_KEY" ]]; then
