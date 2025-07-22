@@ -13,7 +13,7 @@ export default function AddContactModal({ open, onClose, onSubmit, channels }: {
   channels: { value: string; label: string }[];
 }) {
   const [form, setForm] = useState({
-    channel: '',
+    channel: channels[0]?.value || '',  // Initialize with first channel's value
     company: '',
     firstName: '',
     lastName: '',
@@ -28,9 +28,9 @@ export default function AddContactModal({ open, onClose, onSubmit, channels }: {
     e.preventDefault();
     setSubmitting(true);
     // Find the label for the selected channel value
-    const selectedChannel = channels.find(c => c.value === form.channel);
+    const selectedChannel = channels.find(c => c.value === form.channel) || channels[0]; // Fallback to first channel
     const payload = {
-      branch: selectedChannel ? selectedChannel.label : form.channel, // send the label (e.g., "Wholesale")
+      branch: selectedChannel.label, // Will always have a value now
       company: form.company,
       first_name: form.firstName,
       last_name: form.lastName,
@@ -40,7 +40,15 @@ export default function AddContactModal({ open, onClose, onSubmit, channels }: {
     const success = await addContact(payload);
     setSubmitting(false);
     if (success) {
-      setForm({ channel: '', company: '', firstName: '', lastName: '', email: '', phone: '', title: '' });
+      setForm({
+        channel: channels[0]?.value || '', // Reset to first channel
+        company: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        title: ''
+      });
       onClose();
       if (onSubmit) onSubmit(form);
     } else {
