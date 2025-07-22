@@ -10,7 +10,8 @@ const JWT_SECRET = new TextEncoder().encode(
 async function isValidJWT(token: string): Promise<boolean> {
   try {
     // Verify the token and check its expiration
-    // await jwtVerify(token, JWT_SECRET)
+    const { payload } = await jwtVerify(token, JWT_SECRET)
+    console.log('JWT payload:', payload)
     return true
   } catch (error) {
     console.error('JWT validation error:', error)
