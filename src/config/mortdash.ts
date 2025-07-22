@@ -1,5 +1,5 @@
-export const mortdash_url = process.env.NEXT_PUBLIC_MORTDASH_BASE_URL || 'http://localhost:1005';
-export const mortdash_ae_url = process.env.NEXT_PUBLIC_MORTDASH_AE_URL || 'https://local.mortdash.localhost';
+export const mortdash_url = process.env.NEXT_PUBLIC_MORTDASH_BASE_URL;
+export const mortdash_ae_url = process.env.NEXT_PUBLIC_MORTDASH_AE_URL;
 
 // Validate URL format
 if (typeof mortdash_url !== 'string' || !mortdash_url.startsWith('http')) {
