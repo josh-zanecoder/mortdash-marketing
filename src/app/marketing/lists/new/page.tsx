@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ type FilterRow = {
   filter_value_name: string;          // e.g. "Wholesale" (channel name)
 };
 
-export default function AddMarketingListPage() {
+function AddMarketingListPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -407,5 +407,13 @@ export default function AddMarketingListPage() {
         type={toast.type}
       />
     </main>
+  );
+}
+
+export default function AddMarketingListPage() {
+  return (
+    <Suspense fallback={<LoadingModal isOpen={true} title="Loading Form" message="Please wait while we load the form..." />}>
+      <AddMarketingListPageContent />
+    </Suspense>
   );
 } 
