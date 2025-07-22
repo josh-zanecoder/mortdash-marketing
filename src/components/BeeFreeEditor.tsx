@@ -5,6 +5,7 @@ import BeefreeSDK from '@beefree.io/sdk';
 import { toast } from 'sonner';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import SaveTemplateModal from './SaveTemplateModal';
+import SendTestEmailModal from './SendTestEmailModal';
 
 interface TemplateData {
   html: string;
@@ -23,7 +24,9 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showSendTestModal, setShowSendTestModal] = useState(false);
   const [templateData, setTemplateData] = useState<TemplateData | null>(null);
+  const [currentHtml, setCurrentHtml] = useState<string>('');
 
   // Initialize the editor once when the component mounts
   useEffect(() => {
@@ -46,6 +49,10 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
             language
           });
           setShowSaveModal(true);
+        },
+        onSend: (pageHtml: string) => {
+          setCurrentHtml(pageHtml);
+          setShowSendTestModal(true);
         },
         onError: (error: unknown) => {
           console.error('Error:', error);
@@ -282,6 +289,12 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
           email_template_id={undefined} // Pass undefined for new templates, or actual ID for updates
         />
       )}
+
+      <SendTestEmailModal
+        open={showSendTestModal}
+        onClose={() => setShowSendTestModal(false)}
+        html={currentHtml}
+      />
     </div>
   );
 }
