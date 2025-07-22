@@ -32,7 +32,7 @@ interface TrackingResponse {
 
 interface TrackingStore {
   // State
-  data: TrackingData[];
+  data: any;
   stats: TrackingStats;
   pagination: {
     currentPage: number;
@@ -54,7 +54,7 @@ interface TrackingStore {
 }
 
 const initialState = {
-  data: [],
+  data: {},
   stats: {
     delivered: 0,
     unique_clickers: 0,
@@ -107,11 +107,19 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
         throw new Error(errorData.error || 'Failed to fetch tracking data');
       }
 
-      const result: TrackingResponse = await response.json();
-      
+      const result = await response.json();
+      const trackingData = result.data || {};
+
       set({
-        data: result.data || [],
-        stats: result.stats || initialState.stats,
+        data: trackingData, 
+        stats: {
+          delivered: trackingData.delivered?.count || 0,
+          unique_clickers: trackingData.clicks?.count || 0,
+          soft_bounces: trackingData.softBounce?.count || 0,
+          hard_bounces: trackingData.hardBounce?.count || 0,
+          blocked: trackingData.blocked?.count || 0,
+          total: trackingData.total || 0,
+        },
         pagination: {
           currentPage: result.pagination?.current_page || 1,
           totalPages: result.pagination?.total_pages || 1,
@@ -140,7 +148,7 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
         start_date: startDate,
         end_date: endDate,
         page: '1',
-        limit: '1' // We only need stats, not the actual data
+        limit: '1' 
       });
 
       const response = await fetch(`/api/tracking/by-range?${params.toString()}`);
@@ -168,3 +176,20 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
   
   reset: () => set(initialState)
 }));
+
+function groupEmailsByEvent(data: TrackingData[] | any) {
+  console.log('groupEmailsByEvent input:', data);
+  if (!Array.isArray(data)) {
+    return data || {};
+  }
+  const grouped: any = {};
+  data.forEach(email => {
+    const event = email.event || 'unknown';
+    if (!grouped[event]) {
+      grouped[event] = { emails: {}, count: 0, percentage: 0 };
+    }
+    grouped[event].emails[email.id] = email;
+    grouped[event].count += 1;
+  });
+  return grouped;
+}

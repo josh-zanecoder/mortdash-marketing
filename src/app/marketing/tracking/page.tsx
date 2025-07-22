@@ -47,6 +47,12 @@ ChartJS.register(
   Filler
 );
 
+function emailsToArray(emails: any) {
+  if (Array.isArray(emails)) return emails;
+  if (emails && typeof emails === 'object') return Object.values(emails);
+  return [];
+}
+
 export default function TrackingPage() {
   const { 
     data, 
@@ -124,9 +130,19 @@ export default function TrackingPage() {
     return flattenedData;
   };
 
+  // Flatten all emails from all event types for the table
+  const allEmails = [
+    ...emailsToArray(data.delivered?.emails),
+    ...emailsToArray(data.clicks?.emails),
+    ...emailsToArray(data.softBounce?.emails),
+    ...emailsToArray(data.hardBounce?.emails),
+    ...emailsToArray(data.blocked?.emails),
+    ...emailsToArray(data.opened?.emails),
+    ...emailsToArray(data.requests?.emails),
+  ];
+
   // Transform and filter data
-  const transformedData = transformData(data);
-  const filteredData = transformedData.filter(item => {
+  const filteredData = allEmails.filter(item => {
     if (!item) return false;
     
     const matchesSearch = 
@@ -203,21 +219,23 @@ export default function TrackingPage() {
       };
     });
 
-    // Fill in the counts
-    Object.entries(data).forEach(([category, categoryData]: [string, any]) => {
-      if (categoryData.emails) {
-        Object.values(categoryData.emails).forEach((email: any) => {
-          const emailDate = new Date(email.parse_date);
-          // Check if the email date is within the selected range
-          if (emailDate >= start && emailDate <= end) {
-            const dateKey = email.parse_date;
-            if (dateKey && eventCounts[dateKey]) {
-              eventCounts[dateKey][email.event] = (eventCounts[dateKey][email.event] || 0) + 1;
-            }
-          }
-        });
-      }
-    });
+    // Helper to process emails for a given event type
+    function processEmails(eventKey: string, emails: any, eventName: string) {
+      emailsToArray(emails).forEach((email: any) => {
+        const emailDate = email.parse_date || email.date?.split('T')[0] || email.date;
+        if (emailDate && eventCounts[emailDate]) {
+          eventCounts[emailDate][eventName] = (eventCounts[emailDate][eventName] || 0) + 1;
+        }
+      });
+    }
+
+    processEmails('requests', data.requests?.emails, 'sent');
+    processEmails('delivered', data.delivered?.emails, 'delivered');
+    processEmails('opened', data.opened?.emails, 'opened');
+    processEmails('clicks', data.clicks?.emails, 'clicked');
+    processEmails('softBounce', data.softBounce?.emails, 'soft_bounced');
+    processEmails('hardBounce', data.hardBounce?.emails, 'hard_bounced');
+    processEmails('blocked', data.blocked?.emails, 'blocked');
 
     return {
       labels: dates,
@@ -230,7 +248,7 @@ export default function TrackingPage() {
           fill: true,
           tension: 0.4,
           borderWidth: 1,
-          pointRadius: 0,
+          pointRadius: 4,
           pointHoverRadius: 6,
           pointBackgroundColor: '#fff',
           pointHoverBackgroundColor: '#ff8ba7',
@@ -247,7 +265,7 @@ export default function TrackingPage() {
           fill: true,
           tension: 0.4,
           borderWidth: 1,
-          pointRadius: 0,
+          pointRadius: 4,
           pointHoverRadius: 6,
           pointBackgroundColor: '#fff',
           pointHoverBackgroundColor: '#33a1fd',
@@ -264,7 +282,7 @@ export default function TrackingPage() {
           fill: true,
           tension: 0.4,
           borderWidth: 1,
-          pointRadius: 0,
+          pointRadius: 4,
           pointHoverRadius: 6,
           pointBackgroundColor: '#fff',
           pointHoverBackgroundColor: '#4cc9f0',
@@ -281,7 +299,7 @@ export default function TrackingPage() {
           fill: true,
           tension: 0.4,
           borderWidth: 1,
-          pointRadius: 0,
+          pointRadius: 4,
           pointHoverRadius: 6,
           pointBackgroundColor: '#fff',
           pointHoverBackgroundColor: '#ffd60a',
@@ -298,7 +316,7 @@ export default function TrackingPage() {
           fill: true,
           tension: 0.4,
           borderWidth: 1,
-          pointRadius: 0,
+          pointRadius: 4,
           pointHoverRadius: 6,
           pointBackgroundColor: '#fff',
           pointHoverBackgroundColor: '#fb8500',
@@ -315,7 +333,7 @@ export default function TrackingPage() {
           fill: true,
           tension: 0.4,
           borderWidth: 1,
-          pointRadius: 0,
+          pointRadius: 4,
           pointHoverRadius: 6,
           pointBackgroundColor: '#fff',
           pointHoverBackgroundColor: '#219ebc',
@@ -332,7 +350,7 @@ export default function TrackingPage() {
           fill: true,
           tension: 0.4,
           borderWidth: 1,
-          pointRadius: 0,
+          pointRadius: 4,
           pointHoverRadius: 6,
           pointBackgroundColor: '#fff',
           pointHoverBackgroundColor: '#8338ec',
