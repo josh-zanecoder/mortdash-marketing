@@ -41,9 +41,8 @@ export default function AddContactModal({ open, onClose, onSubmit, channels }: {
     setSubmitting(false);
     if (success) {
       setForm({ channel: '', company: '', firstName: '', lastName: '', email: '', phone: '', title: '' });
-      if (onSubmit) onSubmit(form);
       onClose();
-      console.log('Contact added successfully');
+      if (onSubmit) onSubmit(form);
     } else {
       // Optionally show error
       console.error('Failed to add contact');

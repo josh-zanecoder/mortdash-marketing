@@ -14,7 +14,11 @@ interface TemplateData {
   language: string | null;
 }
 
-export default function BeefreeEditor() {
+interface BeeFreeEditorProps {
+  onLoad?: () => void;
+}
+
+export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
   // Create a reference to the DOM element where the editor will be mounted
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);

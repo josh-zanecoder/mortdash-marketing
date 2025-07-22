@@ -54,7 +54,7 @@ export default function Header() {
                     href={`${mortdash_ae_url}/account-executive/dashboard`}
                     className="inline-flex items-center gap-1 px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors"
                   >
-                    AE Dashboard
+                    Back to Mortdash CRM
                   </a>
                 </NavigationMenuLink>
               </NavigationMenuItem>
@@ -100,7 +100,7 @@ export default function Header() {
               onClick={() => setMobileOpen(false)}
             >
               <ArrowLeft className="w-4 h-4" />
-              AE Dashboard
+              Back to Mortdash CRM
             </a>
             <Link href="/dashboard" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Dashboard</Link>
             <Link href="/marketing/contacts" className="py-2 text-lg font-semibold w-full text-center text-[#18181a] hover:text-[#ff6600]" onClick={() => setMobileOpen(false)}>Contact</Link>

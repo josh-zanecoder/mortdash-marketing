@@ -269,7 +269,7 @@ export default function CampaignPage() {
                 </div>
                 <button 
                   onClick={() => router.push('/email-builder')}
-                  className="shrink-0 px-4 py-2.5 bg-[#ff6600] text-white rounded-lg hover:bg-[#ff7a2f] shadow-sm hover:shadow transition-all flex items-center gap-2 font-medium"
+                  className="cursor-pointer shrink-0 px-4 py-2.5 bg-[#ff6600] text-white rounded-lg hover:bg-[#ff7a2f] shadow-sm hover:shadow transition-all flex items-center gap-2 font-medium"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

@@ -77,7 +77,7 @@ export default function DashboardPage() {
           className="inline-flex items-center gap-2 px-4 py-2 bg-white text-[#ff6600] rounded-lg border-2 border-[#ff6600] hover:bg-[#fff7ed] transition-colors font-medium"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to AE Dashboard
+          Back to Mortdash CRM
         </a>
       </div>
 

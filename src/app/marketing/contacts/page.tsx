@@ -49,6 +49,7 @@ export default function ContactsPage() {
     <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center pt-16 px-4">
       <AddContactModal open={showAddModal} onClose={() => {
         setShowAddModal(false);
+      }} onSubmit={() => {
         toast.success('Contact added successfully!', {
           icon: <CheckCircle2 className="text-green-600" />,
         });

@@ -18,7 +18,7 @@ export default function EmailBuilderPage() {
         </div>
 
         {/* Editor */}
-        <div className="w-full">
+        <div id="bee-plugin-container" className="w-full h-[800px] border rounded-lg overflow-hidden">
           <BeeFreeEditor />
         </div>
       </div>

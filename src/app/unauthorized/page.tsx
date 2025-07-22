@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { ExclamationTriangleIcon, ArrowLeftIcon } from "@heroicons/react/24/outline"
+import { mortdash_ae_url } from "@/config/mortdash"
 
 export default function UnauthorizedPage() {
   return (
@@ -37,14 +38,14 @@ export default function UnauthorizedPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              <Link href="/">
+              <a href={`${mortdash_ae_url}/account-executive/dashboard`}>
                 <Button 
-                  className="bg-black hover:bg-gray-800 text-white transition-all duration-200 flex items-center gap-2 mx-auto"
+                  className="cursor-pointer bg-black hover:bg-gray-800 text-white transition-all duration-200 flex items-center gap-2 mx-auto"
                 >
                   <ArrowLeftIcon className="w-4 h-4" />
-                  Return to Home
+                  Return to Main Dashboard
                 </Button>
-              </Link>
+              </a>
             </motion.div>
           </div>
         </Card>
