@@ -635,7 +635,7 @@ export default function TrackingPage() {
                             item.event === 'bounced' ? 'bg-red-50 text-red-700' :
                             'bg-gray-50 text-gray-700'
                           }`}>
-                            {item.event}
+                            {item.event ? item.event.charAt(0).toUpperCase() + item.event.slice(1).toLowerCase() : ''}
                           </span>
                         </TableCell>
                         <TableCell className="text-sm text-gray-600">
