@@ -9,6 +9,7 @@ import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Toaster } from 'sonner';
+import { Suspense } from "react";
 
 const templateFilters = [
   { label: 'All Templates', value: 'all' },
@@ -17,7 +18,7 @@ const templateFilters = [
   { label: 'Others', value: 'others' },
 ];
 
-export default function CampaignPage() {
+function CampaignPageContent() {
   const [selectedList, setSelectedList] = useState('');
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -375,5 +376,13 @@ export default function CampaignPage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CampaignPageContent />
+    </Suspense>
   );
 } 
