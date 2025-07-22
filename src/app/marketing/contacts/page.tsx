@@ -8,6 +8,8 @@ import { useContactStore } from '@/store/useContactStore';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from '@/components/ui/pagination';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
+import EditContactModal from '@/components/EditContactModal';
+import DeleteContactDialog from '@/components/DeleteContactDialog';
 
 
 type ContactType = 'marketing' | 'prospects' | 'clients';
@@ -16,6 +18,12 @@ export default function ContactsPage() {
   const [activeTab, setActiveTab] = useState<ContactType>('marketing');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [editingContact, setEditingContact] = useState<any | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [deletingContact, setDeletingContact] = useState<any | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const updateContact = useContactStore((s) => s.updateContact);
+  const deleteContact = useContactStore((s) => s.deleteContact);
 
   const { marketingContacts, loading, error, fetchContacts, channels, fetchChannels, page, limit, total, setPage, search, setSearch, prospects, prospectsLoading, prospectsError, fetchProspects, clients, clientsLoading, clientsError, fetchClients } = useContactStore();
 
@@ -54,6 +62,42 @@ export default function ContactsPage() {
           icon: <CheckCircle2 className="text-green-600" />,
         });
       }} channels={channels} />
+      <EditContactModal
+        open={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingContact(null);
+        }}
+        onSubmit={async (form) => {
+          // Only close modal and refresh, do not show toast here (handled in modal)
+          setShowEditModal(false);
+          setEditingContact(null);
+        }}
+        channels={channels}
+        contact={editingContact}
+      />
+      <DeleteContactDialog
+        open={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setDeletingContact(null);
+        }}
+        onConfirm={async () => {
+          if (deletingContact) {
+            const success = await deleteContact(deletingContact.id);
+            if (success) {
+              toast.success('Contact deleted successfully!', {
+                icon: <CheckCircle2 className="text-green-600" />,
+              });
+            } else {
+              toast.error('Failed to delete contact.');
+            }
+            setShowDeleteDialog(false);
+            setDeletingContact(null);
+          }
+        }}
+        contact={deletingContact}
+      />
       <UploadContactsModal open={showUploadModal} onClose={() => setShowUploadModal(false)} onSuccess={handleUploadSuccess} />
       <Toaster />
       <div
@@ -142,6 +186,7 @@ export default function ContactsPage() {
                         <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Last Name</th>
                         <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Title</th>
                         <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Company</th>
+                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-900">
@@ -151,6 +196,37 @@ export default function ContactsPage() {
                           <td className="px-4 py-4 text-sm text-gray-800 dark:text-white">{contact.last_name}</td>
                           <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{contact.title}</td>
                           <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{contact.company}</td>
+                          <td className="px-4 py-4 text-sm flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                              onClick={() => {
+                                setEditingContact(contact);
+                                setShowEditModal(true);
+                              }}
+                            >
+                              <span className="sr-only">Update</span>
+                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z" />
+                              </svg>
+                              Update
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-200 hover:bg-red-50"
+                              onClick={() => {
+                                setDeletingContact(contact);
+                                setShowDeleteDialog(true);
+                              }}
+                            >
+                              <span className="sr-only">Delete</span>
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Delete
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

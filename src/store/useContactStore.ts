@@ -28,6 +28,8 @@ interface ContactStore {
   fetchContacts: (opts?: { token?: string; page?: number; limit?: number; search?: string }) => Promise<void>;
   fetchChannels: (token?: string) => Promise<void>;
   addContact: (contact: any, token?: string) => Promise<boolean>;
+  updateContact: (contact: any, token?: string) => Promise<boolean>;
+  deleteContact: (id: number, token?: string) => Promise<boolean>;
   prospects: { company: string; members: any[] }[] | null;
   prospectsLoading: boolean;
   prospectsError: string | null;
@@ -135,6 +137,38 @@ export const useContactStore = create<ContactStore>((set, get) => ({
         body: JSON.stringify(contact),
       });
       if (!res.ok) throw new Error('Failed to add contact');
+      await get().fetchContacts({ token, page: get().page, limit: get().limit });
+      set({ loading: false });
+      return true;
+    } catch (err: any) {
+      set({ error: err.message || 'Unknown error', loading: false });
+      return false;
+    }
+  },
+  updateContact: async (contact: any, token?: string) => {
+    set({ loading: true, error: null });
+    try {
+      const url = token ? `/api/contacts/${contact.id}?token=${encodeURIComponent(token)}` : `/api/contacts/${contact.id}`;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact),
+      });
+      if (!res.ok) throw new Error('Failed to update contact');
+      await get().fetchContacts({ token, page: get().page, limit: get().limit });
+      set({ loading: false });
+      return true;
+    } catch (err: any) {
+      set({ error: err.message || 'Unknown error', loading: false });
+      return false;
+    }
+  },
+  deleteContact: async (id: number, token?: string) => {
+    set({ loading: true, error: null });
+    try {
+      const url = token ? `/api/contacts/${id}?token=${encodeURIComponent(token)}` : `/api/contacts/${id}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete contact');
       await get().fetchContacts({ token, page: get().page, limit: get().limit });
       set({ loading: false });
       return true;
