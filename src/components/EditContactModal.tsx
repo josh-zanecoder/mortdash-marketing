@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useContactStore } from '@/store/useContactStore';
+import { toast } from 'sonner';
+import { CheckCircle2 } from 'lucide-react';
 
 function formatUSPhoneNumber(value: string) {
   const digits = value.replace(/\D/g, '');
@@ -13,14 +14,15 @@ function formatUSPhoneNumber(value: string) {
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
 }
 
-export default function AddContactModal({ open, onClose, onSubmit, channels }: {
+export default function EditContactModal({ open, onClose, onSubmit, channels, contact }: {
   open: boolean;
   onClose: () => void;
   onSubmit?: (form: any) => void;
   channels: { value: string; label: string }[];
+  contact: any;
 }) {
   const [form, setForm] = useState({
-    channel: channels[0]?.value || '',  // Initialize with first channel's value
+    channel: '',
     company: '',
     firstName: '',
     lastName: '',
@@ -29,41 +31,21 @@ export default function AddContactModal({ open, onClose, onSubmit, channels }: {
     title: '',
   });
   const [submitting, setSubmitting] = useState(false);
-  const addContact = useContactStore((s) => s.addContact);
+  const updateContact = useContactStore((s) => s.updateContact);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    // Find the label for the selected channel value
-    const selectedChannel = channels.find(c => c.value === form.channel) || channels[0]; // Fallback to first channel
-    const payload = {
-      branch: selectedChannel.label, // Will always have a value now
-      company: form.company,
-      first_name: form.firstName,
-      last_name: form.lastName,
-      email_address: form.email,
-      title: form.title,
-      phone_number: form.phone,
-    };
-    const success = await addContact(payload);
-    setSubmitting(false);
-    if (success) {
+  useEffect(() => {
+    if (contact) {
       setForm({
-        channel: channels[0]?.value || '', // Reset to first channel
-        company: '',
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        title: ''
+        channel: channels.find(c => c.label === contact.branch)?.value || channels[0]?.value || '',
+        company: contact.company || '',
+        firstName: contact.first_name || '',
+        lastName: contact.last_name || '',
+        email: contact.email_address || contact.email || '',
+        phone: contact.phone_number || contact.phone || '',
+        title: contact.title || '',
       });
-      onClose();
-      if (onSubmit) onSubmit(form);
-    } else {
-      // Optionally show error
-      console.error('Failed to add contact');
     }
-  }
+  }, [contact, channels]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
@@ -74,13 +56,39 @@ export default function AddContactModal({ open, onClose, onSubmit, channels }: {
     }
   }
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    const selectedChannel = channels.find(c => c.value === form.channel) || channels[0];
+    const payload = {
+      id: contact.id,
+      branch: selectedChannel.label,
+      company: form.company,
+      first_name: form.firstName,
+      last_name: form.lastName,
+      email_address: form.email,
+      title: form.title,
+      phone_number: form.phone,
+    };
+    const success = await updateContact(payload);
+    setSubmitting(false);
+    if (success) {
+      onClose();
+      toast.success('Contact updated successfully!', {
+        icon: <CheckCircle2 className="text-green-600" />,
+      });
+      if (onSubmit) onSubmit(form);
+    } else {
+      toast.error('Failed to update contact.');
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
       <DialogContent className="max-w-md w-full p-0 rounded-2xl">
         <DialogHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-2">
-          <DialogTitle className="text-2xl font-bold">Add Marketing Contact</DialogTitle>
-          <DialogClose asChild>
-          </DialogClose>
+          <DialogTitle className="text-2xl font-bold">Edit Marketing Contact</DialogTitle>
+          <DialogClose asChild />
         </DialogHeader>
         <form className="flex flex-col gap-4 px-6 pb-6" onSubmit={handleSubmit}>
           <div>
@@ -139,9 +147,8 @@ export default function AddContactModal({ open, onClose, onSubmit, channels }: {
               id="email"
               name="email"
               value={form.email}
-              onChange={handleChange}
-              placeholder="Enter Email Address"
-              required
+              disabled
+              placeholder="Email cannot be changed"
               type="email"
             />
           </div>
@@ -153,7 +160,6 @@ export default function AddContactModal({ open, onClose, onSubmit, channels }: {
               value={form.phone}
               onChange={handleChange}
               placeholder="(XXX) XXX-XXXX"
-              required
               type="tel"
               maxLength={14}
             />
@@ -184,11 +190,11 @@ export default function AddContactModal({ open, onClose, onSubmit, channels }: {
               className="w-1/2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold py-3 rounded-lg shadow transition-all text-lg"
               disabled={submitting}
             >
-              {submitting ? 'Submitting...' : 'Submit'}
+              {submitting ? 'Updating...' : 'Update'}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
   );
-} 
+}
