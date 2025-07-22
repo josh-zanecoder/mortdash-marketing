@@ -103,8 +103,8 @@ export default function SendTestEmailModal({ open, onClose, html, subject: initi
           recipient,
           name,
           subject,
-          html, // This will be converted to 'template' in the API route
-          templateType
+          template: html, // Send html as template directly
+          template_type: templateType // Use snake_case for backend
         }),
         credentials: 'include',
       });
