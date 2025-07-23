@@ -51,7 +51,7 @@ export default function Header() {
               <NavigationMenuItem>
                 <NavigationMenuLink asChild>
                   <a 
-                    href={`https://ameritrust-test.app.mortdash.com/account-executive/dashboard`}
+                    href={`https://ameritrust-stg.app.mortdash.com/account-executive/dashboard`}
                     className="inline-flex items-center gap-1 px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors"
                   >
                     Back to Mortdash CRM
@@ -95,7 +95,7 @@ export default function Header() {
         {mobileOpen && (
           <div className="absolute top-full left-0 w-full bg-white border-b border-[#f3ede7] shadow-lg flex flex-col items-center py-4 sm:hidden animate-fade-in z-40">
             <a 
-              href={`https://ameritrust-test.app.mortdash.com/account-executive/dashboard`}
+              href={`https://ameritrust-stg.app.mortdash.com/account-executive/dashboard`}
               className="inline-flex items-center justify-center gap-1 py-2 text-lg font-semibold w-full text-center text-[#ff6600] hover:text-[#e65c00] border-b border-[#f3ede7]"
               onClick={() => setMobileOpen(false)}
             >
