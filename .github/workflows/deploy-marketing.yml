@@ -1,21 +1,21 @@
-name: Marketing Deployment
+name: Marketing Staging Deployment
 
 on:
   push:
-    branches: [main]
+    branches: [staging]
   workflow_dispatch:
 
 env:
   PROJECT_ID: ameritrust
-  SERVICE_NAME: ameritrust-mortdash-marketing
+  SERVICE_NAME: ameritrust-mortdash-marketing-staging
   REGION: us-west1
-  ARTIFACT_REGISTRY: us-west1-docker.pkg.dev/ameritrust/ameritrust-mortdash-marketing
+  ARTIFACT_REGISTRY: us-west1-docker.pkg.dev/ameritrust/ameritrust-mortdash-marketing-staging
   SERVICE_ACCOUNT: 448528717330-compute@developer.gserviceaccount.com
-  SECRET_NAME: ameritrust-mortdash-marketing
+  SECRET_NAME: ameritrust-mortdash-marketing-staging
     
 jobs:
   deploy:
-    name: Marketing Deployment
+    name: Marketing Staging Deployment
     runs-on: ubuntu-latest
     permissions:
       contents: read
