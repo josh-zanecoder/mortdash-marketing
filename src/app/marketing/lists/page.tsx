@@ -1,6 +1,6 @@
 'use client'
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Eye } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
 import axios from "axios";
 import { useListsStore } from "@/store/listsStore";
@@ -9,9 +9,105 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ConfirmModal from "@/components/ui/confirm-modal";
 import LoadingModal from "@/components/ui/loading-modal";
 import Toast from "@/components/ui/toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+function MemberDetailsModal() {
+  const { selectedList, setSelectedList, isMemberDetailsOpen, setIsMemberDetailsOpen } = useListsStore();
+
+  if (!selectedList) return null;
+
+  const listType = selectedList.member_details?.type || 'unknown';
+  const memberCount = selectedList.member_details?.members?.length || 0;
+
+  return (
+    <Dialog open={isMemberDetailsOpen} onOpenChange={setIsMemberDetailsOpen}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{selectedList.list_name} - Member Details</DialogTitle>
+          <p className="text-sm text-gray-500 mt-1">
+            Type: {listType.charAt(0).toUpperCase() + listType.slice(1)} • 
+            Total Members: {memberCount}
+          </p>
+        </DialogHeader>
+        <div className="mt-4">
+          <div className="space-y-4">
+            {selectedList.member_details?.members.map((member: any, index: number) => {
+              // For prospects and clients, use member.external_member; for marketing_contact, use member directly
+              const ext = member.external_member || member;
+              const isProspectOrClient = listType === 'prospect' || listType === 'client';
+              
+              return (
+                <div key={member.id} className="p-4 border rounded-lg bg-gray-50">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      {/* Show Prospect/Client Name if available */}
+                      {isProspectOrClient && (member.prospect_id || member.client_id) && (
+                        <div className="text-sm font-medium text-orange-600">
+                          {listType === 'prospect' ? 'Prospect' : 'Client'}: {member.client_name || member.prospect_name}
+                        </div>
+                      )}
+                      <h3 className="font-semibold text-lg text-gray-900">{ext.full_name || 'No name'}</h3>
+                      <p className="text-gray-600">{ext.title || 'No title'}</p>
+                    </div>
+                    <span className="text-sm text-gray-500 bg-white px-2 py-1 rounded-full">#{index + 1}</span>
+                  </div>
+                  
+                  <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                    <div className="col-span-2 md:col-span-1">
+                      <div className="space-y-2">
+                        <div>
+                          <span className="font-medium text-gray-700">Email:</span>{' '}
+                          <span className="text-gray-600">{ext.email || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Phone:</span>{' '}
+                          <span className="text-gray-600">{ext.phone || 'N/A'}</span>
+                        </div>
+                        {ext.company_name && (
+                          <div>
+                            <span className="font-medium text-gray-700">Company:</span>{' '}
+                            <span className="text-gray-600">{ext.company_name}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="col-span-2 md:col-span-1">
+                      <div className="space-y-2">
+                        {(ext.address?.street || ext.address?.city || ext.address?.state || ext.address?.zip) && (
+                          <div>
+                            <span className="font-medium text-gray-700">Address:</span>
+                            <div className="text-gray-600 mt-1">
+                              {ext.address.street && <div>{ext.address.street}</div>}
+                              <div>
+                                {[ext.address.city, ext.address.state, ext.address.zip]
+                                  .filter(Boolean)
+                                  .join(', ')}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {ext.nmls && (
+                          <div>
+                            <span className="font-medium text-gray-700">NMLS:</span>{' '}
+                            <span className="text-gray-600">{ext.nmls}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function ListsPageContent() {
-  const { setLists, setAudienceTypes, setBankChannels, setAudienceTypeFilters } = useListsStore((state) => state);
+  const { setLists, setAudienceTypes, setBankChannels, setAudienceTypeFilters, setSelectedList, setIsMemberDetailsOpen } = useListsStore((state) => state);
   const lists = useListsStore((state) => state.lists);
   const audienceTypes = useListsStore((state) => state.audienceTypes);
   const audienceTypeFilters = useListsStore((state) => state.audienceTypeFilters);
@@ -125,6 +221,11 @@ function ListsPageContent() {
     setConfirmModal({ isOpen: false, id: null, listName: '' });
   };
 
+  const handleMemberDetailsClick = (list: any) => {
+    setSelectedList(list);
+    setIsMemberDetailsOpen(true);
+  };
+
   // Pagination calculations
   const totalPages = Math.ceil(lists.length / itemsPerPage) || 1;
   const paginatedLists = lists.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -180,12 +281,27 @@ function ListsPageContent() {
                           <td className="px-4 py-4 text-sm text-gray-800 dark:text-white">{list.list_name}</td>
                           <td className="px-4 py-4 text-sm text-gray-800 dark:text-white">
                             <div>
-                              <div>{(list as any).audience_type?.name || (list as any).audienceType?.name || '—'}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">
+                                  {(list as any).audience_type?.name || (list as any).audienceType?.name || '—'}
+                                </span>
+                                {list.member_details?.members && (
+                                  <button
+                                    onClick={() => {
+                                      const token = tokenParam;
+                                      const url = token ? `/marketing/lists/${list.id}?token=${token}` : `/marketing/lists/${list.id}`;
+                                      router.push(url);
+                                    }}
+                                    className="text-[#ff6600] hover:text-[#ff7a2f] font-medium cursor-pointer transition-colors"
+                                  >
+                                    ({list.member_details.members.length} {list.member_details.members.length === 1 ? 'Member' : 'Members'})
+                                  </button>
+                                )}
+                              </div>
                               {list.added_by && (
                                 <div className="mt-2">
                                   <span
-                                    className="inline-block px-3 py-1 rounded-md font-bold text-white text-xs"
-                                    style={{ background: "#ff9900" }}
+                                    className="inline-flex items-center px-3 py-1.5 rounded-md text-white text-sm font-medium bg-[#ff9900] whitespace-nowrap"
                                   >
                                     Account Executive = {list.added_by_name}
                                   </span>
@@ -195,14 +311,27 @@ function ListsPageContent() {
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{list.count}</td>
                           <td className="px-4 py-4 text-sm">
-                            <button 
-                              onClick={() => handleDeleteClick(list.id, list.list_name)}
-                              disabled={deleteLoading}
-                              className="px-1 py-1 text-[#ff6600] transition-colors duration-200 rounded-lg hover:bg-[#fff0e6] disabled:opacity-50" 
-                              aria-label="Delete list"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => {
+                                  const token = tokenParam;
+                                  const url = token ? `/marketing/lists/${list.id}?token=${token}` : `/marketing/lists/${list.id}`;
+                                  router.push(url);
+                                }}
+                                className="p-1 text-[#ff6600] transition-colors duration-200 rounded-lg hover:bg-[#fff0e6]" 
+                                aria-label="View members"
+                              >
+                                <Eye size={16} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteClick(list.id, list.list_name)}
+                                disabled={deleteLoading}
+                                className="p-1 text-[#ff6600] transition-colors duration-200 rounded-lg hover:bg-[#fff0e6] disabled:opacity-50" 
+                                aria-label="Delete list"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -275,6 +404,9 @@ function ListsPageContent() {
         message={toast.message}
         type={toast.type}
       />
+
+      {/* Add MemberDetailsModal */}
+      <MemberDetailsModal />
     </main>
   );
 }

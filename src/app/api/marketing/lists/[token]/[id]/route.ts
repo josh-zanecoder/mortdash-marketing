@@ -8,7 +8,7 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
   const { token, id } = await context.params;
 
   try {
-    const res = await axios.post(`${baseUrl}/account-executive/delete-marketing-list/${id}`, {}, {
+    const res = await axios.delete(`${baseUrl}/account-executive/delete-marketing-list/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
