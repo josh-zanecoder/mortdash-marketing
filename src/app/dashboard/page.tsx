@@ -73,7 +73,7 @@ export default function DashboardPage() {
       {/* Back to AE Dashboard Button */}
       <div className="w-full max-w-6xl">
         <a 
-          href={`https://ameritrust-stg.app.mortdash.com/account-executive/dashboard`}
+          href={`${mortdash_ae_url}/account-executive/dashboard`}
           className="inline-flex items-center gap-2 px-4 py-2 bg-white text-[#ff6600] rounded-lg border-2 border-[#ff6600] hover:bg-[#fff7ed] transition-colors font-medium"
         >
           <ArrowLeft className="w-4 h-4" />
