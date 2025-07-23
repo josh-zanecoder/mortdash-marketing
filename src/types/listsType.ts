@@ -31,10 +31,59 @@ export interface MarketingList {
   updated_at: string;
   deleted_at: string | null;
   added_by: number;
-  added_by_name: string;
   recipient_count: number;
   has_member_count: number;
-  audience_type: AudienceType;
+  added_by_name: string;
+  audience_type_name: string;
+  audience_type?: {
+    id: number;
+    name: string;
+  };
+  audienceType?: {
+    id: number;
+    name: string;
+  };
+  member_details?: {
+    type: 'prospect' | 'client' | 'marketing_contact' | null;
+    members: Array<{
+      id: number;
+      email: string | null;
+      phone: string | null;
+      first_name: string;
+      last_name: string;
+      full_name: string;
+      title: string | null;
+      address: {
+        street: string | null;
+        city: string | null;
+        state: string | null;
+        zip: string | null;
+      };
+      company_name: string | null;
+      prospect_id?: number;
+      client_id?: number;
+      external_member?: {
+        id: number;
+        full_name: string;
+        email: string;
+        phone: string;
+        title: string;
+        address: {
+          street: string;
+          city: string;
+          state: string;
+          zip: string;
+        };
+        nmls: string;
+        rate_sheet: boolean;
+        roles: {
+          is_processor: boolean;
+          is_loan_officer: boolean;
+          is_supervisor: boolean;
+        };
+      };
+    }>;
+  };
   marketing_list_filter: MarketingListFilter[];
 }
 
@@ -63,55 +112,56 @@ export interface AudienceTypeApiResponse {
 }
 
 export enum State {
-  Alabama = "AL",
-  Alaska = "AK",
-  Arizona = "AZ",
-  Arkansas = "AR",
-  California = "CA",
-  Colorado = "CO",
-  Connecticut = "CT",
-  Delaware = "DE",
-  DistrictOfColumbia = "DC",
-  Florida = "FL",
-  Georgia = "GA",
-  Hawaii = "HI",
-  Idaho = "ID",
-  Illinois = "IL",
-  Indiana = "IN",
-  Iowa = "IA",
-  Kansas = "KS",
-  Kentucky = "KY",
-  Louisiana = "LA",
-  Maine = "ME",
-  Maryland = "MD",
-  Massachusetts = "MA",
-  Michigan = "MI",
-  Minnesota = "MN",
-  Mississippi = "MS",
-  Missouri = "MO",
-  Montana = "MT",
-  Nebraska = "NE",
-  Nevada = "NV",
-  NewHampshire = "NH",
-  NewJersey = "NJ",
-  NewMexico = "NM",
-  NewYork = "NY",
-  NorthCarolina = "NC",
-  NorthDakota = "ND",
-  Ohio = "OH",
-  Oklahoma = "OK",
-  Oregon = "OR",
-  Pennsylvania = "PA",
-  RhodeIsland = "RI",
-  SouthCarolina = "SC",
-  SouthDakota = "SD",
-  Tennessee = "TN",
-  Texas = "TX",
-  Utah = "UT",
-  Vermont = "VT",
-  Virginia = "VA",
-  Washington = "WA",
-  WestVirginia = "WV",
-  Wisconsin = "WI",
-  Wyoming = "WY",
+  AL = "Alabama",
+  AK = "Alaska",
+  AZ = "Arizona",
+  AR = "Arkansas",
+  CA = "California",
+  CO = "Colorado",
+  CT = "Connecticut",
+  DE = "Delaware",
+  DC = "District of Columbia",
+  FL = "Florida",
+  GA = "Georgia",
+  HI = "Hawaii",
+  ID = "Idaho",
+  IL = "Illinois",
+  IN = "Indiana",
+  IA = "Iowa",
+  KS = "Kansas",
+  KY = "Kentucky",
+  LA = "Louisiana",
+  ME = "Maine",
+  MD = "Maryland",
+  MA = "Massachusetts",
+  MI = "Michigan",
+  MN = "Minnesota",
+  MS = "Mississippi",
+  MO = "Missouri",
+  MT = "Montana",
+  NE = "Nebraska",
+  NV = "Nevada",
+  NH = "New Hampshire",
+  NJ = "New Jersey",
+  NM = "New Mexico",
+  NY = "New York",
+  NC = "North Carolina",
+  ND = "North Dakota",
+  OH = "Ohio",
+  OK = "Oklahoma",
+  OR = "Oregon",
+  PA = "Pennsylvania",
+  RI = "Rhode Island",
+  SC = "South Carolina",
+  SD = "South Dakota",
+  TN = "Tennessee",
+  TX = "Texas",
+  UT = "Utah",
+  VT = "Vermont",
+  VA = "Virginia",
+  WA = "Washington",
+  WV = "West Virginia",
+  WI = "Wisconsin",
+  WY = "Wyoming",
 }
+
