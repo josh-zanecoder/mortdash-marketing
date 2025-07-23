@@ -11,6 +11,10 @@ interface ListsStore {
   setAudienceTypeFilters: (audienceTypeFilters: AudienceTypeFilter[]) => void;
   bankChannels: BankChannel[];
   setBankChannels: (bankChannels: BankChannel[]) => void;
+  selectedList: MarketingList | null;
+  setSelectedList: (list: MarketingList | null) => void;
+  isMemberDetailsOpen: boolean;
+  setIsMemberDetailsOpen: (isOpen: boolean) => void;
 }
 
 export const useListsStore = create<ListsStore>((set) => ({
@@ -23,4 +27,8 @@ export const useListsStore = create<ListsStore>((set) => ({
   setAudienceTypeFilters: (audienceTypeFilters) => set({ audienceTypeFilters }),
   bankChannels: [],
   setBankChannels: (bankChannels) => set({ bankChannels }),
+  selectedList: null,
+  setSelectedList: (list) => set({ selectedList: list }),
+  isMemberDetailsOpen: false,
+  setIsMemberDetailsOpen: (isOpen) => set({ isMemberDetailsOpen: isOpen }),
 }))
