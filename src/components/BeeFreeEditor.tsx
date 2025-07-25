@@ -70,11 +70,13 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
           body: JSON.stringify({ uid: 'demo-user' })
         }).then(res => res.json());
 
-              // Initialize the Beefree SDK with the authentication token
-      const bee = new BeefreeSDK(token);
-      
-      // Start the editor (merge tags will be detected automatically from content)
-      bee.start(beeConfig, {});
+        // Initialize the Beefree SDK with the authentication token
+        const bee = new BeefreeSDK(token);
+        
+        // Start the editor (merge tags will be detected automatically from content)
+        bee.start(beeConfig, {});
+        // Call onLoad after the editor is started
+        if (onLoad) onLoad();
       } catch (error) {
         console.error('Failed to initialize Beefree editor:', error);
         toast.error('Failed to initialize editor', {
@@ -97,6 +99,7 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
     version: number;
     language: string | null;
     email_template_id?: number;
+    email_template_category_id?: number;
   }) => {
     setIsSaving(true);
     try {
@@ -118,6 +121,10 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
         // Add email_template_id if provided (for updates)
         if (templateData.email_template_id) {
           formData.append('email_template_id', templateData.email_template_id.toString());
+        }
+        // Add email_template_category_id if provided
+        if (templateData.email_template_category_id) {
+          formData.append('email_template_category_id', templateData.email_template_category_id.toString());
         }
         
         // Automatically extract merge tags from HTML content

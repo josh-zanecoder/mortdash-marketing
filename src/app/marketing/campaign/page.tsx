@@ -12,13 +12,6 @@ import { Toaster } from 'sonner';
 import { Suspense } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 
-const templateFilters = [
-  { label: 'All Templates', value: 'all' },
-  { label: 'Holidays', value: 'holidays' },
-  { label: 'DSCR', value: 'dscr' },
-  { label: 'Others', value: 'others' },
-];
-
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -135,7 +128,7 @@ function SearchableSelect({
 function CampaignPageContent() {
   const [selectedList, setSelectedList] = useState('');
   const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeFilter, setActiveFilter] = useState<number | 'all'>('all');
   const [loading, setLoading] = useState(false);
   const lists = useListsStore((state) => state.lists);
   const setLists = useListsStore((state) => state.setLists);
@@ -154,6 +147,15 @@ function CampaignPageContent() {
   const router = useRouter();
   // Campaign templates store
   const { templates, loading: templatesLoading, fetchTemplates, clearTemplates } = useCampaignStore();
+  const [categories, setCategories] = useState<{ 
+    id: number; 
+    slug: string; 
+    name: string; 
+    created_at: string; 
+    updated_at: string; 
+  }[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [archivingTemplate, setArchivingTemplate] = useState<number | null>(null);
 
   // Clear templates when component unmounts or when selectedList changes to empty
   useEffect(() => {
@@ -181,6 +183,22 @@ function CampaignPageContent() {
     fetchLists();
   }, [tokenParam, setLists]);
 
+  // Fetch categories on mount
+  useEffect(() => {
+    setCategoriesLoading(true);
+    fetch('/api/campaign/get-email-categories')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.data)) {
+          setCategories(data.data);
+        } else {
+          setCategories([]);
+        }
+      })
+      .catch(() => setCategories([]))
+      .finally(() => setCategoriesLoading(false));
+  }, []);
+
   // Fetch templates when a list is selected
   useEffect(() => {
     const list = lists.find(l => String(l.id) === String(selectedList));
@@ -192,7 +210,7 @@ function CampaignPageContent() {
   const filteredTemplates = templates
     .filter((tpl) => tpl.is_archived === 0)
     .filter((tpl) => {
-      const matchesFilter = activeFilter === 'all' || tpl.category === activeFilter;
+      const matchesFilter = activeFilter === 'all' || tpl.email_template_category_id === activeFilter;
       const matchesSearch = tpl.name?.toLowerCase().includes(search.toLowerCase());
       return matchesFilter && matchesSearch;
     });
@@ -281,6 +299,44 @@ function CampaignPageContent() {
         duration: 5000,
       });
       console.error('Failed to send campaign:', err);
+    }
+  };
+
+  // Archive/Unarchive handler
+  const handleArchive = async (templateId: number, isCurrentlyArchived: boolean) => {
+    setArchivingTemplate(templateId);
+    try {
+      const response = await fetch('/api/campaign/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: templateId,
+          archive: !isCurrentlyArchived // Toggle the archive status
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to archive template');
+      }
+
+      // Refresh templates to get updated archive status
+      const list = lists.find(l => String(l.id) === String(selectedList));
+      const audience_type_id = list?.audience_type_id || null;
+      await fetchTemplates(audience_type_id, false);
+
+      toast.success(
+        isCurrentlyArchived 
+          ? 'Template unarchived successfully!' 
+          : 'Template archived successfully!'
+      );
+    } catch (error) {
+      console.error('Archive error:', error);
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to archive template'
+      );
+    } finally {
+      setArchivingTemplate(null);
     }
   };
 
@@ -512,17 +568,30 @@ function CampaignPageContent() {
                         />
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {templateFilters.map(f => (
+                        <button
+                          className={`px-4 py-2 rounded-lg text-[15px] font-medium transition-colors ${
+                            activeFilter === 'all'
+                              ? 'bg-[#ff6600] text-white' 
+                              : 'bg-gray-50 text-[#666666] hover:bg-gray-100'
+                          }`}
+                          onClick={() => setActiveFilter('all')}
+                        >
+                          All Templates
+                        </button>
+                        {categoriesLoading && (
+                          <span className="px-4 py-2 text-[15px] text-gray-400">Loading...</span>
+                        )}
+                        {!categoriesLoading && categories.map(cat => (
                           <button
-                            key={f.value}
+                            key={cat.id}
                             className={`px-4 py-2 rounded-lg text-[15px] font-medium transition-colors ${
-                              activeFilter === f.value
+                              activeFilter === cat.id
                                 ? 'bg-[#ff6600] text-white' 
                                 : 'bg-gray-50 text-[#666666] hover:bg-gray-100'
                             }`}
-                            onClick={() => setActiveFilter(f.value)}
+                            onClick={() => setActiveFilter(cat.id)}
                           >
-                            {f.label}
+                            {cat.name}
                           </button>
                         ))}
                       </div>
@@ -595,8 +664,22 @@ function CampaignPageContent() {
                                 <div className="text-[13px] text-[#666666]">
                                   {new Date(tpl.date_created).toLocaleDateString()}
                                 </div>
-                                <button className="text-[#666666] hover:text-[#ff6600] p-1.5 rounded-full hover:bg-[#ff6600]/5 transition-colors">
-                                  <Archive className="w-4 h-4" />
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleArchive(tpl.id, tpl.is_archived_by_user);
+                                  }}
+                                  disabled={archivingTemplate === tpl.id}
+                                  className={`text-[#666666] hover:text-[#ff6600] p-1.5 rounded-full hover:bg-[#ff6600]/5 transition-colors ${
+                                    tpl.is_archived_by_user ? 'text-[#ff6600] bg-[#ff6600]/10' : ''
+                                  }`}
+                                  title={tpl.is_archived_by_user ? 'Unarchive template' : 'Archive template'}
+                                >
+                                  {archivingTemplate === tpl.id ? (
+                                    <div className="w-4 h-4 border-2 border-[#ff6600]/30 border-t-[#ff6600] rounded-full animate-spin" />
+                                  ) : (
+                                    <Archive className="w-4 h-4" />
+                                  )}
                                 </button>
                               </div>
                             </div>
