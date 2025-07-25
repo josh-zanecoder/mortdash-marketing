@@ -39,7 +39,17 @@ function CampaignPageContent() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const router = useRouter();
   // Campaign templates store
-  const { templates, loading: templatesLoading, fetchTemplates } = useCampaignStore();
+  const { templates, loading: templatesLoading, fetchTemplates, clearTemplates } = useCampaignStore();
+
+  // Clear templates when component unmounts or when selectedList changes to empty
+  useEffect(() => {
+    if (!selectedList) {
+      clearTemplates();
+    }
+    return () => {
+      clearTemplates(); // Clear templates on unmount
+    };
+  }, [selectedList, clearTemplates]);
 
   useEffect(() => {
     const fetchLists = async () => {
@@ -59,11 +69,9 @@ function CampaignPageContent() {
 
   // Fetch templates when a list is selected
   useEffect(() => {
-    if (!selectedList) return;
     const list = lists.find(l => String(l.id) === String(selectedList));
-    if (list && list.audience_type_id) {
-      fetchTemplates(list.audience_type_id, false);
-    }
+    const audience_type_id = list?.audience_type_id || null;
+    fetchTemplates(audience_type_id, false);
   }, [selectedList, lists, fetchTemplates]);
 
   // Filter templates by search, filter, and is_archived === 0
