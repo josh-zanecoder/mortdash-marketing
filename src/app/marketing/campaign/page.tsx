@@ -1,7 +1,7 @@
 'use client'
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
-import { Archive, Eye, X } from 'lucide-react';
+import { Archive, Eye, X, Plus, Search, ChevronDown } from 'lucide-react';
 import { useListsStore } from '@/store/listsStore';
 import { useCampaignStore } from '@/store/useCampaignStore';
 import axios from 'axios';
@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Toaster } from 'sonner';
 import { Suspense } from "react";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 
 const templateFilters = [
   { label: 'All Templates', value: 'all' },
@@ -17,6 +18,119 @@ const templateFilters = [
   { label: 'DSCR', value: 'dscr' },
   { label: 'Others', value: 'others' },
 ];
+
+const fadeIn = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 20 }
+};
+
+const pageTransition = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 40
+};
+
+interface MarketingListOption {
+  id: number | string;
+  list_name: string;
+}
+
+interface SearchableSelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: MarketingListOption[];
+  disabled?: boolean;
+  placeholder?: string;
+}
+
+function SearchableSelect({ 
+  value, 
+  onChange, 
+  options, 
+  disabled = false, 
+  placeholder = "Search marketing lists..." 
+}: SearchableSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filteredOptions = options.filter(option => 
+    option.list_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selectedOption = options.find(opt => String(opt.id) === String(value));
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <div
+        className={`flex items-center justify-between w-full border border-gray-200 rounded-lg px-4 py-2.5 bg-white cursor-pointer ${
+          disabled ? 'bg-gray-50 cursor-not-allowed' : 'hover:border-gray-300'
+        }`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+      >
+        <div className="flex-1 truncate">
+          {selectedOption ? selectedOption.list_name : 'Select a marketing list'}
+        </div>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'transform rotate-180' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
+          <div className="p-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                className="w-full pl-9 pr-4 py-2 text-[15px] border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6600]/20"
+                placeholder={placeholder}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
+          <div className="max-h-60 overflow-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-gray-500">No results found</div>
+            ) : (
+              filteredOptions.map((option) => (
+                <div
+                  key={option.id}
+                  className={`px-4 py-2.5 text-[15px] cursor-pointer transition-colors ${
+                    String(value) === String(option.id)
+                      ? 'bg-[#ff6600]/5 text-[#ff6600]'
+                      : 'hover:bg-gray-50 text-gray-700'
+                  }`}
+                  onClick={() => {
+                    onChange(String(option.id));
+                    setIsOpen(false);
+                    setSearchTerm('');
+                  }}
+                >
+                  {option.list_name}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CampaignPageContent() {
   const [selectedList, setSelectedList] = useState('');
@@ -250,137 +364,251 @@ function CampaignPageContent() {
       )}
 
       {/* Main Content */}
-      <main className="min-h-screen bg-gradient-to-b from-[#fdf6f1] to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <main className="min-h-screen bg-[#fdf6f1]">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Page Header */}
-          <div className="mb-8 sm:mb-12">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Email Templates</h1>
-            <p className="mt-2 text-gray-600">Create and manage your email marketing templates</p>
-          </div>
+          <motion.div 
+            initial={fadeIn.initial}
+            animate={fadeIn.animate}
+            className="mb-8"
+          >
+            <h1 className="text-2xl font-bold text-[#1a1a1a] tracking-[-0.02em] mb-1">
+              Email Campaign
+            </h1>
+            <p className="text-[15px] text-[#666666]">
+              Create and manage your email marketing campaigns
+            </p>
+          </motion.div>
 
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
-            {/* Marketing List Selector */}
-            <div className="p-6 sm:p-8 border-b border-gray-100">
-              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                <div className="flex-1 max-w-md">
-                  <label className="block font-medium text-sm text-gray-700 mb-2">Marketing List</label>
-                  <select
-                    className="w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6600]/30 bg-white disabled:bg-gray-50"
-                    value={selectedList}
-                    onChange={e => setSelectedList(e.target.value)}
-                    disabled={loading}
-                  >
-                    <option value="">Select a marketing list</option>
-                    {lists.map(list => (
-                      <option key={list.id} value={list.id}>{list.list_name}</option>
-                    ))}
-                  </select>
-                </div>
-                <button 
-                  onClick={() => router.push('/email-builder')}
-                  className="cursor-pointer shrink-0 px-4 py-2.5 bg-[#ff6600] text-white rounded-lg hover:bg-[#ff7a2f] shadow-sm hover:shadow transition-all flex items-center gap-2 font-medium"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Create Template
-                </button>
-              </div>
-            </div>
-
-            {/* Search and Filters */}
-            <div className="p-6 sm:p-8 bg-gray-50 border-b border-gray-100">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    placeholder="Search templates..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#ff6600]/30"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                  />
-                  <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {templateFilters.map(f => (
-                    <button
-                      key={f.value}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        activeFilter === f.value
-                          ? 'bg-[#ff6600] text-white shadow-sm' 
-                          : 'bg-white text-gray-700 hover:bg-gray-100'
-                      }`}
-                      onClick={() => setActiveFilter(f.value)}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Templates Grid */}
-            <div className="p-6 sm:p-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {templatesLoading ? (
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="aspect-[4/3] bg-gray-200 rounded-xl" />
-                      <div className="mt-4 space-y-3">
-                        <div className="h-4 bg-gray-200 rounded w-3/4" />
-                        <div className="h-4 bg-gray-200 rounded w-1/2" />
-                      </div>
-                    </div>
-                  ))
-                ) : filteredTemplates.length === 0 ? (
-                  <div className="col-span-full py-12 text-center">
-                    <div className="text-gray-400 text-lg mb-2">No templates found</div>
-                    <div className="text-gray-500 text-sm">Try adjusting your search or filters</div>
+          <motion.div 
+            layout
+            transition={pageTransition}
+            className="relative"
+          >
+            {!selectedList ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="max-w-2xl mx-auto"
+              >
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-semibold text-[#1a1a1a] mb-3">Select Marketing List</h2>
+                    <p className="text-[15px] text-[#666666]">Choose a marketing list to start creating your campaign</p>
                   </div>
-                ) : (
-                  filteredTemplates.map(tpl => (
-                    <div
-                      key={tpl.id}
-                      className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1"
-                    >
-                      <div className="relative aspect-[4/3] bg-gray-50">
-                        <img 
-                          src={tpl.thumbnail} 
-                          alt={tpl.name}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <button
-                            onClick={() => handlePreview(tpl)}
-                            className="bg-white text-gray-900 px-6 py-2.5 rounded-lg font-medium transform -translate-y-2 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2"
-                          >
-                            <Eye className="w-5 h-5" />
-                            Preview
-                          </button>
-                        </div>
+
+                  <div className="space-y-6">
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-[#666666] mb-2">Marketing List</label>
+                      <SearchableSelect
+                        value={selectedList}
+                        onChange={setSelectedList}
+                        options={lists}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    {loading && (
+                      <div className="flex justify-center py-4">
+                        <div className="w-6 h-6 border-2 border-[#ff6600]/30 border-t-[#ff6600] rounded-full animate-spin" />
                       </div>
-                      <div className="p-4">
-                        <h3 className="font-medium text-gray-900 mb-2 truncate">{tpl.name}</h3>
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-gray-500 flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {new Date(tpl.date_created).toLocaleDateString()}
-                          </div>
-                          <button className="text-[#ff6600] hover:text-[#ff7a2f] p-1 rounded-full hover:bg-[#ff6600]/5 transition-colors">
-                            <Archive className="w-4 h-4" />
+                    )}
+
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <p className="text-[15px] text-[#666666]">
+                        Need to create a new list?
+                      </p>
+                      <button
+                        onClick={() => {
+                          const token = tokenParam;
+                          const url = token ? `/marketing/lists/new?token=${token}` : '/marketing/lists/new';
+                          router.push(url);
+                        }}
+                        className="text-[#ff6600] hover:text-[#ff7a2f] text-[15px] font-medium transition-colors"
+                      >
+                        Create New List
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-8"
+              >
+                {/* List Selection Bar */}
+                <motion.div 
+                  layout="position"
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
+                >
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                    <div className="w-full sm:w-[300px]">
+                      <label className="block text-sm font-medium text-[#666666] mb-2">Marketing List</label>
+                      <SearchableSelect
+                        value={selectedList}
+                        onChange={setSelectedList}
+                        options={lists}
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="flex items-center gap-4 ml-auto">
+                      <button
+                        onClick={() => {
+                          const token = tokenParam;
+                          const url = token ? `/marketing/lists/new?token=${token}` : '/marketing/lists/new';
+                          router.push(url);
+                        }}
+                        className="text-[#ff6600] hover:text-[#ff7a2f] text-[15px] font-medium transition-colors"
+                      >
+                        Create New List
+                      </button>
+                      <button 
+                        onClick={() => router.push('/email-builder')}
+                        className="bg-[#ff6600] text-white rounded-lg px-5 py-2.5 font-medium hover:bg-[#ff7a2f] transition-colors inline-flex items-center gap-2"
+                      >
+                        <Plus className="w-5 h-5" />
+                        Create Template
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Templates Section */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100"
+                >
+                  {/* Templates Header */}
+                  <motion.div 
+                    layout="position"
+                    className="p-6 border-b border-gray-100"
+                  >
+                    <h2 className="text-xl font-semibold text-[#1a1a1a] mb-1">Email Templates</h2>
+                    <p className="text-[15px] text-[#666666]">Select a template for your campaign</p>
+                  </motion.div>
+
+                  {/* Search and Filters */}
+                  <motion.div 
+                    layout="position"
+                    className="p-6 border-b border-gray-100"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      <div className="relative flex-1 max-w-2xl">
+                        <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search templates..."
+                          className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#ff6600]/20 text-[15px]"
+                          value={search}
+                          onChange={e => setSearch(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {templateFilters.map(f => (
+                          <button
+                            key={f.value}
+                            className={`px-4 py-2 rounded-lg text-[15px] font-medium transition-colors ${
+                              activeFilter === f.value
+                                ? 'bg-[#ff6600] text-white' 
+                                : 'bg-gray-50 text-[#666666] hover:bg-gray-100'
+                            }`}
+                            onClick={() => setActiveFilter(f.value)}
+                          >
+                            {f.label}
                           </button>
-                        </div>
+                        ))}
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
+                  </motion.div>
+
+                  {/* Templates Grid */}
+                  <motion.div 
+                    layout="position"
+                    className="p-6"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {templatesLoading ? (
+                        Array.from({ length: 8 }).map((_, i) => (
+                          <motion.div 
+                            key={i}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: i * 0.1 }}
+                            className="animate-pulse"
+                          >
+                            <div className="aspect-[4/3] bg-gray-100 rounded-xl" />
+                            <div className="mt-4 space-y-2">
+                              <div className="h-4 bg-gray-100 rounded w-3/4" />
+                              <div className="h-4 bg-gray-100 rounded w-1/2" />
+                            </div>
+                          </motion.div>
+                        ))
+                      ) : filteredTemplates.length === 0 ? (
+                        <motion.div 
+                          initial={fadeIn.initial}
+                          animate={fadeIn.animate}
+                          className="col-span-full py-12 text-center"
+                        >
+                          <div className="text-[#666666] text-lg mb-2">No templates found</div>
+                          <div className="text-[#999999] text-[15px]">Try adjusting your search or filters</div>
+                        </motion.div>
+                      ) : (
+                        filteredTemplates.map((tpl, index) => (
+                          <motion.div
+                            key={tpl.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ 
+                              delay: index * 0.1,
+                              duration: 0.3,
+                              ease: "easeOut"
+                            }}
+                            className="group rounded-xl border border-gray-100 overflow-hidden bg-white transition-all duration-300 hover:shadow-lg"
+                          >
+                            <div className="relative aspect-[4/3] bg-gray-50">
+                              <img 
+                                src={tpl.thumbnail} 
+                                alt={tpl.name}
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                                <button
+                                  onClick={() => handlePreview(tpl)}
+                                  className="bg-white text-[#1a1a1a] px-6 py-2.5 rounded-lg font-medium transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2 hover:bg-gray-50"
+                                >
+                                  <Eye className="w-5 h-5" />
+                                  Preview
+                                </button>
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <h3 className="font-medium text-[#1a1a1a] mb-2 truncate">{tpl.name}</h3>
+                              <div className="flex items-center justify-between">
+                                <div className="text-[13px] text-[#666666]">
+                                  {new Date(tpl.date_created).toLocaleDateString()}
+                                </div>
+                                <button className="text-[#666666] hover:text-[#ff6600] p-1.5 rounded-full hover:bg-[#ff6600]/5 transition-colors">
+                                  <Archive className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                </motion.div>
+              </motion.div>
+            )}
+          </motion.div>
         </div>
       </main>
     </>
