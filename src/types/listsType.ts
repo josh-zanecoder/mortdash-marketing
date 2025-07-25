@@ -1,26 +1,3 @@
-export interface AudienceType {
-  value: number;
-  name: string;
-}
-
-export interface AudienceTypeFilter {
-  value: number;
-  name: string;
-  audience_type_id: number;
-  type: string;
-}
-
-export interface MarketingListFilter {
-  id: number;
-  marketing_list_id: number;
-  audience_type_filter_id: number | null;
-  value: string;
-  created_at: string | null;
-  updated_at: string | null;
-  deleted_at: string | null;
-  audience_type_filter: AudienceTypeFilter | null;
-}
-
 export interface MarketingList {
   id: number;
   list_name: string;
@@ -35,6 +12,10 @@ export interface MarketingList {
   has_member_count: number;
   added_by_name: string;
   audience_type_name: string;
+  member_details?: {
+    type: string;
+    members: any[];
+  };
   audience_type?: {
     id: number;
     name: string;
@@ -43,48 +24,28 @@ export interface MarketingList {
     id: number;
     name: string;
   };
-  member_details?: {
-    type: 'prospect' | 'client' | 'marketing_contact' | null;
-    members: Array<{
-      id: number;
-      email: string | null;
-      phone: string | null;
-      first_name: string;
-      last_name: string;
-      full_name: string;
-      title: string | null;
-      address: {
-        street: string | null;
-        city: string | null;
-        state: string | null;
-        zip: string | null;
-      };
-      company_name: string | null;
-      prospect_id?: number;
-      client_id?: number;
-      external_member?: {
-        id: number;
-        full_name: string;
-        email: string;
-        phone: string;
-        title: string;
-        address: {
-          street: string;
-          city: string;
-          state: string;
-          zip: string;
-        };
-        nmls: string;
-        rate_sheet: boolean;
-        roles: {
-          is_processor: boolean;
-          is_loan_officer: boolean;
-          is_supervisor: boolean;
-        };
-      };
-    }>;
-  };
-  marketing_list_filter: MarketingListFilter[];
+  marketing_list_filter?: MarketingListFilter[];
+}
+
+export interface AudienceType {
+  value: number;  // Changed back to value
+  name: string;
+}
+
+export interface AudienceTypeFilter {
+  value: number;  // Changed to value
+  name: string;
+  audience_type_id: number;
+  type: string;
+  code?: string;  // Made optional since it's not in API response
+}
+
+export interface MarketingListFilter {
+  id?: number;
+  marketing_list_id?: number;
+  audience_type_filter_id: number;
+  value: string;
+  audience_type_filter?: AudienceTypeFilter;
 }
 
 export interface MarketingListApiResponse {
@@ -95,8 +56,8 @@ export interface MarketingListApiResponse {
 }
 
 export interface BankChannel {
+  value: number;  // Changed to value
   name: string;
-  value: number;
 }
 
 export interface BankChannelApiResponse {

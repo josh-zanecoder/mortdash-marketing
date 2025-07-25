@@ -246,17 +246,24 @@ function AddMarketingListPageContent() {
   
   const updateFilter = (idx: number, key: keyof FilterRow, value: any) => {
     const newFilters = [...filters];
-    newFilters[idx] = { ...newFilters[idx], [key]: value };
-  
-    // Reset value if filter type changes
+    
+    // If updating filter type
     if (key === 'filter_type_id') {
-      const selected = audienceTypeFilters.find(ft => ft.value === value);
-      newFilters[idx].filter_type_name = selected?.name || '';
-      newFilters[idx].filter_value = ''; // reset selected value
-      newFilters[idx].filter_value_id = '';
-      newFilters[idx].filter_value_name = '';
+      const selected = audienceTypeFilters.find(ft => ft.value === Number(value));
+      if (selected) {
+        newFilters[idx] = {
+          ...newFilters[idx],
+          filter_type_id: Number(value),
+          filter_type_name: selected.code || selected.name, // Use code for type identification
+          filter_value: '',
+          filter_value_id: '',
+          filter_value_name: ''
+        };
+      }
+    } else {
+      newFilters[idx] = { ...newFilters[idx], [key]: value };
     }
-  
+
     setFilters(newFilters);
   };
   const removeFilter = (idx: number) => setFilters(filters.filter((_, i) => i !== idx));
@@ -283,9 +290,11 @@ function AddMarketingListPageContent() {
               onChange={(e) => handleAudienceTypeChange(Number(e.target.value))}
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]"
             >
-              <option value="" disabled>Select Audience Type</option>
+              <option value="">Select Audience Type</option>
               {audienceTypes.map((at) => (
-                <option key={at.value} value={at.value}>{at.name}</option>
+                <option key={`audience-type-${at.value}-${at.name}`} value={at.value}>
+                  {at.name}
+                </option>
               ))}
             </select>
           </div>
@@ -299,84 +308,86 @@ function AddMarketingListPageContent() {
                 <select
                   value={f.filter_type_id ?? ''}
                   onChange={(e) => {
-                    updateFilter(idx, 'filter_type_id', Number(e.target.value));
+                    const selectedFilter = audienceTypeFilters.find(
+                      ft => ft.value === Number(e.target.value)
+                    );
+                    if (selectedFilter) {
+                      const newFilters = [...filters];
+                      newFilters[idx] = {
+                        ...newFilters[idx],
+                        filter_type_id: selectedFilter.value,
+                        filter_type_name: selectedFilter.name,
+                        filter_value: '',
+                        filter_value_id: '',
+                        filter_value_name: ''
+                      };
+                      setFilters(newFilters);
+                    }
                   }}
                   className="px-3 py-2 border rounded-lg flex-1"
                 >
-                  <option value="" disabled>Select filter</option>
+                  <option value="">Select filter</option>
                   {audienceTypeFilters
                     .filter(ft => ft.audience_type_id === audienceTypeId && ft.type === 'all')
-                    .map(ft => {
-                      return (
-                        <option key={ft.value} value={ft.value}>{ft.name}</option>
-                      );
-                    })}
+                    .map(ft => (
+                      <option key={`filter-type-${ft.value}-${ft.name}`} value={ft.value}>
+                        {ft.name}
+                      </option>
+                    ))}
                 </select>
 
-                <span>=</span>
+                <span className="text-gray-500">=</span>
 
                 {/* Filter Value Dropdown */}
                 {f.filter_type_name === 'Channel' && (
                   <select
                     value={f.filter_value || ''}
                     onChange={(e) => {
-                      const selectedChannel = bankChannels.find(channel => String(channel.value) === e.target.value);
-                      
-                      // Update all filter fields at once
-                      const newFilters = [...filters];
-                      newFilters[idx] = {
-                        ...newFilters[idx],
-                        filter_value: e.target.value,
-                        filter_value_id: e.target.value,
-                        filter_value_name: selectedChannel?.name || ''
-                      };
-                      setFilters(newFilters);
+                      const selectedChannel = bankChannels.find(channel => channel.value === Number(e.target.value));
+                      if (selectedChannel) {
+                        const newFilters = [...filters];
+                        newFilters[idx] = {
+                          ...newFilters[idx],
+                          filter_value: String(selectedChannel.value),
+                          filter_value_id: String(selectedChannel.value),
+                          filter_value_name: selectedChannel.name
+                        };
+                        setFilters(newFilters);
+                      }
                     }}
                     className="px-3 py-2 border rounded-lg flex-1"
                   >
-                    <option value="" disabled>Select channel</option>
-                    {bankChannels.map((channel) => {
-                      return (
-                        <option key={channel.value} value={String(channel.value)}>
-                          {channel.name}
-                        </option>
-                      );
-                    })}
-                  </select>
-                )}
-
-                {f.filter_type_name === 'State' && (
-                  <select
-                    value={f.filter_value || ''}
-                    onChange={(e) => {
-                      const stateName = Object.entries(State).find(([name, abbr]) => abbr === e.target.value)?.[0];
-                      
-                      // Update all filter fields at once
-                      const newFilters = [...filters];
-                      newFilters[idx] = {
-                        ...newFilters[idx],
-                        filter_value: e.target.value,
-                        filter_value_id: e.target.value,
-                        filter_value_name: stateName || ''
-                      };
-                      setFilters(newFilters);
-                    }}
-                    className="px-3 py-2 border rounded-lg flex-1"
-                  >
-                    <option value="" disabled>Select state</option>
-                    {Object.entries(State).map(([name, abbr]) => (
-                      <option key={abbr} value={abbr}>
-                        {name.replace(/([A-Z])/g, ' $1').trim()}
+                    <option value="">Select channel</option>
+                    {bankChannels.map((channel) => (
+                      <option key={`channel-${channel.value}-${channel.name}`} value={channel.value}>
+                        {channel.name}
                       </option>
                     ))}
                   </select>
                 )}
-
-                {/* Show placeholder when no filter type is selected */}
-                {!f.filter_type_name && f.filter_type_id && (
-                  <div className="px-3 py-2 border rounded-lg flex-1 text-gray-400 bg-gray-50">
-                    Select filter type first
-                  </div>
+                {f.filter_type_name === 'State' && (
+                  <select
+                    value={f.filter_value || ''}
+                    onChange={(e) => {
+                      const stateValue = e.target.value;
+                      const newFilters = [...filters];
+                      newFilters[idx] = {
+                        ...newFilters[idx],
+                        filter_value: stateValue,
+                        filter_value_id: stateValue,
+                        filter_value_name: stateValue
+                      };
+                      setFilters(newFilters);
+                    }}
+                    className="px-3 py-2 border rounded-lg flex-1"
+                  >
+                    <option value="">Select state</option>
+                    {Object.entries(State).map(([abbr, name]) => (
+                      <option key={`state-${abbr}`} value={abbr}>
+                        {name} ({abbr})
+                      </option>
+                    ))}
+                  </select>
                 )}
               </div>
             ))}
