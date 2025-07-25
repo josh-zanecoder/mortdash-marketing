@@ -18,7 +18,8 @@ interface CampaignStore {
   templates: CampaignTemplate[];
   loading: boolean;
   error: string | null;
-  fetchTemplates: (audience_type_id: number, is_archived?: boolean) => Promise<void>;
+  fetchTemplates: (audience_type_id: number | null, is_archived?: boolean) => Promise<void>;
+  clearTemplates: () => void;
 }
 
 export const useCampaignStore = create<CampaignStore>((set) => ({
@@ -26,6 +27,12 @@ export const useCampaignStore = create<CampaignStore>((set) => ({
   loading: false,
   error: null,
   fetchTemplates: async (audience_type_id, is_archived = false) => {
+    // If no audience_type_id, clear templates and return
+    if (!audience_type_id) {
+      set({ templates: [], loading: false, error: null });
+      return;
+    }
+
     set({ loading: true, error: null });
     try {
       const params = new URLSearchParams();
@@ -39,5 +46,8 @@ export const useCampaignStore = create<CampaignStore>((set) => ({
     } catch (err: any) {
       set({ error: err.message || 'Unknown error', loading: false });
     }
+  },
+  clearTemplates: () => {
+    set({ templates: [], loading: false, error: null });
   },
 }));
