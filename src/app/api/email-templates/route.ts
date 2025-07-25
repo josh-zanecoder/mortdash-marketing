@@ -21,16 +21,24 @@ export async function POST(req: NextRequest) {
       // Convert FormData to the format expected by the backend
       const backendFormData = new FormData();
       
-      // Add all form fields
+      // Add all form fields except audience_type_id
       for (const [key, value] of formData.entries()) {
-        if (key === 'file') {
-          // File should be passed as is
+        if (key !== 'audience_type_id') {
           backendFormData.append(key, value);
-        } else {
-          // All other fields (including audience_type_id) should be passed as is
-          backendFormData.append(key, value as string);
         }
       }
+
+      // Get the audience_type_id
+      const audienceTypeId = formData.get('audience_type_id');
+      
+      if (!audienceTypeId) {
+        return NextResponse.json(
+          { error: 'Missing audience_type_id' },
+          { status: 400 }
+        );
+      }
+
+      backendFormData.append('audience_type_id', audienceTypeId.toString());
       
       // Proxy the request to your backend
       const backendRes = await fetch(`${mortdash_url}/api/bank/v1/marketing/create-email-template`, {

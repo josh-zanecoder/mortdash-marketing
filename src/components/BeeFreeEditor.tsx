@@ -89,7 +89,7 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
   const handleSaveTemplate = async (templateData: {
     name: string;
     file: string;
-    templateType: string;
+    templateTypes: string[];
     subject: string;
     html: string;
     json: string;
@@ -100,76 +100,82 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
   }) => {
     setIsSaving(true);
     try {
-      // Create FormData to match the jQuery implementation
-      const formData = new FormData();
-      
-      // Add form fields
-      formData.append('name', templateData.name);
-      formData.append('subject', templateData.subject);
-      
-      // Get the audience type ID based on the selected template type
-      const audienceTypeId = await getAudienceTypeId(templateData.templateType);
-      formData.append('audience_type_id', audienceTypeId.toString());
-      
-      formData.append('created_at', new Date().toISOString());
-      
-      // Add email_template_id if provided (for updates)
-      if (templateData.email_template_id) {
-        formData.append('email_template_id', templateData.email_template_id.toString());
-      }
-      
-      // Automatically extract merge tags from HTML content
-      const extractMergeTags = (html: string): string[] => {
-        const mergeTagRegex = /\{\{([^}]+)\}\}/g;
-        const matches = html.match(mergeTagRegex);
-        return matches ? [...new Set(matches)] : []; // Remove duplicates
-      };
+      // Create an array of promises for each template type
+      const savePromises = templateData.templateTypes.map(async (templateType) => {
+        // Create FormData for each template type
+        const formData = new FormData();
+        
+        // Add form fields
+        formData.append('name', templateData.name);
+        formData.append('subject', templateData.subject);
+        
+        // Get the audience type ID based on the selected template type
+        const audienceTypeId = await getAudienceTypeId(templateType);
+        formData.append('audience_type_id', audienceTypeId.toString());
+        
+        formData.append('created_at', new Date().toISOString());
+        
+        // Add email_template_id if provided (for updates)
+        if (templateData.email_template_id) {
+          formData.append('email_template_id', templateData.email_template_id.toString());
+        }
+        
+        // Automatically extract merge tags from HTML content
+        const extractMergeTags = (html: string): string[] => {
+          const mergeTagRegex = /\{\{([^}]+)\}\}/g;
+          const matches = html.match(mergeTagRegex);
+          return matches ? [...new Set(matches)] : []; // Remove duplicates
+        };
 
-      const detectedMergeTags = extractMergeTags(templateData.html);
-      
-      // Log detected merge tags for debugging
-      console.log('🔍 Detected Merge Tags:', detectedMergeTags);
-      
-      // Add detected merge tags as fields in the original database format
-      if (detectedMergeTags.length > 0) {
-        const fields = detectedMergeTags.map(tag => {
-          const dbName = getTagDescription(tag);
-          const tagType = getTagType(tag);
-          return {
-            parameter: tag, // The merge tag itself (e.g., "{{first_name}}")
-            type: tagType, // Type in kebab-case (e.g., "first-name")
-            db_name: dbName, // Description/name for the tag
-            is_required: false
-          };
+        const detectedMergeTags = extractMergeTags(templateData.html);
+        
+        // Log detected merge tags for debugging
+        console.log(`🔍 Detected Merge Tags for ${templateType}:`, detectedMergeTags);
+        
+        // Add detected merge tags as fields in the original database format
+        if (detectedMergeTags.length > 0) {
+          const fields = detectedMergeTags.map(tag => {
+            const dbName = getTagDescription(tag);
+            const tagType = getTagType(tag);
+            return {
+              parameter: tag, // The merge tag itself (e.g., "{{first_name}}")
+              type: tagType, // Type in kebab-case (e.g., "first-name")
+              db_name: dbName, // Description/name for the tag
+              is_required: false
+            };
+          });
+          
+          // Log the fields that will be saved to database
+          console.log(`💾 Fields to be saved for ${templateType}:`, fields);
+          console.log(`📊 Total fields detected for ${templateType}:`, fields.length);
+          
+          formData.append('fields', JSON.stringify(fields));
+        } else {
+          console.log(`ℹ️ No merge tags detected in template for ${templateType}`);
+        }
+        
+        // Create a file from the HTML content
+        const htmlBlob = new Blob([templateData.html], { type: 'text/html' });
+        const htmlFile = new File([htmlBlob], 'template.html', { type: 'text/html' });
+        formData.append('file', htmlFile);
+        
+        // Save the template to your database
+        const response = await fetch('/api/email-templates', {
+          method: 'POST',
+          body: formData, // Send as FormData instead of JSON
         });
-        
-        // Log the fields that will be saved to database
-        console.log('💾 Fields to be saved:', fields);
-        console.log('📊 Total fields detected:', fields.length);
-        
-        formData.append('fields', JSON.stringify(fields));
-      } else {
-        console.log('ℹ️ No merge tags detected in template');
-      }
-      
-      // Create a file from the HTML content
-      const htmlBlob = new Blob([templateData.html], { type: 'text/html' });
-      const htmlFile = new File([htmlBlob], 'template.html', { type: 'text/html' });
-      formData.append('file', htmlFile);
-      
-      // Save the template to your database
-      const response = await fetch('/api/email-templates', {
-        method: 'POST',
-        body: formData, // Send as FormData instead of JSON
+
+        if (!response.ok) {
+          throw new Error(`Failed to save template for type ${templateType}`);
+        }
+
+        return response.json();
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to save template');
-      }
-
-      const result = await response.json();
+      // Wait for all templates to be saved
+      const results = await Promise.all(savePromises);
       
-      toast.success('Email template saved successfully!', {
+      toast.success(`Email template${templateData.templateTypes.length > 1 ? 's' : ''} saved successfully!`, {
         icon: <CheckCircle2 className="text-green-600" />,
       });
     } catch (error) {
