@@ -7,20 +7,26 @@ import {
   NavigationMenuItem,
   NavigationMenuLink,
 } from "@/components/ui/navigation-menu";
-import { mortdash_ae_url } from "@/config/mortdash";
 import { ArrowLeft } from "lucide-react";
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [atTop, setAtTop] = useState(true);
-  const [baseUrl, setBaseUrl] = useState(mortdash_ae_url);
+  const [baseUrl, setBaseUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    // Update baseUrl when mortdash_ae_url becomes available
-    if (!baseUrl && mortdash_ae_url) {
-      setBaseUrl(mortdash_ae_url);
-    }
-  }, [baseUrl]);
+    // Fetch configuration from API
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(config => {
+        if (config.mortdash_ae_url) {
+          setBaseUrl(config.mortdash_ae_url);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load configuration:', err);
+      });
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,12 +37,14 @@ export default function Header() {
   }, []);
 
   const handleBackClick = (e: React.MouseEvent) => {
-    if (!mortdash_ae_url) {
+    if (!baseUrl) {
       e.preventDefault();
       console.warn('Mortdash URL not yet available');
       return;
     }
   };
+
+  const backToMortdashUrl = baseUrl ? `${baseUrl}/account-executive/dashboard` : '#';
 
   return (
     <header
@@ -67,9 +75,11 @@ export default function Header() {
               <NavigationMenuItem>
                 <NavigationMenuLink asChild>
                   <a 
-                    href={baseUrl ? `${baseUrl}/account-executive/dashboard` : '#'}
+                    href={backToMortdashUrl}
                     onClick={handleBackClick}
-                    className="inline-flex items-center gap-1 px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors"
+                    className={`inline-flex items-center gap-1 px-3 py-1 text-base font-semibold ${
+                      !baseUrl ? 'opacity-50 cursor-not-allowed' : ''
+                    } text-[#18181a] hover:text-[#ff6600] transition-colors`}
                   >
                     Back to Mortdash CRM
                   </a>
@@ -112,9 +122,11 @@ export default function Header() {
         {mobileOpen && (
           <div className="absolute top-full left-0 w-full bg-white border-b border-[#f3ede7] shadow-lg flex flex-col items-center py-4 sm:hidden animate-fade-in z-40">
             <a 
-              href={baseUrl ? `${baseUrl}/account-executive/dashboard` : '#'}
+              href={backToMortdashUrl}
               onClick={handleBackClick}
-              className="inline-flex items-center justify-center gap-1 py-2 text-lg font-semibold w-full text-center text-[#ff6600] hover:text-[#e65c00] border-b border-[#f3ede7]"
+              className={`inline-flex items-center justify-center gap-1 py-2 text-lg font-semibold w-full text-center ${
+                !baseUrl ? 'opacity-50 cursor-not-allowed' : ''
+              } text-[#ff6600] hover:text-[#e65c00] border-b border-[#f3ede7]`}
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Mortdash CRM

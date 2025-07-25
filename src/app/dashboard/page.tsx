@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { BarChart2, Users, ListTodo, MailOpen, FileText, ArrowLeft } from 'lucide-react';
 import { useContactStore } from '@/store/useContactStore';
 import { useTrackingStore } from '@/store/useTrackingStore';
-import { mortdash_url, mortdash_ae_url } from '@/config/mortdash';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const marketingLinks = [
   { label: 'Prospect Lists', description: 'Manage potential clients and leads in your pipeline.', href: '/marketing/contacts', icon: <Users className="w-5 h-5 text-slate-500" /> },
@@ -22,6 +21,7 @@ const rateSheets = [
 ];
 
 export default function DashboardPage() {
+  const [baseUrl, setBaseUrl] = useState<string | null>(null);
   const { 
     marketingContacts, 
     prospects, 
@@ -51,6 +51,18 @@ export default function DashboardPage() {
     fetchProspects();
     fetchClients();
     fetchDashboardStats();
+
+    // Fetch configuration from API
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(config => {
+        if (config.mortdash_ae_url) {
+          setBaseUrl(config.mortdash_ae_url);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load configuration:', err);
+      });
   }, [fetchContacts, fetchProspects, fetchClients, fetchDashboardStats]);
 
   const contactStats = [
@@ -72,13 +84,15 @@ export default function DashboardPage() {
     <main className="flex flex-col flex-1 min-h-screen bg-[#fdf6f1] items-center py-16 px-4 gap-8">
       {/* Back to AE Dashboard Button */}
       <div className="w-full max-w-6xl">
-        <a 
-          href={`${mortdash_ae_url}/account-executive/dashboard`}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-white text-[#ff6600] rounded-lg border-2 border-[#ff6600] hover:bg-[#fff7ed] transition-colors font-medium"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Mortdash CRM
-        </a>
+        {baseUrl && (
+          <a 
+            href={`${baseUrl}/account-executive/dashboard`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-[#ff6600] rounded-lg border-2 border-[#ff6600] hover:bg-[#fff7ed] transition-colors font-medium"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Mortdash CRM
+          </a>
+        )}
       </div>
 
       {/* Hero Section */}

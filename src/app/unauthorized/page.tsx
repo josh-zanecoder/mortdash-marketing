@@ -5,9 +5,25 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { ExclamationTriangleIcon, ArrowLeftIcon } from "@heroicons/react/24/outline"
-import { mortdash_ae_url } from "@/config/mortdash"
+import { useState, useEffect } from "react"
 
 export default function UnauthorizedPage() {
+  const [baseUrl, setBaseUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch configuration from API
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(config => {
+        if (config.mortdash_ae_url) {
+          setBaseUrl(config.mortdash_ae_url);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load configuration:', err);
+      });
+  }, []);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
       <motion.div
@@ -38,14 +54,16 @@ export default function UnauthorizedPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              <a href={`${mortdash_ae_url}/account-executive/dashboard`}>
-                <Button 
-                  className="cursor-pointer bg-black hover:bg-gray-800 text-white transition-all duration-200 flex items-center gap-2 mx-auto"
-                >
-                  <ArrowLeftIcon className="w-4 h-4" />
-                  Return to Main Dashboard
-                </Button>
-              </a>
+              {baseUrl && (
+                <a href={`${baseUrl}/account-executive/dashboard`}>
+                  <Button 
+                    className="cursor-pointer bg-black hover:bg-gray-800 text-white transition-all duration-200 flex items-center gap-2 mx-auto"
+                  >
+                    <ArrowLeftIcon className="w-4 h-4" />
+                    Return to Main Dashboard
+                  </Button>
+                </a>
+              )}
             </motion.div>
           </div>
         </Card>
