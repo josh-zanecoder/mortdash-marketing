@@ -13,6 +13,14 @@ import { ArrowLeft } from "lucide-react";
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [atTop, setAtTop] = useState(true);
+  const [baseUrl, setBaseUrl] = useState(mortdash_ae_url);
+
+  useEffect(() => {
+    // Update baseUrl when mortdash_ae_url becomes available
+    if (!baseUrl && mortdash_ae_url) {
+      setBaseUrl(mortdash_ae_url);
+    }
+  }, [baseUrl]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -21,6 +29,14 @@ export default function Header() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleBackClick = (e: React.MouseEvent) => {
+    if (!mortdash_ae_url) {
+      e.preventDefault();
+      console.warn('Mortdash URL not yet available');
+      return;
+    }
+  };
 
   return (
     <header
@@ -51,7 +67,8 @@ export default function Header() {
               <NavigationMenuItem>
                 <NavigationMenuLink asChild>
                   <a 
-                    href={`${mortdash_ae_url}/account-executive/dashboard`}
+                    href={baseUrl ? `${baseUrl}/account-executive/dashboard` : '#'}
+                    onClick={handleBackClick}
                     className="inline-flex items-center gap-1 px-3 py-1 text-base font-semibold text-[#18181a] hover:text-[#ff6600] transition-colors"
                   >
                     Back to Mortdash CRM
@@ -95,9 +112,9 @@ export default function Header() {
         {mobileOpen && (
           <div className="absolute top-full left-0 w-full bg-white border-b border-[#f3ede7] shadow-lg flex flex-col items-center py-4 sm:hidden animate-fade-in z-40">
             <a 
-              href={`${mortdash_ae_url}/account-executive/dashboard`}
+              href={baseUrl ? `${baseUrl}/account-executive/dashboard` : '#'}
+              onClick={handleBackClick}
               className="inline-flex items-center justify-center gap-1 py-2 text-lg font-semibold w-full text-center text-[#ff6600] hover:text-[#e65c00] border-b border-[#f3ede7]"
-              onClick={() => setMobileOpen(false)}
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Mortdash CRM
