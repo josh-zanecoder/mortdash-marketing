@@ -1,7 +1,7 @@
 'use client'
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Eye } from "lucide-react";
-import { useEffect, useState, Suspense } from "react";
+import { Trash2, Plus, Eye, Edit2 } from "lucide-react";
+import { useEffect, useState, Suspense, useMemo } from "react";
 import axios from "axios";
 import { useListsStore } from "@/store/listsStore";
 import Link from 'next/link';
@@ -9,7 +9,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ConfirmModal from "@/components/ui/confirm-modal";
 import LoadingModal from "@/components/ui/loading-modal";
 import Toast from "@/components/ui/toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import type { MarketingList, AudienceType } from "@/types/listsType";
+import { State } from "@/types/listsType";
+import { Toaster } from '@/components/ui/sonner';
+import { toast } from 'sonner';
+import { CheckCircle2 } from 'lucide-react';
 
 function MemberDetailsModal() {
   const { selectedList, setSelectedList, isMemberDetailsOpen, setIsMemberDetailsOpen } = useListsStore();
@@ -21,9 +26,14 @@ function MemberDetailsModal() {
 
   return (
     <Dialog open={isMemberDetailsOpen} onOpenChange={setIsMemberDetailsOpen}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogContent 
+        className="max-w-3xl max-h-[80vh] overflow-y-auto"
+      >
         <DialogHeader>
           <DialogTitle>{selectedList.list_name} - Member Details</DialogTitle>
+          <DialogDescription>
+            View detailed information about list members including their contact information and status.
+          </DialogDescription>
           <p className="text-sm text-gray-500 mt-1">
             Type: {listType.charAt(0).toUpperCase() + listType.slice(1)} • 
             Total Members: {memberCount}
@@ -106,6 +116,312 @@ function MemberDetailsModal() {
   );
 }
 
+function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList | null, isOpen: boolean, onClose: () => void, token: string | null }) {
+  const [listName, setListName] = useState(list?.list_name || '');
+  const [selectedAudienceType, setSelectedAudienceType] = useState<number>(list?.audience_type_id || 0);
+  const [loading, setLoading] = useState(false);
+  const { lists, setLists } = useListsStore();
+  const audienceTypes = useListsStore((state) => state.audienceTypes);
+  const audienceTypeFilters = useListsStore((state) => state.audienceTypeFilters);
+  const bankChannels = useListsStore((state) => state.bankChannels);
+  const [filters, setFilters] = useState<any[]>([]);
+  const [error, setError] = useState('');
+
+  // Get relevant filters for the selected audience type
+  const relevantFilters = useMemo(() => {
+    if (!selectedAudienceType) return [];
+    return audienceTypeFilters.filter(filter => 
+      (filter.name === 'State' || filter.name === 'Channel') && 
+      Number(filter.audience_type_id) === selectedAudienceType
+    );
+  }, [selectedAudienceType, audienceTypeFilters]);
+
+  useEffect(() => {
+    if (list) {
+      setListName(list.list_name);
+      setSelectedAudienceType(list.audience_type_id);
+      // Extract existing filters from the list and convert them to editable format
+      const existingFilters = list.marketing_list_filter?.map(filter => {
+        const value = filter.value;
+        const filterType = filter.audience_type_filter;
+        
+        return {
+          audience_type_filter_id: filterType?.value || filter.audience_type_filter_id,
+          filter_type_id: filterType?.value || filter.audience_type_filter_id,
+          filter_type_name: filterType?.name || '',
+          filter_value: value,
+          filter_value_id: value,
+          filter_value_name: value
+        };
+      }).filter(Boolean) || [];
+      
+      setFilters(existingFilters);
+    }
+    setError('');
+  }, [list]);
+
+  useEffect(() => {
+  }, [selectedAudienceType, audienceTypeFilters, relevantFilters, filters]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !list) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await axios.put(`/api/marketing/lists/${token}/${list.id}`, {
+        list_name: listName,
+        audience_type_id: selectedAudienceType,
+        filters: filters.map(filter => {
+          // For state filters, ensure we're sending the acronym
+          if (filter.filter_type_name === 'State') {
+            return {
+              audience_type_filter_id: filter.filter_type_id,
+              value: filter.filter_value_id // Use the acronym directly from filter_value_id
+            };
+          }
+          return {
+            audience_type_filter_id: filter.filter_type_id,
+            value: filter.filter_value
+          };
+        })
+      });
+
+      if (res.data.success) {
+        // Fetch fresh data after successful edit
+        const listRes = await axios.get(`/api/marketing/lists/${token}`);
+        setLists(listRes.data.data);
+        toast.success('Marketing list updated successfully!', {
+          icon: <CheckCircle2 className="text-green-600" />,
+        });
+        onClose();
+      } else {
+        setError(res.data.message || 'Failed to update list');
+      }
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Failed to update list');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFilterChange = (filterId: number, value: string) => {
+    console.log('Changing filter:', { filterId, value });
+    setFilters(prevFilters => {
+      const filterIndex = prevFilters.findIndex(f => f.audience_type_filter_id === filterId);
+      if (filterIndex > -1) {
+        // Update existing filter
+        const updatedFilters = [...prevFilters];
+        updatedFilters[filterIndex] = {
+          ...updatedFilters[filterIndex],
+          value: value
+        };
+        return updatedFilters;
+      } else {
+        // Add new filter
+        return [...prevFilters, {
+          audience_type_filter_id: filterId,
+          value: value
+        }];
+      }
+    });
+  };
+
+  const removeFilter = (index: number) => {
+    setFilters(prevFilters => prevFilters.filter((_, i) => i !== index));
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent 
+        className="sm:max-w-[425px]"
+      >
+        <DialogHeader>
+          <DialogTitle>Edit Marketing List</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="listName" className="text-sm font-medium text-gray-700">
+              List Name
+            </label>
+            <input
+              id="listName"
+              type="text"
+              value={listName}
+              onChange={(e) => setListName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent"
+              placeholder="Enter list name"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="audienceType" className="text-sm font-medium text-gray-700">
+              Audience Type
+            </label>
+            <select
+              id="audienceType"
+              value={selectedAudienceType}
+              onChange={(e) => setSelectedAudienceType(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent"
+              required
+            >
+              <option value="0">Select Audience Type</option>
+              {audienceTypes.map((type) => (
+                <option key={`audience-type-${type.value}`} value={type.value}>
+                  {type.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filters Section */}
+          <div className="space-y-4 border-t pt-4 mt-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">List Filters</h3>
+            
+            {/* Edit filters */}
+            {filters.map((f, idx) => (
+              <div key={idx} className="flex items-center gap-2 mb-3">
+                <button type="button" onClick={() => removeFilter(idx)} className="text-red-500">➖</button>
+
+                {/* Filter Type Dropdown */}
+                <select
+                  value={f.filter_type_id ?? ''}
+                  onChange={(e) => {
+                    const selectedFilter = audienceTypeFilters.find(
+                      ft => ft.value === Number(e.target.value)
+                    );
+                    if (selectedFilter) {
+                      const newFilters = [...filters];
+                      newFilters[idx] = {
+                        ...newFilters[idx],
+                        filter_type_id: selectedFilter.value,
+                        filter_type_name: selectedFilter.name,
+                        filter_value: '',
+                        filter_value_id: '',
+                        filter_value_name: ''
+                      };
+                      setFilters(newFilters);
+                    }
+                  }}
+                  className="px-3 py-2 border rounded-lg flex-1"
+                >
+                  <option value="">Select filter</option>
+                  {audienceTypeFilters
+                    .filter(ft => ft.audience_type_id === selectedAudienceType && ft.type === 'all')
+                    .map(ft => (
+                      <option key={`filter-type-${ft.value}-${ft.name}`} value={ft.value}>
+                        {ft.name}
+                      </option>
+                    ))}
+                </select>
+
+                <span className="text-gray-500">=</span>
+
+                {/* Filter Value Dropdown */}
+                {f.filter_type_name === 'Channel' && (
+                  <select
+                    value={f.filter_value || ''}
+                    onChange={(e) => {
+                      const selectedChannel = bankChannels.find(channel => channel.name === e.target.value);
+                      if (selectedChannel) {
+                        const newFilters = [...filters];
+                        newFilters[idx] = {
+                          ...newFilters[idx],
+                          filter_value: selectedChannel.name,
+                          filter_value_id: String(selectedChannel.value),
+                          filter_value_name: selectedChannel.name
+                        };
+                        setFilters(newFilters);
+                      }
+                    }}
+                    className="px-3 py-2 border rounded-lg flex-1"
+                  >
+                    <option value="">Select channel</option>
+                    {bankChannels.map((channel) => (
+                      <option key={`channel-${channel.value}-${channel.name}`} value={channel.name}>
+                        {channel.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {f.filter_type_name === 'State' && (
+                  <div className="relative flex-1">
+                    <select
+                      value={f.filter_value || ''}
+                      onChange={(e) => {
+                        const newFilters = [...filters];
+                        newFilters[idx] = {
+                          ...newFilters[idx],
+                          filter_value: e.target.value,
+                          filter_value_id: e.target.value,
+                          filter_value_name: e.target.value
+                        };
+                        setFilters(newFilters);
+                      }}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    >
+                      <option value="">Select state</option>
+                      {Object.entries(State).map(([abbr, name]) => (
+                        <option 
+                          key={`state-${abbr}`} 
+                          value={abbr}
+                        >
+                          {name} ({abbr})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            ))}
+            <button 
+              type="button" 
+              onClick={() => {
+                setFilters([...filters, { 
+                  filter_type_id: null, 
+                  filter_type_name: '', 
+                  filter_value: '', 
+                  filter_value_id: '', 
+                  filter_value_name: '' 
+                }]);
+              }} 
+              className="inline-flex items-center gap-2 text-[#ff6600] hover:text-[#ff7a2f] font-semibold"
+            >
+              <span>+</span> Add Filter
+            </button>
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-600">{error}</p>
+          )}
+
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              onClick={onClose}
+              variant="outline"
+              className="px-4 py-2"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white"
+            >
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ListsPageContent() {
   const { setLists, setAudienceTypes, setBankChannels, setAudienceTypeFilters, setSelectedList, setIsMemberDetailsOpen } = useListsStore((state) => state);
   const lists = useListsStore((state) => state.lists);
@@ -127,6 +443,10 @@ function ListsPageContent() {
     type: 'success' | 'error' | 'warning' | 'info';
   }>({ isOpen: false, title: '', type: 'info' });
   const itemsPerPage = 10;
+  const [editModal, setEditModal] = useState<{
+    isOpen: boolean;
+    list: MarketingList | null;
+  }>({ isOpen: false, list: null });
 
   const router = useRouter()
   const searchParams = useSearchParams();
@@ -221,9 +541,17 @@ function ListsPageContent() {
     setConfirmModal({ isOpen: false, id: null, listName: '' });
   };
 
-  const handleMemberDetailsClick = (list: any) => {
+  const handleMemberDetailsClick = (list: MarketingList) => {
     setSelectedList(list);
     setIsMemberDetailsOpen(true);
+  };
+
+  const handleEditClick = (list: MarketingList) => {
+    setEditModal({ isOpen: true, list });
+  };
+
+  const handleEditClose = () => {
+    setEditModal({ isOpen: false, list: null });
   };
 
   // Pagination calculations
@@ -236,6 +564,7 @@ function ListsPageContent() {
 
   return (
     <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center pt-16 px-4">
+      <Toaster />
       <div
         className="w-full max-w-6xl bg-white rounded-2xl shadow-xl p-12 flex flex-col items-center"
         style={{ minHeight: "700px" }}
@@ -283,7 +612,7 @@ function ListsPageContent() {
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">
-                                  {(list as any).audience_type?.name || (list as any).audienceType?.name || '—'}
+                                  {(list as MarketingList).audience_type?.name || (list as MarketingList).audienceType?.name || '—'}
                                 </span>
                                 {list.member_details?.members && (
                                   <button
@@ -298,6 +627,19 @@ function ListsPageContent() {
                                   </button>
                                 )}
                               </div>
+                              {/* Display Filters */}
+                              {list.marketing_list_filter && list.marketing_list_filter.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {list.marketing_list_filter.map((filter) => (
+                                    <span
+                                      key={filter.id}
+                                      className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"
+                                    >
+                                      {filter.audience_type_filter?.name}: {filter.value}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                               {list.added_by && (
                                 <div className="mt-2">
                                   <span
@@ -322,6 +664,13 @@ function ListsPageContent() {
                                 aria-label="View members"
                               >
                                 <Eye size={16} />
+                              </button>
+                              <button 
+                                onClick={() => handleEditClick(list)}
+                                className="p-1 text-[#ff6600] transition-colors duration-200 rounded-lg hover:bg-[#fff0e6]" 
+                                aria-label="Edit list"
+                              >
+                                <Edit2 size={16} />
                               </button>
                               <button 
                                 onClick={() => handleDeleteClick(list.id, list.list_name)}
@@ -407,6 +756,14 @@ function ListsPageContent() {
 
       {/* Add MemberDetailsModal */}
       <MemberDetailsModal />
+
+      {/* Add EditModal */}
+      <EditListModal
+        list={editModal.list}
+        isOpen={editModal.isOpen}
+        onClose={handleEditClose}
+        token={tokenParam}
+      />
     </main>
   );
 }
