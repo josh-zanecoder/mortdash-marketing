@@ -127,17 +127,25 @@ function AddMarketingListPageContent() {
       // Use only valid filters that the user has actually selected
       const filtersToSend = validFilters.length > 0 ? validFilters : [];
       
+      // Filter out any filters that don't have proper values
+      const finalFilters = filtersToSend.filter(filter => 
+        filter.filter_type_id && 
+        filter.filter_value && 
+        filter.filter_value.trim() !== '' &&
+        filter.filter_value !== 'All'
+      );
+      
 
       
       const body = {
         name: listName,
         audience_type: String(audienceTypeId),
-        filters: filtersToSend.map(({ filter_type_id, filter_type_name, filter_value, filter_value_id, filter_value_name }) => {
+        filters: finalFilters.map(({ filter_type_id, filter_type_name, filter_value, filter_value_id, filter_value_name }) => {
           const baseFilter = {
             filter_type_id: filter_type_id ? String(filter_type_id) : '',
             filter_type_name: filter_type_name || '',
             filter_value_id: filter_value_id || filter_value || '',
-            value_name: filter_value_name || filter_type_name || 'All',
+            value_name: filter_value_name || filter_value || filter_value_id || '',
           };
           
           // Add audience-specific fields based on backend expectations
@@ -155,7 +163,7 @@ function AddMarketingListPageContent() {
             return {
               ...baseFilter,
               // For Prospect, ensure we have the value_name that the backend expects
-              value_name: filter_value_name || filter_value || filter_value_id || 'All'
+              value_name: filter_value_name || filter_value || filter_value_id || ''
             };
           } else {
             return baseFilter;
