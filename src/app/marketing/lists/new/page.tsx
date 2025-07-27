@@ -124,32 +124,10 @@ function AddMarketingListPageContent() {
       // Filter out empty filters (where filter_type_id is null or empty)
       const validFilters = filters.filter(f => f.filter_type_id !== null && f.filter_type_id !== 0);
       
-      // For Prospect lists, use actual filters if selected, otherwise send a minimal valid filter
-      const filtersToSend = audienceTypeId === 1 ? 
-        (validFilters.length > 0 ? validFilters : [{
-          filter_type_id: 1,
-          filter_type_name: 'Channel',
-          filter_value: '1',
-          filter_value_id: '1',
-          filter_value_name: 'Wholesale'
-        }]) : 
-        (validFilters.length > 0 ? validFilters : [{
-          filter_type_id: null,
-          filter_type_name: 'Channel',
-          filter_value: '',
-          filter_value_id: '',
-          filter_value_name: 'All'
-        }]);
+      // Use only valid filters that the user has actually selected
+      const filtersToSend = validFilters.length > 0 ? validFilters : [];
       
-      // For Prospect lists with State filter, try to avoid the backend issue by using a different approach
-      if (audienceTypeId === 1 && validFilters.some(f => f.filter_type_name === 'State')) {
-        setToast({
-          isOpen: true,
-          title: 'Warning',
-          message: 'Prospect lists with State filters may have limited functionality due to backend limitations. Try using Channel filters instead.',
-          type: 'warning'
-        });
-      }
+
       
       const body = {
         name: listName,

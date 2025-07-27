@@ -171,10 +171,17 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
     setError('');
 
     try {
+      // Filter out incomplete filters (those without filter_type_id or value)
+      const validFilters = filters.filter(filter => 
+        filter.filter_type_id && 
+        filter.filter_value && 
+        filter.filter_value.trim() !== ''
+      );
+
       const res = await axios.put(`/api/marketing/lists/${token}/${list.id}`, {
         list_name: listName,
         audience_type_id: selectedAudienceType,
-        filters: filters.map(filter => {
+        filters: validFilters.map(filter => {
           // For state filters, ensure we're sending the acronym
           if (filter.filter_type_name === 'State') {
             return {
@@ -378,21 +385,28 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
                 )}
               </div>
             ))}
-            <button 
-              type="button" 
-              onClick={() => {
-                setFilters([...filters, { 
-                  filter_type_id: null, 
-                  filter_type_name: '', 
-                  filter_value: '', 
-                  filter_value_id: '', 
-                  filter_value_name: '' 
-                }]);
-              }} 
-              className="inline-flex items-center gap-2 text-[#ff6600] hover:text-[#ff7a2f] font-semibold"
-            >
-              <span>+</span> Add Filter
-            </button>
+                         <button 
+               type="button" 
+               onClick={() => {
+                 setFilters([...filters, { 
+                   filter_type_id: null, 
+                   filter_type_name: '', 
+                   filter_value: '', 
+                   filter_value_id: '', 
+                   filter_value_name: '' 
+                 }]);
+               }} 
+               className="inline-flex items-center gap-2 text-[#ff6600] hover:text-[#ff7a2f] font-semibold"
+             >
+               <span>+</span> Add Filter
+             </button>
+             
+             {/* Show warning if there are incomplete filters */}
+             {filters.some(f => f.filter_type_id && !f.filter_value) && (
+               <p className="text-sm text-amber-600 mt-2">
+                 ⚠️ Some filters are incomplete. Incomplete filters will be ignored when saving.
+               </p>
+             )}
           </div>
 
           {error && (
