@@ -134,18 +134,7 @@ export default function DashboardPage() {
 
   return (
     <main className="flex flex-col flex-1 min-h-screen bg-[#fdf6f1] items-center py-16 px-4 gap-8">
-      {/* Back to AE Dashboard Button */}
-      <div className="w-full max-w-6xl">
-        {baseUrl && (
-          <a 
-            href={`${baseUrl}/account-executive/dashboard`}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-[#ff6600] rounded-lg border-2 border-[#ff6600] hover:bg-[#fff7ed] transition-colors font-medium"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Mortdash CRM
-          </a>
-        )}
-      </div>
+
 
       {/* Hero Section */}
       <section className="w-full max-w-4xl text-center mb-8">
