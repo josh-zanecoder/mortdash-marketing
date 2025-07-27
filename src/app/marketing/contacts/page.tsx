@@ -122,7 +122,10 @@ export default function ContactsPage() {
 
   // Handler to refresh contacts after upload
   const handleUploadSuccess = () => {
-    fetchContacts({ page, limit, search });
+    // Reset to page 1 to show newly uploaded contacts
+    setPage(1);
+    // Fetch fresh data with current search and limit
+    fetchContacts({ page: 1, limit, search });
     toast.success('Contacts uploaded successfully!', {
       icon: <CheckCircle2 className="text-green-600" />,
     });
@@ -142,6 +145,8 @@ export default function ContactsPage() {
       <AddContactModal open={showAddModal} onClose={() => {
         setShowAddModal(false);
       }} onSubmit={() => {
+        // Refresh contacts after adding
+        fetchContacts({ page, limit, search });
         toast.success('Contact added successfully!', {
           icon: <CheckCircle2 className="text-green-600" />,
         });
@@ -153,7 +158,8 @@ export default function ContactsPage() {
           setEditingContact(null);
         }}
         onSubmit={async (form) => {
-          // Only close modal and refresh, do not show toast here (handled in modal)
+          // Refresh contacts after editing
+          fetchContacts({ page, limit, search });
           setShowEditModal(false);
           setEditingContact(null);
         }}
@@ -170,6 +176,8 @@ export default function ContactsPage() {
           if (deletingContact) {
             const success = await deleteContact(deletingContact.id);
             if (success) {
+              // Refresh contacts after deleting
+              fetchContacts({ page, limit, search });
               toast.success('Contact deleted successfully!', {
                 icon: <CheckCircle2 className="text-green-600" />,
               });
