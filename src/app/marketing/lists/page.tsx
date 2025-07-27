@@ -536,6 +536,12 @@ function ListsPageContent() {
     list: MarketingList | null;
   }>({ isOpen: false, list: null });
 
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilter, setActiveFilter] = useState<string>('all'); // 'all' or audience type id
+  const [sortBy, setSortBy] = useState<'name' | 'count' | 'created_at'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
   const router = useRouter()
   const searchParams = useSearchParams();
   const tokenParam = searchParams.get('token');
@@ -698,9 +704,61 @@ function ListsPageContent() {
     setEditModal({ isOpen: false, list: null });
   };
 
-  // Pagination calculations
-  const totalPages = Math.ceil(lists.length / itemsPerPage) || 1;
-  const paginatedLists = lists.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  // Filter and sort lists
+  const filteredAndSortedLists = useMemo(() => {
+    let filtered = lists.filter(list => {
+      // Search filter
+      const matchesSearch = list.list_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (list as MarketingList).audience_type?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (list as MarketingList).audienceType?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Audience type filter
+      const matchesFilter = activeFilter === 'all' || 
+                           (list as MarketingList).audience_type?.id?.toString() === activeFilter ||
+                           (list as MarketingList).audienceType?.id?.toString() === activeFilter;
+      
+      return matchesSearch && matchesFilter;
+    });
+
+    // Sort lists
+    filtered.sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      switch (sortBy) {
+        case 'name':
+          aValue = a.list_name?.toLowerCase() || '';
+          bValue = b.list_name?.toLowerCase() || '';
+          break;
+        case 'count':
+          aValue = a.count || 0;
+          bValue = b.count || 0;
+          break;
+        case 'created_at':
+          aValue = new Date(a.created_at || '').getTime();
+          bValue = new Date(b.created_at || '').getTime();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    return filtered;
+  }, [lists, searchTerm, activeFilter, sortBy, sortOrder]);
+
+  // Pagination calculations for filtered lists
+  const totalPages = Math.ceil(filteredAndSortedLists.length / itemsPerPage) || 1;
+  const paginatedLists = filteredAndSortedLists.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeFilter, sortBy, sortOrder]);
 
   const goPrev = () => setCurrentPage((p) => Math.max(1, p - 1));
   const goNext = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
@@ -733,6 +791,91 @@ function ListsPageContent() {
           </Button>
         </div>
 
+        {/* Search and Filter Section */}
+        <div className="w-full mb-8 space-y-6">
+          {/* Search Bar */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Search lists by name or audience type..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm"
+            />
+          </div>
+
+          {/* Filters and Sort */}
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+            {/* Audience Type Filters */}
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setActiveFilter('all')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  activeFilter === 'all'
+                    ? 'bg-orange-500 text-white shadow-md'
+                    : 'bg-white/80 text-slate-700 hover:bg-white hover:shadow-sm border border-slate-200'
+                }`}
+              >
+                All Lists ({lists.length})
+              </button>
+              {audienceTypes.map((audienceType) => (
+                <button
+                  key={audienceType.value}
+                  onClick={() => setActiveFilter(audienceType.value.toString())}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    activeFilter === audienceType.value.toString()
+                      ? 'bg-orange-500 text-white shadow-md'
+                      : 'bg-white/80 text-slate-700 hover:bg-white hover:shadow-sm border border-slate-200'
+                  }`}
+                >
+                  {audienceType.name} ({lists.filter(list => {
+                    const audienceTypeId = (list as MarketingList).audience_type?.id || (list as MarketingList).audienceType?.id;
+                    return audienceTypeId === audienceType.value;
+                  }).length})
+                </button>
+              ))}
+            </div>
+
+            {/* Sort Options */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-slate-700">Sort by:</label>
+              <select
+                value={`${sortBy}-${sortOrder}`}
+                onChange={(e) => {
+                  const [newSortBy, newSortOrder] = e.target.value.split('-') as ['name' | 'count' | 'created_at', 'asc' | 'desc'];
+                  setSortBy(newSortBy);
+                  setSortOrder(newSortOrder);
+                }}
+                className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm text-sm"
+              >
+                <option value="created_at-desc">Newest First</option>
+                <option value="created_at-asc">Oldest First</option>
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+                <option value="count-desc">Most Members</option>
+                <option value="count-asc">Least Members</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Results Summary */}
+          <div className="flex items-center justify-between text-sm text-slate-600">
+            <div>
+              Showing {paginatedLists.length} of {filteredAndSortedLists.length} lists
+              {searchTerm && (
+                <span className="ml-2">
+                  for "<span className="font-medium">{searchTerm}</span>"
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Custom Table Section */}
         {loading ? (
           <TableSkeleton />
@@ -753,7 +896,17 @@ function ListsPageContent() {
                         </tr>
                       </thead>
                       <tbody className="bg-white/80 divide-y divide-slate-200/60 dark:divide-slate-700 dark:bg-slate-900">
-                        {paginatedLists.map((list, idx) => (
+                        {paginatedLists.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-12 text-center">
+                              <div className="text-slate-500 text-lg">No lists found</div>
+                              <div className="text-slate-400 text-sm mt-1">
+                                Try adjusting your search or filters
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedLists.map((list, idx) => (
                           <tr key={`${list.id}-${idx}-${list.list_name}-${list.created_at}`} className="hover:bg-slate-50/80 transition-colors duration-200">
                             <td className="px-6 py-5 text-sm font-medium text-slate-900">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
                             <td className="px-6 py-5">
@@ -831,7 +984,8 @@ function ListsPageContent() {
                               </div>
                             </td>
                           </tr>
-                        ))}
+                        ))
+                        )}
                       </tbody>
                     </table>
                   </div>
