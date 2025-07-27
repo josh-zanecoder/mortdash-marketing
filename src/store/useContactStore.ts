@@ -5,8 +5,11 @@ interface Contact {
   first_name: string;
   last_name: string;
   email: string;
+  email_address?: string;
+  phone_number?: string;
   title: string;
   company: string;
+  branch?: string;
 }
 
 interface Channel {
