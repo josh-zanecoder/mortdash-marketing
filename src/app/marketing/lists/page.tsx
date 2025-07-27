@@ -466,6 +466,60 @@ function ListsPageContent() {
   const searchParams = useSearchParams();
   const tokenParam = searchParams.get('token');
 
+  // Skeleton loader component
+  const TableSkeleton = () => (
+    <div className="w-full">
+      <div className="w-full flex flex-col mt-6">
+        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 md:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th className="py-3.5 px-4 text-sm font-normal text-left text-gray-500 dark:text-gray-400">#</th>
+                    <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">List Name</th>
+                    <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Audience</th>
+                    <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Count</th>
+                    <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-900">
+                  {Array.from({ length: 10 }).map((_, idx) => (
+                    <tr key={idx}>
+                      <td className="px-4 py-4">
+                        <div className="w-6 h-4 bg-gray-200 rounded animate-pulse"></div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="space-y-2">
+                          <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="w-40 h-6 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="w-48 h-6 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="w-12 h-4 bg-gray-200 rounded animate-pulse"></div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   useEffect(() => {
     const loadAll = async () => {
       if (!tokenParam) return;
@@ -602,135 +656,139 @@ function ListsPageContent() {
         </div>
 
         {/* Custom Table Section */}
-        <div className="w-full">
-          <div className="w-full flex flex-col mt-6">
-            <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-              <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-                <div className="overflow-hidden border border-gray-200 dark:border-gray-700 md:rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-800">
-                      <tr>
-                        <th className="py-3.5 px-4 text-sm font-normal text-left text-gray-500 dark:text-gray-400">#</th>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">List Name</th>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Audience</th>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Count</th>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-900">
-                      {paginatedLists.map((list, idx) => (
-                        <tr key={`${list.id}-${idx}-${list.list_name}-${list.created_at}`}>
-                          <td className="px-4 py-4 text-sm text-gray-800 dark:text-white">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
-                          <td className="px-4 py-4 text-sm text-gray-800 dark:text-white">{list.list_name}</td>
-                          <td className="px-4 py-4 text-sm text-gray-800 dark:text-white">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">
-                                  {(list as MarketingList).audience_type?.name || (list as MarketingList).audienceType?.name || '—'}
-                                </span>
-                                {list.member_details?.members && (
-                                  <button
-                                    onClick={() => {
-                                      const token = tokenParam;
-                                      const url = token ? `/marketing/lists/${list.id}?token=${token}` : `/marketing/lists/${list.id}`;
-                                      router.push(url);
-                                    }}
-                                    className="text-[#ff6600] hover:text-[#ff7a2f] font-medium cursor-pointer transition-colors"
-                                  >
-                                    ({list.member_details.members.length} {list.member_details.members.length === 1 ? 'Member' : 'Members'})
-                                  </button>
+        {loading ? (
+          <TableSkeleton />
+        ) : (
+          <div className="w-full">
+            <div className="w-full flex flex-col mt-6">
+              <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+                  <div className="overflow-hidden border border-gray-200 dark:border-gray-700 md:rounded-lg">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th className="py-3.5 px-4 text-sm font-normal text-left text-gray-500 dark:text-gray-400">#</th>
+                          <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">List Name</th>
+                          <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Audience</th>
+                          <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Count</th>
+                          <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-900">
+                        {paginatedLists.map((list, idx) => (
+                          <tr key={`${list.id}-${idx}-${list.list_name}-${list.created_at}`}>
+                            <td className="px-4 py-4 text-sm text-gray-800 dark:text-white">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
+                            <td className="px-4 py-4 text-sm text-gray-800 dark:text-white">{list.list_name}</td>
+                            <td className="px-4 py-4 text-sm text-gray-800 dark:text-white">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">
+                                    {(list as MarketingList).audience_type?.name || (list as MarketingList).audienceType?.name || '—'}
+                                  </span>
+                                  {list.member_details?.members && (
+                                    <button
+                                      onClick={() => {
+                                        const token = tokenParam;
+                                        const url = token ? `/marketing/lists/${list.id}?token=${token}` : `/marketing/lists/${list.id}`;
+                                        router.push(url);
+                                      }}
+                                      className="text-[#ff6600] hover:text-[#ff7a2f] font-medium cursor-pointer transition-colors"
+                                    >
+                                      ({list.member_details.members.length} {list.member_details.members.length === 1 ? 'Member' : 'Members'})
+                                    </button>
+                                  )}
+                                </div>
+                                {/* Display Filters */}
+                                {list.marketing_list_filter && list.marketing_list_filter.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {list.marketing_list_filter.map((filter) => (
+                                      <span
+                                        key={filter.id}
+                                        className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"
+                                      >
+                                        {filter.audience_type_filter?.name}: {filter.value}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                                {list.added_by && (
+                                  <div className="mt-2">
+                                    <span
+                                      className="inline-flex items-center px-3 py-1.5 rounded-md text-white text-sm font-medium bg-[#ff9900] whitespace-nowrap"
+                                    >
+                                      Account Executive = {list.added_by_name}
+                                    </span>
+                                  </div>
                                 )}
                               </div>
-                              {/* Display Filters */}
-                              {list.marketing_list_filter && list.marketing_list_filter.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                  {list.marketing_list_filter.map((filter) => (
-                                    <span
-                                      key={filter.id}
-                                      className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"
-                                    >
-                                      {filter.audience_type_filter?.name}: {filter.value}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                              {list.added_by && (
-                                <div className="mt-2">
-                                  <span
-                                    className="inline-flex items-center px-3 py-1.5 rounded-md text-white text-sm font-medium bg-[#ff9900] whitespace-nowrap"
-                                  >
-                                    Account Executive = {list.added_by_name}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{list.count}</td>
-                          <td className="px-4 py-4 text-sm">
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => {
-                                  const token = tokenParam;
-                                  const url = token ? `/marketing/lists/${list.id}?token=${token}` : `/marketing/lists/${list.id}`;
-                                  router.push(url);
-                                }}
-                                className="p-1 text-[#ff6600] transition-colors duration-200 rounded-lg hover:bg-[#fff0e6]" 
-                                aria-label="View members"
-                              >
-                                <Eye size={16} />
-                              </button>
-                              <button 
-                                onClick={() => handleEditClick(list)}
-                                className="p-1 text-[#ff6600] transition-colors duration-200 rounded-lg hover:bg-[#fff0e6]" 
-                                aria-label="Edit list"
-                              >
-                                <Edit2 size={16} />
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteClick(list.id, list.list_name)}
-                                disabled={deleteLoading}
-                                className="p-1 text-[#ff6600] transition-colors duration-200 rounded-lg hover:bg-[#fff0e6] disabled:opacity-50" 
-                                aria-label="Delete list"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{list.count}</td>
+                            <td className="px-4 py-4 text-sm">
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => {
+                                    const token = tokenParam;
+                                    const url = token ? `/marketing/lists/${list.id}?token=${token}` : `/marketing/lists/${list.id}`;
+                                    router.push(url);
+                                  }}
+                                  className="p-1 text-[#ff6600] transition-colors duration-200 rounded-lg hover:bg-[#fff0e6]" 
+                                  aria-label="View members"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => handleEditClick(list)}
+                                  className="p-1 text-[#ff6600] transition-colors duration-200 rounded-lg hover:bg-[#fff0e6]" 
+                                  aria-label="Edit list"
+                                >
+                                  <Edit2 size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteClick(list.id, list.list_name)}
+                                  disabled={deleteLoading}
+                                  className="p-1 text-[#ff6600] transition-colors duration-200 rounded-lg hover:bg-[#fff0e6] disabled:opacity-50" 
+                                  aria-label="Delete list"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-6">
-            <button onClick={goPrev} disabled={currentPage === 1} className="flex items-center px-5 py-2 text-sm text-gray-700 capitalize transition-colors duration-200 bg-white border rounded-md gap-x-2 hover:bg-gray-100 disabled:opacity-50">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 rtl:-scale-x-100">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 15.75L3 12m0 0l3.75-3.75M3 12h18" />
-              </svg>
-              <span>previous</span>
-            </button>
-            <div className="items-center hidden md:flex gap-x-3">
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => goPage(i + 1)}
-                  className={`px-2 py-1 text-sm rounded-md ${currentPage === i + 1 ? 'text-blue-500 bg-blue-100/60 dark:bg-gray-800' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300'}`}
-                >
-                  {i + 1}
-                </button>
-              ))}
+            {/* Pagination */}
+            <div className="flex items-center justify-between mt-6">
+              <button onClick={goPrev} disabled={currentPage === 1} className="flex items-center px-5 py-2 text-sm text-gray-700 capitalize transition-colors duration-200 bg-white border rounded-md gap-x-2 hover:bg-gray-100 disabled:opacity-50">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 rtl:-scale-x-100">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 15.75L3 12m0 0l3.75-3.75M3 12h18" />
+                </svg>
+                <span>previous</span>
+              </button>
+              <div className="items-center hidden md:flex gap-x-3">
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    key={i + 1}
+                    onClick={() => goPage(i + 1)}
+                    className={`px-2 py-1 text-sm rounded-md ${currentPage === i + 1 ? 'text-blue-500 bg-blue-100/60 dark:bg-gray-800' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300'}`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+              <button onClick={goNext} disabled={currentPage === totalPages} className="flex items-center px-5 py-2 text-sm text-gray-700 capitalize transition-colors duration-200 bg-white border rounded-md gap-x-2 hover:bg-gray-100 disabled:opacity-50">
+                <span>Next</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 rtl:-scale-x-100">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                </svg>
+              </button>
             </div>
-            <button onClick={goNext} disabled={currentPage === totalPages} className="flex items-center px-5 py-2 text-sm text-gray-700 capitalize transition-colors duration-200 bg-white border rounded-md gap-x-2 hover:bg-gray-100 disabled:opacity-50">
-              <span>Next</span>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 rtl:-scale-x-100">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-              </svg>
-            </button>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Floating action button for mobile */}
@@ -752,12 +810,6 @@ function ListsPageContent() {
         cancelText="Cancel"
         type="danger"
         loading={deleteLoading}
-      />
-
-      <LoadingModal
-        isOpen={loading}
-        title="Loading Marketing Lists"
-        message="Please wait while we load your marketing lists..."
       />
 
       <Toast
@@ -784,7 +836,69 @@ function ListsPageContent() {
 
 export default function ListsPage() {
   return (
-    <Suspense fallback={<LoadingModal isOpen={true} title="Loading Marketing Lists" message="Please wait while we load your marketing lists..." />}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#fdf6f1] flex flex-col items-center pt-16 px-4">
+        <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl p-12 flex flex-col items-center" style={{ minHeight: "700px" }}>
+          <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+            <div>
+              <div className="w-48 h-8 bg-gray-200 rounded animate-pulse mb-2"></div>
+              <div className="w-64 h-5 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="w-40 h-10 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          <div className="w-full">
+            <div className="w-full flex flex-col mt-6">
+              <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+                  <div className="overflow-hidden border border-gray-200 dark:border-gray-700 md:rounded-lg">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th className="py-3.5 px-4 text-sm font-normal text-left text-gray-500 dark:text-gray-400">#</th>
+                          <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">List Name</th>
+                          <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Audience</th>
+                          <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Count</th>
+                          <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-900">
+                        {Array.from({ length: 10 }).map((_, idx) => (
+                          <tr key={idx}>
+                            <td className="px-4 py-4">
+                              <div className="w-6 h-4 bg-gray-200 rounded animate-pulse"></div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="space-y-2">
+                                <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                                <div className="w-40 h-6 bg-gray-200 rounded animate-pulse"></div>
+                                <div className="w-48 h-6 bg-gray-200 rounded animate-pulse"></div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="w-12 h-4 bg-gray-200 rounded animate-pulse"></div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+                                <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+                                <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
       <ListsPageContent />
     </Suspense>
   );
