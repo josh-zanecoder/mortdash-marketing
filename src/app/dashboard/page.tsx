@@ -15,12 +15,63 @@ const marketingLinks = [
 
 
 
-const rateSheets = [
-  { name: 'Standard Rate Sheet', lastUpdated: '2024-06-01', link: '#' },
-  { name: 'Premium Rate Sheet', lastUpdated: '2024-05-15', link: '#' },
-];
+interface RateSheet {
+  id: number;
+  name: string;
+  file_path?: string;
+  blob?: Blob;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function DashboardPage() {
+  const [rateSheets, setRateSheets] = useState<RateSheet[]>([]);
+  const [rateSheetsLoading, setRateSheetsLoading] = useState(true);
+  const [rateSheetsError, setRateSheetsError] = useState<string | null>(null);
+
+  const fetchRateSheets = async () => {
+    try {
+      setRateSheetsLoading(true);
+      setRateSheetsError(null);
+      
+      const response = await fetch('/api/ratesheet');
+      if (!response.ok) {
+        throw new Error('Failed to fetch rate sheets');
+      }
+      
+      // Check if response is a file download
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+        // Store the blob for later use
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        
+        // Set a placeholder rate sheet entry with download function
+        setRateSheets([{
+          id: 1,
+          name: 'Latest Rate Sheet',
+          file_path: url,
+          blob: blob, // Store the blob for later download
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }]);
+      } else {
+        // It's JSON data
+        const data = await response.json();
+        if (data.success && data.data) {
+          setRateSheets(Array.isArray(data.data) ? data.data : [data.data]);
+        } else {
+          setRateSheets([]);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error fetching rate sheets:', error);
+      setRateSheetsError(error.message || 'Failed to load rate sheets');
+      setRateSheets([]);
+    } finally {
+      setRateSheetsLoading(false);
+    }
+  };
   const [baseUrl, setBaseUrl] = useState<string | null>(null);
   const { 
     marketingContacts, 
@@ -51,6 +102,7 @@ export default function DashboardPage() {
     fetchProspects();
     fetchClients();
     fetchDashboardStats();
+    fetchRateSheets();
 
     // Fetch configuration from API
     fetch('/api/config')
@@ -177,22 +229,95 @@ export default function DashboardPage() {
         </Card>
         </Link>
         {/* Rate Sheets Section */}
-        <Card className="col-span-1 p-6 shadow-lg border-2 border-[#ffe3d1] bg-white flex flex-col justify-between">
-          <CardHeader className="flex flex-row items-center gap-2 mb-4">
-            <FileText className="w-6 h-6 text-[#ff6600]" />
-            <CardTitle className="text-2xl font-bold">Rate Sheets</CardTitle>
+        <Card className="col-span-1 p-6 shadow-lg border-2 border-[#ffe3d1] bg-white">
+          <CardHeader className="flex flex-row items-center gap-2 mb-6">
+            <div className="p-2 bg-[#fff7ed] rounded-lg">
+              <FileText className="w-6 h-6 text-[#ff6600]" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-bold text-[#232323]">Rate Sheets</CardTitle>
+              <p className="text-sm text-[#6d6d6d] mt-1">Access your latest rate information</p>
+            </div>
           </CardHeader>
-          <CardContent>
-            <ul className="space-y-4 mb-4">
-              {rateSheets.map((sheet) => (
-                <li key={sheet.name} className="flex flex-col">
-                  <span className="font-semibold text-[#232323]">{sheet.name}</span>
-                  <span className="text-xs text-[#6d6d6d]">Last updated: {sheet.lastUpdated}</span>
-                  <a href={sheet.link} className="text-blue-600 text-xs hover:underline mt-1">View/Download</a>
-                </li>
-              ))}
-            </ul>
-            <Link href="#" className="inline-block mt-2 px-4 py-2 bg-[#ff6600] text-white rounded-lg font-semibold shadow hover:bg-[#e65c00] transition text-center">See All Rate Sheets</Link>
+          <CardContent className="p-0">
+            {rateSheetsLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 2 }).map((_, index) => (
+                  <div key={index} className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2 mb-3"></div>
+                    <div className="h-8 bg-gray-200 rounded w-24"></div>
+                  </div>
+                ))}
+              </div>
+            ) : rateSheetsError ? (
+              <div className="text-center py-8">
+                <div className="text-red-500 mb-2">
+                  <FileText className="w-8 h-8 mx-auto" />
+                </div>
+                <div className="text-red-600 text-sm">{rateSheetsError}</div>
+              </div>
+            ) : rateSheets.length > 0 ? (
+              <div className="space-y-4">
+                {rateSheets.map((sheet) => (
+                  <div key={sheet.id} className="bg-[#fdf6f1] rounded-lg p-4 border border-[#ffe3d1] hover:bg-[#fff7ed] transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg shadow-sm">
+                          <FileText className="w-4 h-4 text-[#ff6600]" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-[#232323] text-sm">{sheet.name}</h3>
+                          <p className="text-xs text-[#6d6d6d] mt-1">
+                            Updated {new Date(sheet.updated_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    {sheet.blob ? (
+                      <button 
+                        onClick={() => {
+                          const url = window.URL.createObjectURL(sheet.blob!);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = 'rate-sheet.xlsx';
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                        }}
+                        className="w-full bg-[#ff6600] hover:bg-[#e65c00] text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Download Rate Sheet
+                      </button>
+                    ) : sheet.file_path && (
+                      <a 
+                        href={sheet.file_path} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="w-full bg-[#ff6600] hover:bg-[#e65c00] text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        View Rate Sheet
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-gray-400 mb-3">
+                  <FileText className="w-12 h-12 mx-auto" />
+                </div>
+                <div className="text-gray-500 text-sm mb-2">No rate sheets available</div>
+                <div className="text-gray-400 text-xs">Rate sheets will appear here when available</div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>
@@ -202,9 +327,12 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <BarChart2 className="w-6 h-6 text-[#ff6600]" />
-              <CardTitle className="text-2xl font-bold">Stats</CardTitle>
+              <div>
+                <CardTitle className="text-2xl font-bold">Stats</CardTitle>
+                <p className="text-sm text-[#6d6d6d] mt-1">Last 7 days performance</p>
+              </div>
             </div>
-            <Link href="/marketing/tracking" className="text-sm text-blue-600 hover:underline font-semibold">View Tracking &rarr;</Link>
+            <Link href="/marketing/tracking?range=Last%207%20Days" className="text-sm text-blue-600 hover:underline font-semibold">View Tracking &rarr;</Link>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">

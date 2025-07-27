@@ -139,16 +139,24 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
 
   fetchDashboardStats: async () => {
     try {
-      // Get today's date
+      // Get last 7 days date range (matching tracking page logic)
       const today = new Date();
-      const startDate = today.toISOString().split('T')[0];
-      const endDate = startDate;
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - 7);
+      
+      const endDate = new Date(today);
 
       const params = new URLSearchParams({
-        start_date: startDate,
-        end_date: endDate,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
         page: '1',
-        limit: '1' 
+        limit: '10' 
+      });
+
+      console.log('Dashboard Stats Date Range:', {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        fullUrl: `/api/tracking/by-range?${params.toString()}`
       });
 
       const response = await fetch(`/api/tracking/by-range?${params.toString()}`);
@@ -158,10 +166,32 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
         throw new Error(errorData.error || 'Failed to fetch dashboard stats');
       }
 
-      const result: TrackingResponse = await response.json();
+      const result: any = await response.json();
+      
+      console.log('API Response:', {
+        success: result.success,
+        data: result.data,
+        stats: result.stats,
+        message: result.message
+      });
+      
+      // Process data the same way as tracking page
+      const trackingData = result.data || {};
+      
+      // Calculate stats from the data structure (matching tracking page logic)
+      const dashboardStats = {
+        delivered: trackingData.delivered?.count || 0,
+        unique_clickers: trackingData.clicks?.count || 0,
+        soft_bounces: trackingData.softBounce?.count || 0,
+        hard_bounces: trackingData.hardBounce?.count || 0,
+        blocked: trackingData.blocked?.count || 0,
+        total: trackingData.total || 0,
+      };
+      
+      console.log('Calculated Dashboard Stats:', dashboardStats);
       
       set({
-        dashboardStats: result.stats || initialState.stats
+        dashboardStats: dashboardStats
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
