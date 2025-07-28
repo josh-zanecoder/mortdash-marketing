@@ -210,12 +210,13 @@ function CampaignPageContent() {
     fetchTemplates(audience_type_id, showArchived);
   }, [selectedList, lists, showArchived, fetchTemplates]);
 
-  // Filter templates by search and filter
+  // Filter templates by search, filter, and archive status
   const filteredTemplates = templates
     .filter((tpl) => {
       const matchesFilter = activeFilter === 'all' || tpl.email_template_category_id === activeFilter;
       const matchesSearch = tpl.name?.toLowerCase().includes(search.toLowerCase());
-      return matchesFilter && matchesSearch;
+      const matchesArchiveStatus = showArchived ? tpl.is_archived === 1 : tpl.is_archived === 0;
+      return matchesFilter && matchesSearch && matchesArchiveStatus;
     });
 
   // Helper to fetch and show preview
@@ -364,7 +365,12 @@ function CampaignPageContent() {
       // Refresh templates to get updated archive status
       const list = lists.find(l => String(l.id) === String(selectedList));
       const audience_type_id = list?.audience_type_id || null;
-      await fetchTemplates(audience_type_id, false);
+      
+      // Clear current templates first to avoid showing stale data
+      clearTemplates();
+      
+      // Fetch fresh templates with current archive status
+      await fetchTemplates(audience_type_id, showArchived);
 
       toast.success(
         isCurrentlyArchived 
