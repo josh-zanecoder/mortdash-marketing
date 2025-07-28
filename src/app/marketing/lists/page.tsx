@@ -317,191 +317,325 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="sm:max-w-[425px]"
+        className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto bg-white/95 backdrop-blur-sm border-0 shadow-2xl rounded-2xl"
       >
-        <DialogHeader>
-          <DialogTitle>Edit Marketing List</DialogTitle>
+        <DialogHeader className="pb-6 border-b border-slate-200/60">
+          <DialogTitle className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+              <Edit2 size={20} className="text-white" />
+            </div>
+            Edit Marketing List
+          </DialogTitle>
+         
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="listName" className="text-sm font-medium text-gray-700">
+        
+        <form onSubmit={handleSubmit} className="space-y-6 pt-6">
+          {/* List Name Section */}
+          <div className="space-y-3">
+            <label htmlFor="listName" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
               List Name
+              <span className="text-red-500">*</span>
             </label>
-            <input
-              id="listName"
-              type="text"
-              value={listName}
-              onChange={(e) => setListName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent"
-              placeholder="Enter list name"
-              required
-            />
+            <div className="relative">
+              <input
+                id="listName"
+                type="text"
+                value={listName}
+                onChange={(e) => setListName(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm transition-all duration-200 hover:shadow-md"
+                placeholder="Enter a descriptive list name"
+                required
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <div className="w-2 h-2 bg-orange-500 rounded-full opacity-60"></div>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="audienceType" className="text-sm font-medium text-gray-700">
+          {/* Audience Type Section */}
+          <div className="space-y-3">
+            <label htmlFor="audienceType" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               Audience Type
+              <span className="text-red-500">*</span>
             </label>
-            <select
-              id="audienceType"
-              value={selectedAudienceType}
-              onChange={(e) => setSelectedAudienceType(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent"
-              required
-            >
-              <option value="0">Select Audience Type</option>
-              {audienceTypes.map((type) => (
-                <option key={`audience-type-${type.value}`} value={type.value}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                id="audienceType"
+                value={selectedAudienceType}
+                onChange={(e) => setSelectedAudienceType(Number(e.target.value))}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm transition-all duration-200 hover:shadow-md appearance-none"
+                required
+              >
+                <option value="0">Select an audience type</option>
+                {audienceTypes.map((type) => (
+                  <option key={`audience-type-${type.value}`} value={type.value}>
+                    {type.name}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </div>
 
           {/* Filters Section */}
-          <div className="space-y-4 border-t pt-4 mt-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">List Filters</h3>
+          <div className="space-y-4 border-t border-slate-200/60 pt-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                List Filters
+              </h3>
+              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+                {filters.length} active
+              </span>
+            </div>
             
-            {/* Edit filters */}
-            {filters.map((f, idx) => (
-              <div key={idx} className="flex items-center gap-2 mb-3">
-                <button type="button" onClick={() => removeFilter(idx)} className="cursor-pointer text-red-500">➖</button>
-
-                {/* Filter Type Dropdown */}
-                <select
-                  value={f.filter_type_id ?? ''}
-                  onChange={(e) => {
-                    const selectedFilter = audienceTypeFilters.find(
-                      ft => ft.value === Number(e.target.value)
-                    );
-                    if (selectedFilter) {
-                      const newFilters = [...filters];
-                      newFilters[idx] = {
-                        ...newFilters[idx],
-                        filter_type_id: selectedFilter.value,
-                        filter_type_name: selectedFilter.name,
-                        filter_value: '',
-                        filter_value_id: '',
-                        filter_value_name: ''
-                      };
-                      setFilters(newFilters);
-                    }
-                  }}
-                  className="px-3 py-2 border rounded-lg flex-1"
-                >
-                  <option value="">Select filter</option>
-                  {audienceTypeFilters
-                    .filter(ft => ft.audience_type_id === selectedAudienceType && ft.type === 'all')
-                    .map(ft => (
-                      <option key={`filter-type-${ft.value}-${ft.name}`} value={ft.value}>
-                        {ft.name}
-                      </option>
-                    ))}
-                </select>
-
-                <span className="text-gray-500">=</span>
-
-                {/* Filter Value Dropdown */}
-                {f.filter_type_name === 'Channel' && (
-                  <select
-                    value={f.filter_value || ''}
-                    onChange={(e) => {
-                      const selectedChannel = bankChannels.find(channel => channel.name === e.target.value);
-                      if (selectedChannel) {
-                        const newFilters = [...filters];
-                        newFilters[idx] = {
-                          ...newFilters[idx],
-                          filter_value: selectedChannel.name,
-                          filter_value_id: String(selectedChannel.value),
-                          filter_value_name: selectedChannel.name
-                        };
-                        setFilters(newFilters);
-                      }
-                    }}
-                    className="px-3 py-2 border rounded-lg flex-1"
-                  >
-                    <option value="">Select channel</option>
-                    {bankChannels.map((channel) => (
-                      <option key={`channel-${channel.value}-${channel.name}`} value={channel.name}>
-                        {channel.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-
-                {f.filter_type_name === 'State' && (
-                  <div className="relative flex-1">
-                    <select
-                      value={f.filter_value || ''}
-                      onChange={(e) => {
-                        const newFilters = [...filters];
-                        newFilters[idx] = {
-                          ...newFilters[idx],
-                          filter_value: e.target.value,
-                          filter_value_id: e.target.value,
-                          filter_value_name: e.target.value
-                        };
-                        setFilters(newFilters);
-                      }}
-                      className="w-full px-3 py-2 border rounded-lg"
+            {/* Filters Container */}
+            <div className="space-y-4">
+              {filters.map((f, idx) => (
+                <div key={idx} className="bg-slate-50/80 rounded-xl p-4 border border-slate-200/60">
+                  <div className="flex items-center gap-3 mb-3">
+                    <button 
+                      type="button" 
+                      onClick={() => removeFilter(idx)} 
+                      className="w-8 h-8 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105"
                     >
-                      <option value="">Select state</option>
-                      {Object.entries(State).map(([abbr, name]) => (
-                        <option 
-                          key={`state-${abbr}`} 
-                          value={abbr}
-                        >
-                          {name} ({abbr})
-                        </option>
-                      ))}
-                    </select>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <span className="text-sm font-medium text-slate-600">Filter {idx + 1}</span>
                   </div>
-                )}
+
+                  <div className="grid grid-cols-3 gap-3 items-center">
+                    {/* Filter Type Dropdown */}
+                    <div className="relative">
+                      <select
+                        value={f.filter_type_id ?? ''}
+                        onChange={(e) => {
+                          const selectedFilter = audienceTypeFilters.find(
+                            ft => ft.value === Number(e.target.value)
+                          );
+                          if (selectedFilter) {
+                            const newFilters = [...filters];
+                            newFilters[idx] = {
+                              ...newFilters[idx],
+                              filter_type_id: selectedFilter.value,
+                              filter_type_name: selectedFilter.name,
+                              filter_value: '',
+                              filter_value_id: '',
+                              filter_value_name: ''
+                            };
+                            setFilters(newFilters);
+                          }
+                        }}
+                        className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-sm appearance-none"
+                      >
+                        <option value="">Select filter</option>
+                        {audienceTypeFilters
+                          .filter(ft => ft.audience_type_id === selectedAudienceType && ft.type === 'all')
+                          .filter(ft => {
+                            // Don't show filter types that are already selected in other filters
+                            const existingFilterTypes = filters
+                              .map((filter, filterIdx) => filterIdx !== idx ? filter.filter_type_name : null)
+                              .filter(Boolean);
+                            return !existingFilterTypes.includes(ft.name);
+                          })
+                          .map(ft => (
+                            <option key={`filter-type-${ft.value}-${ft.name}`} value={ft.value}>
+                              {ft.name}
+                            </option>
+                          ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-center">
+                      <span className="text-slate-400 font-medium">=</span>
+                    </div>
+
+                    {/* Filter Value Dropdown */}
+                    <div className="relative">
+                      {f.filter_type_name === 'Channel' && (
+                        <select
+                          value={f.filter_value || ''}
+                          onChange={(e) => {
+                            const selectedChannel = bankChannels.find(channel => channel.name === e.target.value);
+                            if (selectedChannel) {
+                              const newFilters = [...filters];
+                              newFilters[idx] = {
+                                ...newFilters[idx],
+                                filter_value: selectedChannel.name,
+                                filter_value_id: String(selectedChannel.value),
+                                filter_value_name: selectedChannel.name
+                              };
+                              setFilters(newFilters);
+                            }
+                          }}
+                          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-sm appearance-none"
+                        >
+                          <option value="">Select channel</option>
+                          {bankChannels.map((channel) => (
+                            <option key={`channel-${channel.value}-${channel.name}`} value={channel.name}>
+                              {channel.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      {f.filter_type_name === 'State' && (
+                        <select
+                          value={f.filter_value || ''}
+                          onChange={(e) => {
+                            const newFilters = [...filters];
+                            newFilters[idx] = {
+                              ...newFilters[idx],
+                              filter_value: e.target.value,
+                              filter_value_id: e.target.value,
+                              filter_value_name: e.target.value
+                            };
+                            setFilters(newFilters);
+                          }}
+                          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-sm appearance-none"
+                        >
+                          <option value="">Select state</option>
+                          {Object.entries(State).map(([abbr, name]) => (
+                            <option 
+                              key={`state-${abbr}`} 
+                              value={abbr}
+                            >
+                              {name} ({abbr})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      {f.filter_type_name && (
+                        <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add Filter Button */}
+            {selectedAudienceType ? (
+              (() => {
+                const existingFilterTypes = filters.map(f => f.filter_type_name).filter(Boolean);
+                const hasChannel = existingFilterTypes.includes('Channel');
+                const hasState = existingFilterTypes.includes('State');
+                const canAddMore = !hasChannel || !hasState;
+                
+                return canAddMore ? (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setFilters([...filters, { 
+                        filter_type_id: null, 
+                        filter_type_name: '', 
+                        filter_value: '', 
+                        filter_value_id: '', 
+                        filter_value_name: '' 
+                      }]);
+                    }} 
+                    className="w-full py-3 px-4 border-2 border-dashed border-orange-300 rounded-xl text-orange-600 hover:text-orange-700 hover:border-orange-400 hover:bg-orange-50/50 transition-all duration-200 font-medium flex items-center justify-center gap-2 group"
+                  >
+                    <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center group-hover:bg-orange-200 transition-colors duration-200">
+                      <Plus size={14} className="text-orange-600" />
+                    </div>
+                    Add New Filter
+                  </button>
+                ) : (
+                  <div className="w-full py-3 px-4 border-2 border-dashed border-green-300 rounded-xl text-green-600 bg-green-50/50 flex items-center justify-center gap-2">
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-medium">All filter types added (Channel and State)</span>
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="w-full py-3 px-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 bg-slate-50/50 flex items-center justify-center gap-2">
+                <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <span className="text-sm">Please select an audience type to add filters</span>
               </div>
-            ))}
-                         <button 
-               type="button" 
-               onClick={() => {
-                 setFilters([...filters, { 
-                   filter_type_id: null, 
-                   filter_type_name: '', 
-                   filter_value: '', 
-                   filter_value_id: '', 
-                   filter_value_name: '' 
-                 }]);
-               }} 
-               className="cursor-pointer inline-flex items-center gap-2 text-[#ff6600] hover:text-[#ff7a2f] font-semibold"
-             >
-               <span>+</span> Add Filter
-             </button>
+            )}
              
-             {/* Show warning if there are incomplete filters */}
-             {filters.some(f => f.filter_type_id && !f.filter_value) && (
-               <p className="text-sm text-amber-600 mt-2">
-                 ⚠️ Some filters are incomplete. Incomplete filters will be ignored when saving.
-               </p>
-             )}
+            {/* Warning Message */}
+            {filters.some(f => f.filter_type_id && !f.filter_value) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-amber-800">Incomplete Filters</p>
+                    <p className="text-sm text-amber-700 mt-1">Some filters are incomplete and will be ignored when saving.</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Error Message */}
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            </div>
           )}
 
-          <div className="flex justify-end gap-3">
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200/60">
             <Button
               type="button"
               onClick={onClose}
               variant="outline"
-              className="cursor-pointer px-4 py-2"
+              className="px-6 py-2.5 border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 rounded-xl transition-all duration-200"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="cursor-pointer px-4 py-2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white"
+              className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Saving...
+                </div>
+              ) : (
+                'Save Changes'
+              )}
             </Button>
           </div>
         </form>
