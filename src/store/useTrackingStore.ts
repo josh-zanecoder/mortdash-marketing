@@ -153,11 +153,7 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
         limit: '10' 
       });
 
-      console.log('Dashboard Stats Date Range:', {
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-        fullUrl: `/api/tracking/by-range?${params.toString()}`
-      });
+   
 
       const response = await fetch(`/api/tracking/by-range?${params.toString()}`);
       
@@ -168,12 +164,7 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
 
       const result: any = await response.json();
       
-      console.log('API Response:', {
-        success: result.success,
-        data: result.data,
-        stats: result.stats,
-        message: result.message
-      });
+    
       
       // Process data the same way as tracking page
       const trackingData = result.data || {};
@@ -188,7 +179,7 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
         total: trackingData.total || 0,
       };
       
-      console.log('Calculated Dashboard Stats:', dashboardStats);
+ 
       
       set({
         dashboardStats: dashboardStats
@@ -208,7 +199,7 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
 }));
 
 function groupEmailsByEvent(data: TrackingData[] | any) {
-  console.log('groupEmailsByEvent input:', data);
+
   if (!Array.isArray(data)) {
     return data || {};
   }

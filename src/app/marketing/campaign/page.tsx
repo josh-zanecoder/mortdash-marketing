@@ -226,7 +226,7 @@ function CampaignPageContent() {
         `/api/campaign/get-email-template-content?id=${tpl.id}&marketing_list_id=${marketing_list_id}`
       );
       const data = await res.json();
-      console.log('Preview template data:', data);
+  
       setPreviewData({
         ...data,
         template: tpl.id // Store the template ID from tpl

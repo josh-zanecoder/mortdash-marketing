@@ -289,7 +289,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
   };
 
   const handleFilterChange = (filterId: number, value: string) => {
-    console.log('Changing filter:', { filterId, value });
+   
     setFilters(prevFilters => {
       const filterIndex = prevFilters.findIndex(f => f.audience_type_filter_id === filterId);
       if (filterIndex > -1) {

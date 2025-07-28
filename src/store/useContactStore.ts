@@ -120,7 +120,7 @@ export const useContactStore = create<ContactStore>((set, get) => ({
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch channels');
       const data = await res.json();
-      console.log('Fetched channels data:', data);
+     
       let channels: Channel[] = [];
       if (data && Array.isArray(data.data)) {
         channels = data.data.map((c: any) => ({ value: String(c.value), label: c.name }));
