@@ -6,7 +6,7 @@ const baseUrl = `${mortdash_url}/api/bank/v1/marketing`;
 
 export async function GET(request: NextRequest, context: { params: Promise<{ token: string }> }) {
   const { token } = await context.params;
-  console.log('Proxying with token:', token);
+
 
   try {
     const res = await axios.get(`${baseUrl}/account-executive/marketing-list`, {
@@ -17,8 +17,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
       validateStatus: () => true,
     });
 
-    console.log('Backend status:', res.status);
-    console.log('Backend data:', res.data);
+
 
     const contentType = res.headers['content-type'];
     if (res.status === 401) {
@@ -47,23 +46,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ to
   const { token } = await context.params;
   const body = await request.json();
 
-  console.log('=== API ROUTE DEBUG ===');
-  console.log('Token:', token);
-  console.log('Body being sent to backend:', JSON.stringify(body, null, 2));
+ 
 
   try {
-    console.log('Making request to:', `${baseUrl}/account-executive/marketing-list`);
-    console.log('Full URL:', `${baseUrl}/account-executive/marketing-list`);
-    
+  
     // Test connectivity first
     try {
       const testRes = await axios.get(`${baseUrl.replace('/api/bank/v1/marketing', '')}/health`, {
         timeout: 5000,
         validateStatus: () => true,
       });
-      console.log('Backend health check status:', testRes.status);
+   
     } catch (testError: any) {
-      console.log('Backend health check failed:', testError.message);
+    
     }
     
     const res = await axios.post(`${baseUrl}/account-executive/marketing-list`, body, {
@@ -75,12 +70,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ to
       timeout: 30000, // 30 second timeout
     });
 
-    console.log('Backend response status:', res.status);
-    console.log('Backend response headers:', res.headers);
-    console.log('Backend response data:', JSON.stringify(res.data, null, 2));
+    
 
     if (res.status >= 400) {
-      console.log('Backend returned error status:', res.status);
+   
       return NextResponse.json(res.data, { status: res.status });
     }
 
