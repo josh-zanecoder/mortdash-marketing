@@ -137,7 +137,7 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
         const detectedMergeTags = extractMergeTags(templateData.html);
         
         // Log detected merge tags for debugging
-        console.log(`🔍 Detected Merge Tags for ${templateType}:`, detectedMergeTags);
+       
         
         // Add detected merge tags as fields in the original database format
         if (detectedMergeTags.length > 0) {
@@ -152,13 +152,11 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
             };
           });
           
-          // Log the fields that will be saved to database
-          console.log(`💾 Fields to be saved for ${templateType}:`, fields);
-          console.log(`📊 Total fields detected for ${templateType}:`, fields.length);
+        
           
           formData.append('fields', JSON.stringify(fields));
         } else {
-          console.log(`ℹ️ No merge tags detected in template for ${templateType}`);
+        
         }
         
         // Create a file from the HTML content

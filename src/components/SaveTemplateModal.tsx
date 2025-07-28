@@ -90,12 +90,10 @@ export default function SaveTemplateModal({
 
       const detectedMergeTags = extractMergeTags(html);
       
-      console.log('🔍 Modal Opened - Detected Merge Tags:', detectedMergeTags);
-      console.log('📄 Template HTML Length:', html.length);
+   
       
       if (detectedMergeTags.length > 0) {
-        console.log('✅ Merge tags found in template');
-        console.log('📊 Total merge tags detected:', detectedMergeTags.length);
+        
         
         // Show what fields will be created
         const fields = detectedMergeTags.map(tag => {
@@ -108,9 +106,9 @@ export default function SaveTemplateModal({
           };
         });
         
-        console.log('💾 Fields that will be saved:', fields);
+      
       } else {
-        console.log('ℹ️ No merge tags detected in this template');
+     
       }
     }
   }, [open, html]);

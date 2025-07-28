@@ -6,7 +6,7 @@ const baseUrl = `${mortdash_url}/api/bank/v1/marketing`;
 
 export async function GET(request: NextRequest) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  console.log('Proxying with token:', token);
+ 
 
   try {
     const res = await axios.get(`${baseUrl}/account-executive/audience-types`, {

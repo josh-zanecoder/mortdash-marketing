@@ -20,13 +20,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log('Sending test email request to backend:', {
-      url: backendUrl,
-      recipient,
-      name,
-      subject,
-      template_type
-    });
 
     // Set up headers with auth token
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -48,10 +41,7 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    console.log('Backend response:', {
-      status: response.status,
-      data: response.data
-    });
+  
 
     return NextResponse.json(response.data, { status: response.status });
   } catch (error: any) {
