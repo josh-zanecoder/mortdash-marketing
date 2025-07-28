@@ -93,6 +93,17 @@ function AddMarketingListPageContent() {
       return;
     }
 
+    // Check if list name is empty or contains only whitespace
+    if (!listName || !listName.trim()) {
+      setToast({
+        isOpen: true,
+        title: 'Error',
+        message: 'Please enter a valid list name',
+        type: 'error'
+      });
+      return;
+    }
+
     if (!audienceTypeId) {
       setToast({
         isOpen: true,
@@ -138,7 +149,7 @@ function AddMarketingListPageContent() {
 
       
       const body = {
-        name: listName,
+        name: listName.trim(),
         audience_type: String(audienceTypeId),
         filters: finalFilters.map(({ filter_type_id, filter_type_name, filter_value, filter_value_id, filter_value_name }) => {
           const baseFilter = {
