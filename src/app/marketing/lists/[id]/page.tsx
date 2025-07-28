@@ -103,7 +103,7 @@ export default function MembersPage() {
           <div>
             <Button
               variant="ghost"
-              className="mb-4"
+              className="cursor-pointer mb-4"
               onClick={() => router.back()}
             >
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Lists
@@ -209,7 +209,7 @@ export default function MembersPage() {
                 <PaginationItem>
                   <PaginationPrevious 
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                    className={`cursor-pointer ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
                   />
                 </PaginationItem>
                 {Array.from({ length: totalPages }, (_, i) => {
@@ -225,6 +225,7 @@ export default function MembersPage() {
                         <PaginationLink
                           onClick={() => setCurrentPage(pageNum)}
                           isActive={currentPage === pageNum}
+                          className="cursor-pointer"
                         >
                           {pageNum}
                         </PaginationLink>
@@ -235,9 +236,9 @@ export default function MembersPage() {
                     pageNum === currentPage + 3
                   ) {
                     return (
-                      <PaginationItem key={pageNum}>
-                        <PaginationLink>...</PaginationLink>
-                      </PaginationItem>
+                                        <PaginationItem key={pageNum}>
+                    <PaginationLink className="cursor-pointer">...</PaginationLink>
+                  </PaginationItem>
                     );
                   }
                   return null;
@@ -245,7 +246,7 @@ export default function MembersPage() {
                 <PaginationItem>
                   <PaginationNext
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                    className={`cursor-pointer ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
                   />
                 </PaginationItem>
               </PaginationContent>

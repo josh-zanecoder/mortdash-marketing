@@ -255,26 +255,44 @@ function AddMarketingListPageContent() {
   const removeFilter = (idx: number) => setFilters(filters.filter((_, i) => i !== idx));
 
   return (
-    <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center pt-16 px-4">
-      <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl p-10">
-        <h1 className="text-3xl font-extrabold text-[#232323] mb-6">Add Marketing List</h1>
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-50 flex flex-col items-center pt-16 px-4">
+      {/* Backdrop overlay */}
+      <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-40"></div>
+      
+      {/* Modal container */}
+      <div className="relative z-50 w-full max-w-2xl bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-white/30 p-8 md:p-12">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+            Add Marketing List
+          </h1>
+          <button
+            onClick={() => router.back()}
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all duration-200"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">List Name</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">List Name</label>
             <input
               type="text"
               value={listName}
               onChange={(e) => setListName(e.target.value)}
               required
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]"
+              placeholder="Enter a descriptive name for your list"
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Audience Type</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Audience Type</label>
             <select
               value={audienceTypeId || ''}
               onChange={(e) => handleAudienceTypeChange(Number(e.target.value))}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]"
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm cursor-pointer"
             >
               <option value="">Select Audience Type</option>
               {audienceTypes.map((at) => (
@@ -285,10 +303,10 @@ function AddMarketingListPageContent() {
             </select>
           </div>
           <div>
-            <label className="block text-xl font-semibold text-gray-800 mb-3">Filters</label>
+            <label className="block text-lg font-semibold text-slate-800 mb-4">Filters</label>
             {filters.map((f, idx) => (
-              <div key={idx} className="flex items-center gap-2 mb-3">
-                <button type="button" onClick={() => removeFilter(idx)} className="text-red-500">➖</button>
+              <div key={idx} className="flex items-center gap-3 mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <button type="button" onClick={() => removeFilter(idx)} className="cursor-pointer p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200">➖</button>
 
                 {/* Filter Type Dropdown */}
                 <select
@@ -310,7 +328,7 @@ function AddMarketingListPageContent() {
                       setFilters(newFilters);
                     }
                   }}
-                  className="px-3 py-2 border rounded-lg flex-1"
+                  className="cursor-pointer px-3 py-2 border border-slate-300 rounded-lg flex-1 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm"
                 >
                   <option value="">Select filter</option>
                   {audienceTypeFilters
@@ -322,7 +340,7 @@ function AddMarketingListPageContent() {
                     ))}
                 </select>
 
-                <span className="text-gray-500">=</span>
+                <span className="text-slate-500 font-medium">=</span>
 
                 {/* Filter Value Dropdown */}
                 {f.filter_type_name === 'Channel' && (
@@ -341,7 +359,7 @@ function AddMarketingListPageContent() {
                         setFilters(newFilters);
                       }
                     }}
-                    className="px-3 py-2 border rounded-lg flex-1"
+                    className="cursor-pointer px-3 py-2 border border-slate-300 rounded-lg flex-1 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm"
                   >
                     <option value="">Select channel</option>
                     {bankChannels.map((channel) => (
@@ -365,7 +383,7 @@ function AddMarketingListPageContent() {
                       };
                       setFilters(newFilters);
                     }}
-                    className="px-3 py-2 border rounded-lg flex-1"
+                    className="cursor-pointer px-3 py-2 border border-slate-300 rounded-lg flex-1 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm"
                   >
                     <option value="">Select state</option>
                     {Object.entries(State).map(([abbr, name]) => (
@@ -377,12 +395,14 @@ function AddMarketingListPageContent() {
                 )}
               </div>
             ))}
-            <button type="button" onClick={addFilter} className="text-[#ff6600] font-semibold">➕ Add Filter</button>
+            <button type="button" onClick={addFilter} className="cursor-pointer inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 font-semibold hover:bg-orange-50 px-3 py-2 rounded-lg transition-all duration-200">
+              <span className="text-lg">+</span> Add Filter
+            </button>
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <div className="flex justify-end gap-4">
-            <Button type="button" onClick={() => router.back()} className="bg-gray-200 text-gray-700 hover:bg-gray-300">Cancel</Button>
-            <Button type="submit" disabled={loading} className="bg-[#ff6600] hover:bg-[#ff7a2f] text-white">
+          {error && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg border border-red-200">{error}</p>}
+          <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
+            <Button type="button" onClick={() => router.back()} className="cursor-pointer px-6 py-3 bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-xl transition-all duration-200">Cancel</Button>
+            <Button type="submit" disabled={loading} className="cursor-pointer px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
               {loading ? 'Saving...' : 'Save'}
             </Button>
           </div>
