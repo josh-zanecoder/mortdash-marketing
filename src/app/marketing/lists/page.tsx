@@ -219,20 +219,73 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
         const value = filter.value;
         const filterType = filter.audience_type_filter;
         
+        // For Channel filters, we need to map the value to the channel name
+        let filterValue = value;
+        let filterValueName = value;
+        let filterTypeName = filterType?.name || '';
+        
+        // Check if this is a Channel filter by looking at the value
+        const channel = bankChannels.find(ch => 
+          String(ch.value) === value || ch.name === value
+        );
+        
+        if (channel) {
+          // This is definitely a Channel filter
+          filterTypeName = 'Channel';
+          filterValue = channel.name;
+          filterValueName = channel.name;
+          
+          // Find the Channel filter type ID from audienceTypeFilters
+          const channelFilterType = audienceTypeFilters.find(ft => 
+            ft.name === 'Channel' && ft.audience_type_id === list.audience_type_id
+          );
+          if (channelFilterType) {
+            filterTypeName = 'Channel';
+            // Update the filter_type_id to the correct Channel filter type ID
+            return {
+              audience_type_filter_id: channelFilterType.value,
+              filter_type_id: channelFilterType.value,
+              filter_type_name: 'Channel',
+              filter_value: channel.name,
+              filter_value_id: value,
+              filter_value_name: channel.name
+            };
+          }
+        }
+        
+        // Check if this is a State filter by looking at the value
+        const stateAbbr = Object.keys(State).find(abbr => abbr === value);
+        if (stateAbbr) {
+          // This is definitely a State filter
+          const stateFilterType = audienceTypeFilters.find(ft => 
+            ft.name === 'State' && ft.audience_type_id === list.audience_type_id
+          );
+          if (stateFilterType) {
+            return {
+              audience_type_filter_id: stateFilterType.value,
+              filter_type_id: stateFilterType.value,
+              filter_type_name: 'State',
+              filter_value: value,
+              filter_value_id: value,
+              filter_value_name: value
+            };
+          }
+        }
+        
         return {
           audience_type_filter_id: filterType?.value || filter.audience_type_filter_id,
           filter_type_id: filterType?.value || filter.audience_type_filter_id,
-          filter_type_name: filterType?.name || '',
-          filter_value: value,
+          filter_type_name: filterTypeName,
+          filter_value: filterValue,
           filter_value_id: value,
-          filter_value_name: value
+          filter_value_name: filterValueName
         };
       }).filter(Boolean) || [];
       
       setFilters(existingFilters);
     }
     setError('');
-  }, [list]);
+  }, [list, bankChannels, audienceTypeFilters]);
 
   useEffect(() => {
   }, [selectedAudienceType, audienceTypeFilters, relevantFilters, filters]);
@@ -333,7 +386,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
           {/* List Name Section */}
           <div className="space-y-3">
             <label htmlFor="listName" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+         
               List Name
               <span className="text-red-500">*</span>
             </label>
@@ -356,7 +409,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
           {/* Audience Type Section */}
           <div className="space-y-3">
             <label htmlFor="audienceType" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            
               Audience Type
               <span className="text-red-500">*</span>
             </label>
@@ -365,7 +418,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
                 id="audienceType"
                 value={selectedAudienceType}
                 onChange={(e) => setSelectedAudienceType(Number(e.target.value))}
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm transition-all duration-200 hover:shadow-md appearance-none"
+                className="cursor-pointer w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm transition-all duration-200 hover:shadow-md appearance-none"
                 required
               >
                 <option value="0">Select an audience type</option>
@@ -384,39 +437,51 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
           </div>
 
           {/* Filters Section */}
-          <div className="space-y-4 border-t border-slate-200/60 pt-6">
+          <div className="space-y-5 border-t border-slate-200/60 pt-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                List Filters
-              </h3>
-              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
-                {filters.length} active
-              </span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-slate-800">List Filters</h3>
+                  <p className="text-xs text-slate-500">Define targeting criteria for your list</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
+                  {filters.length} active
+                </span>
+              </div>
             </div>
             
             {/* Filters Container */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filters.map((f, idx) => (
-                <div key={idx} className="bg-slate-50/80 rounded-xl p-4 border border-slate-200/60">
-                  <div className="flex items-center gap-3 mb-3">
+                <div key={idx} className="group relative bg-gradient-to-r from-slate-50 to-slate-100/50 rounded-xl p-4 border border-slate-200/60 shadow-sm hover:shadow-md transition-all duration-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-slate-700">Filter {idx + 1}</span>
+                    </div>
                     <button 
                       type="button" 
                       onClick={() => removeFilter(idx)} 
-                      className="w-8 h-8 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105"
+                      className="cursor-pointer w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105 opacity-0 group-hover:opacity-100"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
-                    <span className="text-sm font-medium text-slate-600">Filter {idx + 1}</span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 items-center">
+                  <div className="grid grid-cols-12 gap-4 items-center">
                     {/* Filter Type Dropdown */}
-                    <div className="relative">
+                    <div className="relative col-span-5">
                       <select
-                        value={f.filter_type_id ?? ''}
+                        value={f.filter_type_id || f.audience_type_filter_id || ''}
                         onChange={(e) => {
                           const selectedFilter = audienceTypeFilters.find(
                             ft => ft.value === Number(e.target.value)
@@ -434,17 +499,38 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
                             setFilters(newFilters);
                           }
                         }}
-                        className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-sm appearance-none"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
                       >
                         <option value="">Select filter</option>
                         {audienceTypeFilters
                           .filter(ft => ft.audience_type_id === selectedAudienceType && ft.type === 'all')
                           .filter(ft => {
-                            // Don't show filter types that are already selected in other filters
-                            const existingFilterTypes = filters
-                              .map((filter, filterIdx) => filterIdx !== idx ? filter.filter_type_name : null)
-                              .filter(Boolean);
-                            return !existingFilterTypes.includes(ft.name);
+                            // Always show the current filter's type, even if all values are used
+                            if (f.filter_type_name === ft.name) {
+                              return true;
+                            }
+                            
+                            // For Channel filters, check if all channel values are already selected
+                            if (ft.name === 'Channel') {
+                              const selectedChannelValues = filters
+                                .filter(filter => filter.filter_type_name === 'Channel')
+                                .map(filter => filter.filter_value)
+                                .filter(Boolean);
+                              const allChannelValues = bankChannels.map(channel => channel.name);
+                              return selectedChannelValues.length < allChannelValues.length;
+                            }
+                            
+                            // For State filters, check if all state values are already selected
+                            if (ft.name === 'State') {
+                              const selectedStateValues = filters
+                                .filter(filter => filter.filter_type_name === 'State')
+                                .map(filter => filter.filter_value)
+                                .filter(Boolean);
+                              const allStateValues = Object.keys(State);
+                              return selectedStateValues.length < allStateValues.length;
+                            }
+                            
+                            return true;
                           })
                           .map(ft => (
                             <option key={`filter-type-${ft.value}-${ft.name}`} value={ft.value}>
@@ -459,12 +545,14 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-center">
-                      <span className="text-slate-400 font-medium">=</span>
+                    <div className="flex items-center justify-center col-span-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-slate-500 to-slate-600 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">=</span>
+                      </div>
                     </div>
 
                     {/* Filter Value Dropdown */}
-                    <div className="relative">
+                    <div className="relative col-span-5">
                       {f.filter_type_name === 'Channel' && (
                         <select
                           value={f.filter_value || ''}
@@ -481,14 +569,24 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
                               setFilters(newFilters);
                             }
                           }}
-                          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-sm appearance-none"
+                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
                         >
                           <option value="">Select channel</option>
-                          {bankChannels.map((channel) => (
-                            <option key={`channel-${channel.value}-${channel.name}`} value={channel.name}>
-                              {channel.name}
-                            </option>
-                          ))}
+                          {bankChannels
+                            .filter(channel => {
+                              // Don't show channels that are already selected in other Channel filters
+                              const existingChannelValues = filters
+                                .map((filter, filterIdx) => 
+                                  filterIdx !== idx && filter.filter_type_name === 'Channel' ? filter.filter_value : null
+                                )
+                                .filter(Boolean);
+                              return !existingChannelValues.includes(channel.name);
+                            })
+                            .map((channel) => (
+                              <option key={`channel-${channel.value}-${channel.name}`} value={channel.name}>
+                                {channel.name}
+                              </option>
+                            ))}
                         </select>
                       )}
 
@@ -505,17 +603,27 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
                             };
                             setFilters(newFilters);
                           }}
-                          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-sm appearance-none"
+                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
                         >
                           <option value="">Select state</option>
-                          {Object.entries(State).map(([abbr, name]) => (
-                            <option 
-                              key={`state-${abbr}`} 
-                              value={abbr}
-                            >
-                              {name} ({abbr})
-                            </option>
-                          ))}
+                          {Object.entries(State)
+                            .filter(([abbr, name]) => {
+                              // Don't show states that are already selected in other State filters
+                              const existingStateValues = filters
+                                .map((filter, filterIdx) => 
+                                  filterIdx !== idx && filter.filter_type_name === 'State' ? filter.filter_value : null
+                                )
+                                .filter(Boolean);
+                              return !existingStateValues.includes(abbr);
+                            })
+                            .map(([abbr, name]) => (
+                              <option 
+                                key={`state-${abbr}`} 
+                                value={abbr}
+                              >
+                                {name} ({abbr})
+                              </option>
+                            ))}
                         </select>
                       )}
 
@@ -534,14 +642,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
 
             {/* Add Filter Button */}
             {selectedAudienceType ? (
-              (() => {
-                const existingFilterTypes = filters.map(f => f.filter_type_name).filter(Boolean);
-                const hasChannel = existingFilterTypes.includes('Channel');
-                const hasState = existingFilterTypes.includes('State');
-                const canAddMore = !hasChannel || !hasState;
-                
-                return canAddMore ? (
-                  <button 
+                                <button 
                     type="button" 
                     onClick={() => {
                       setFilters([...filters, { 
@@ -552,32 +653,21 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
                         filter_value_name: '' 
                       }]);
                     }} 
-                    className="w-full py-3 px-4 border-2 border-dashed border-orange-300 rounded-xl text-orange-600 hover:text-orange-700 hover:border-orange-400 hover:bg-orange-50/50 transition-all duration-200 font-medium flex items-center justify-center gap-2 group"
+                    className="cursor-pointer w-full py-4 px-6 border-2 border-dashed border-blue-300 rounded-xl text-blue-600 hover:text-blue-700 hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-200 font-medium flex items-center justify-center gap-3 group bg-gradient-to-r from-blue-50/30 to-indigo-50/30"
                   >
-                    <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center group-hover:bg-orange-200 transition-colors duration-200">
-                      <Plus size={14} className="text-orange-600" />
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-200">
+                      <Plus size={16} className="text-blue-600" />
                     </div>
-                    Add New Filter
+                    <span>Add New Filter</span>
                   </button>
-                ) : (
-                  <div className="w-full py-3 px-4 border-2 border-dashed border-green-300 rounded-xl text-green-600 bg-green-50/50 flex items-center justify-center gap-2">
-                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <span className="text-sm font-medium">All filter types added (Channel and State)</span>
-                  </div>
-                );
-              })()
             ) : (
-              <div className="w-full py-3 px-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 bg-slate-50/50 flex items-center justify-center gap-2">
-                <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center">
+              <div className="w-full py-4 px-6 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 bg-slate-50/50 flex items-center justify-center gap-3">
+                <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
                   <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <span className="text-sm">Please select an audience type to add filters</span>
+                <span className="text-sm font-medium">Please select an audience type to add filters</span>
               </div>
             )}
              
@@ -619,14 +709,14 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
               type="button"
               onClick={onClose}
               variant="outline"
-              className="px-6 py-2.5 border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 rounded-xl transition-all duration-200"
+              className="cursor-pointer px-6 py-2.5 border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 rounded-xl transition-all duration-200"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="cursor-pointer px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {loading ? (
                 <div className="flex items-center gap-2">

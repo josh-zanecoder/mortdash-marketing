@@ -88,7 +88,7 @@ export default function EditContactModal({ open, onClose, onSubmit, channels, co
       <DialogContent className="max-w-md w-full p-0 rounded-2xl">
         <DialogHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-2">
           <DialogTitle className="text-2xl font-bold">Edit Marketing Contact</DialogTitle>
-          <DialogClose asChild />
+          <DialogClose className="cursor-pointer" />
         </DialogHeader>
         <form className="flex flex-col gap-4 px-6 pb-6" onSubmit={handleSubmit}>
           <div>
@@ -98,7 +98,7 @@ export default function EditContactModal({ open, onClose, onSubmit, channels, co
               name="channel"
               value={form.channel}
               onChange={handleChange}
-              className="w-full border rounded-md px-4 py-3 text-base bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ff6600]/30"
+              className="cursor-pointer w-full border rounded-md px-4 py-3 text-base bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ff6600]/30"
               required
             >
               {channels.map((c) => (
@@ -179,7 +179,7 @@ export default function EditContactModal({ open, onClose, onSubmit, channels, co
             <Button
               type="button"
               variant="secondary"
-              className="w-1/2 bg-white text-[#ff6600] border border-[#ff6600] hover:bg-[#fff7ed] font-bold py-3 rounded-lg shadow transition-all text-lg"
+              className="cursor-pointer w-1/2 bg-white text-[#ff6600] border border-[#ff6600] hover:bg-[#fff7ed] font-bold py-3 rounded-lg shadow transition-all text-lg"
               onClick={onClose}
               disabled={submitting}
             >
@@ -187,7 +187,7 @@ export default function EditContactModal({ open, onClose, onSubmit, channels, co
             </Button>
             <Button
               type="submit"
-              className="w-1/2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold py-3 rounded-lg shadow transition-all text-lg"
+              className="cursor-pointer w-1/2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold py-3 rounded-lg shadow transition-all text-lg"
               disabled={submitting}
             >
               {submitting ? 'Updating...' : 'Update'}

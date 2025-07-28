@@ -26,7 +26,7 @@ export default function DeleteContactDialog({ open, onClose, onConfirm, contact 
             <Button
               type="button"
               variant="outline"
-              className="w-1/2 rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 font-semibold py-3 shadow-sm transition-all text-base"
+              className="cursor-pointer w-1/2 rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 font-semibold py-3 shadow-sm transition-all text-base"
               onClick={onClose}
             >
               Cancel
@@ -34,7 +34,7 @@ export default function DeleteContactDialog({ open, onClose, onConfirm, contact 
             <Button
               type="button"
               variant="destructive"
-              className="w-1/2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-3 shadow-sm transition-all text-base border-0"
+              className="cursor-pointer w-1/2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-3 shadow-sm transition-all text-base border-0"
               onClick={() => {
                 onConfirm();
               }}
