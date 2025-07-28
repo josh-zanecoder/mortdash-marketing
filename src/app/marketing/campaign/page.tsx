@@ -144,6 +144,9 @@ function CampaignPageContent() {
   } | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
   const router = useRouter();
   // Campaign templates store
   const { templates, loading: templatesLoading, fetchTemplates, clearTemplates } = useCampaignStore();
@@ -240,7 +243,7 @@ function CampaignPageContent() {
   };
 
   // Send handler for preview modal
-  const handleSend = async () => {
+  const handleSend = async (isScheduled = false, scheduledDateTime: string | null = null) => {
     if (!previewData || !selectedList) return;
     
     // Get the selected list details
@@ -253,13 +256,22 @@ function CampaignPageContent() {
       return;
     }
 
+    // Validate scheduled date/time if scheduling
+    if (isScheduled && scheduledDateTime) {
+      const scheduledDate = new Date(scheduledDateTime);
+      const now = new Date();
+      if (scheduledDate <= now) {
+        toast.error('Scheduled date must be in the future');
+        return;
+      }
+    }
+
     const payload = {
       template: previewData.template,
       marketing_list_id: selectedList,
-      recipient_type: 'list',
-      status: 'pending',
-      is_schedule: false,
-      scheduled_at: null,
+      recipient_type: 'marketing_list',
+      schedule_at: scheduledDateTime,
+      time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       subject: previewData.subject || 'Marketing Campaign',
       individual_audience: [],
       preview_parameters: {
@@ -268,10 +280,12 @@ function CampaignPageContent() {
     };
 
     // Show loading toast
-    const loadingToast = toast.loading('Sending campaign...');
+    const loadingToast = toast.loading(isScheduled ? 'Scheduling campaign...' : 'Sending campaign...');
 
     try {
-      const response = await fetch('/api/campaign/send-marketing-email', {
+      const endpoint = isScheduled ? '/api/campaign/send-later-marketing-email' : '/api/campaign/send-marketing-email';
+      const url = tokenParam ? `${endpoint}?token=${tokenParam}` : endpoint;
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -279,45 +293,72 @@ function CampaignPageContent() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to send campaign');
+        throw new Error(errorData.error || `Failed to ${isScheduled ? 'schedule' : 'send'} campaign`);
       }
 
       // Dismiss loading toast and show success
       toast.dismiss(loadingToast);
-      toast.success('Campaign sent successfully!', {
-        description: 'Your email campaign is now being processed.',
+      toast.success(isScheduled ? 'Campaign scheduled successfully!' : 'Campaign sent successfully!', {
+        description: isScheduled 
+          ? 'Your email campaign has been scheduled for later delivery.'
+          : 'Your email campaign is now being processed.',
         duration: 5000,
       });
 
-      // Close modal
+      // Close modals
       setPreviewOpen(false);
+      setScheduleModalOpen(false);
+      setScheduledDate('');
+      setScheduledTime('');
     } catch (err) {
       // Dismiss loading toast and show error
       toast.dismiss(loadingToast);
-      toast.error('Failed to send campaign', {
+      toast.error(`Failed to ${isScheduled ? 'schedule' : 'send'} campaign`, {
         description: err instanceof Error ? err.message : 'An unexpected error occurred',
         duration: 5000,
       });
-      console.error('Failed to send campaign:', err);
+      console.error(`Failed to ${isScheduled ? 'schedule' : 'send'} campaign:`, err);
     }
+  };
+
+  // Schedule handler
+  const handleSchedule = () => {
+    setScheduleModalOpen(true);
+  };
+
+  // Handle schedule submission
+  const handleScheduleSubmit = () => {
+    if (!scheduledDate || !scheduledTime) {
+      toast.error('Please select both date and time');
+      return;
+    }
+
+    const scheduledDateTime = `${scheduledDate}T${scheduledTime}`;
+    handleSend(true, scheduledDateTime);
   };
 
   // Archive/Unarchive handler
   const handleArchive = async (templateId: number, isCurrentlyArchived: boolean) => {
     setArchivingTemplate(templateId);
     try {
-      const response = await fetch('/api/campaign/archive', {
+      const url = tokenParam ? `/api/campaign/archive?token=${tokenParam}` : '/api/campaign/archive';
+      const payload = {
+        id: templateId,
+        archive: Boolean(!isCurrentlyArchived) // Toggle the archive status (true for archive, false for unarchive)
+      };
+      console.log('Archive payload:', payload);
+      console.log('Archive URL:', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: templateId,
-          archive: !isCurrentlyArchived // Toggle the archive status
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to archive template');
+        console.error('Archive error response:', errorData);
+        throw new Error(errorData.error || errorData.message || 'Failed to archive template');
       }
 
       // Refresh templates to get updated archive status
@@ -364,17 +405,26 @@ function CampaignPageContent() {
               <div className="text-lg sm:text-xl font-semibold text-gray-900">Template Preview</div>
               <div className="flex items-center gap-2">
                 <button 
-                  onClick={handleSend}
-                  className="bg-[#ff6600] hover:bg-[#ff7a2f] text-white px-3 sm:px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all text-sm sm:text-base font-medium flex items-center gap-2"
+                  onClick={() => handleSend(false)}
+                  className="cursor-pointer bg-[#ff6600] hover:bg-[#ff7a2f] text-white px-3 sm:px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all text-sm sm:text-base font-medium flex items-center gap-2"
                 >
                   <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                   </svg>
                   Send
                 </button>
                 <button 
+                  onClick={handleSchedule}
+                  className="cursor-pointer bg-white hover:bg-gray-50 text-[#ff6600] border border-[#ff6600] px-3 sm:px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all text-sm sm:text-base font-medium flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Schedule
+                </button>
+                <button 
                   onClick={() => setPreviewOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                  className="cursor-pointer text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
                   aria-label="Close preview"
                 >
                   <X className="w-6 h-6" />
@@ -414,6 +464,76 @@ function CampaignPageContent() {
                   dangerouslySetInnerHTML={{ __html: previewData?.html || '' }}
                 />
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Modal */}
+      {scheduleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setScheduleModalOpen(false)} />
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+              <div className="text-lg font-semibold text-gray-900">Schedule Campaign</div>
+              <button 
+                onClick={() => setScheduleModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Close schedule modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-[#ff6600]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-[#ff6600]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Schedule for Later</h3>
+                <p className="text-sm text-gray-600">Choose when you want your campaign to be sent</p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                  <input
+                    type="date"
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]/20 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                  <input
+                    type="time"
+                    value={scheduledTime}
+                    onChange={(e) => setScheduledTime(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]/20 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setScheduleModalOpen(false)}
+                  className="flex-1 px-4 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleScheduleSubmit}
+                  className="flex-1 px-4 py-2.5 bg-[#ff6600] hover:bg-[#ff7a2f] text-white rounded-lg font-medium transition-colors"
+                >
+                  Schedule Campaign
+                </button>
+              </div>
             </div>
           </div>
         </div>
