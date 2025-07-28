@@ -526,7 +526,7 @@ function CampaignPageContent() {
                       </button>
                       <button 
                         onClick={() => router.push('/email-builder')}
-                        className="bg-[#ff6600] text-white rounded-lg px-5 py-2.5 font-medium hover:bg-[#ff7a2f] transition-colors inline-flex items-center gap-2"
+                        className="cursor-pointer bg-[#ff6600] text-white rounded-lg px-5 py-2.5 font-medium hover:bg-[#ff7a2f] transition-colors inline-flex items-center gap-2"
                       >
                         <Plus className="w-5 h-5" />
                         Create Template
