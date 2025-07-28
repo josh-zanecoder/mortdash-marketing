@@ -365,7 +365,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
             {/* Edit filters */}
             {filters.map((f, idx) => (
               <div key={idx} className="flex items-center gap-2 mb-3">
-                <button type="button" onClick={() => removeFilter(idx)} className="text-red-500">➖</button>
+                <button type="button" onClick={() => removeFilter(idx)} className="cursor-pointer text-red-500">➖</button>
 
                 {/* Filter Type Dropdown */}
                 <select
@@ -470,7 +470,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
                    filter_value_name: '' 
                  }]);
                }} 
-               className="inline-flex items-center gap-2 text-[#ff6600] hover:text-[#ff7a2f] font-semibold"
+               className="cursor-pointer inline-flex items-center gap-2 text-[#ff6600] hover:text-[#ff7a2f] font-semibold"
              >
                <span>+</span> Add Filter
              </button>
@@ -492,14 +492,14 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
               type="button"
               onClick={onClose}
               variant="outline"
-              className="px-4 py-2"
+              className="cursor-pointer px-4 py-2"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white"
+              className="cursor-pointer px-4 py-2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white"
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </Button>
@@ -785,7 +785,7 @@ function ListsPageContent() {
               const url = token ? `/marketing/lists/new?token=${token}` : '/marketing/lists/new';
               router.push(url);
             }}
-            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            className="cursor-pointer flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             <Plus size={20} className="stroke-2" /> Add Marketing List
           </Button>
@@ -813,21 +813,21 @@ function ListsPageContent() {
           <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
             {/* Audience Type Filters */}
             <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => setActiveFilter('all')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  activeFilter === 'all'
-                    ? 'bg-orange-500 text-white shadow-md'
-                    : 'bg-white/80 text-slate-700 hover:bg-white hover:shadow-sm border border-slate-200'
-                }`}
-              >
-                All Lists ({lists.length})
-              </button>
+                          <button
+              onClick={() => setActiveFilter('all')}
+              className={`cursor-pointer px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                activeFilter === 'all'
+                  ? 'bg-orange-500 text-white shadow-md'
+                  : 'bg-white/80 text-slate-700 hover:bg-white hover:shadow-sm border border-slate-200'
+              }`}
+            >
+              All Lists ({lists.length})
+            </button>
               {audienceTypes.map((audienceType) => (
                 <button
                   key={audienceType.value}
                   onClick={() => setActiveFilter(audienceType.value.toString())}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  className={`cursor-pointer px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                     activeFilter === audienceType.value.toString()
                       ? 'bg-orange-500 text-white shadow-md'
                       : 'bg-white/80 text-slate-700 hover:bg-white hover:shadow-sm border border-slate-200'
@@ -851,7 +851,7 @@ function ListsPageContent() {
                   setSortBy(newSortBy);
                   setSortOrder(newSortOrder);
                 }}
-                className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm text-sm"
+                className="cursor-pointer px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm text-sm"
               >
                 <option value="created_at-desc">Newest First</option>
                 <option value="created_at-asc">Oldest First</option>
@@ -925,7 +925,7 @@ function ListsPageContent() {
                                         const url = token ? `/marketing/lists/${list.id}?token=${token}` : `/marketing/lists/${list.id}`;
                                         router.push(url);
                                       }}
-                                      className="text-orange-600 hover:text-orange-700 font-medium cursor-pointer transition-colors text-sm"
+                                      className="cursor-pointer text-orange-600 hover:text-orange-700 font-medium transition-colors text-sm"
                                     >
                                       ({list.member_details.members.length} {list.member_details.members.length === 1 ? 'Member' : 'Members'})
                                     </button>
@@ -961,14 +961,14 @@ function ListsPageContent() {
                                     const url = token ? `/marketing/lists/${list.id}?token=${token}` : `/marketing/lists/${list.id}`;
                                     router.push(url);
                                   }}
-                                  className="p-2 text-slate-600 hover:text-orange-600 transition-all duration-200 rounded-lg hover:bg-orange-50 hover:shadow-sm" 
+                                  className="cursor-pointer p-2 text-slate-600 hover:text-orange-600 transition-all duration-200 rounded-lg hover:bg-orange-50 hover:shadow-sm" 
                                   aria-label="View members"
                                 >
                                   <Eye size={18} className="stroke-2" />
                                 </button>
                                 <button 
                                   onClick={() => handleEditClick(list)}
-                                  className="p-2 text-slate-600 hover:text-blue-600 transition-all duration-200 rounded-lg hover:bg-blue-50 hover:shadow-sm" 
+                                  className="cursor-pointer p-2 text-slate-600 hover:text-blue-600 transition-all duration-200 rounded-lg hover:bg-blue-50 hover:shadow-sm" 
                                   aria-label="Edit list"
                                 >
                                   <Edit2 size={18} className="stroke-2" />
@@ -976,7 +976,7 @@ function ListsPageContent() {
                                 <button 
                                   onClick={() => handleDeleteClick(list.id, list.list_name)}
                                   disabled={deleteLoading}
-                                  className="p-2 text-slate-600 hover:text-red-600 transition-all duration-200 rounded-lg hover:bg-red-50 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" 
+                                  className="cursor-pointer p-2 text-slate-600 hover:text-red-600 transition-all duration-200 rounded-lg hover:bg-red-50 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" 
                                   aria-label="Delete list"
                                 >
                                   <Trash2 size={18} className="stroke-2" />
@@ -997,7 +997,7 @@ function ListsPageContent() {
               <button 
                 onClick={goPrev} 
                 disabled={currentPage === 1} 
-                className="flex items-center px-4 py-2.5 text-sm font-medium text-slate-700 capitalize transition-all duration-200 bg-white border border-slate-300 rounded-lg gap-x-2 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                className="cursor-pointer flex items-center px-4 py-2.5 text-sm font-medium text-slate-700 capitalize transition-all duration-200 bg-white border border-slate-300 rounded-lg gap-x-2 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4 rtl:-scale-x-100">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 15.75L3 12m0 0l3.75-3.75M3 12h18" />
@@ -1009,7 +1009,7 @@ function ListsPageContent() {
                   <button
                     key={i + 1}
                     onClick={() => goPage(i + 1)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    className={`cursor-pointer px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                       currentPage === i + 1 
                         ? 'bg-orange-500 text-white shadow-md' 
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -1022,7 +1022,7 @@ function ListsPageContent() {
               <button 
                 onClick={goNext} 
                 disabled={currentPage === totalPages} 
-                className="flex items-center px-4 py-2.5 text-sm font-medium text-slate-700 capitalize transition-all duration-200 bg-white border border-slate-300 rounded-lg gap-x-2 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                className="cursor-pointer flex items-center px-4 py-2.5 text-sm font-medium text-slate-700 capitalize transition-all duration-200 bg-white border border-slate-300 rounded-lg gap-x-2 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
               >
                 <span>Next</span>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4 rtl:-scale-x-100">
@@ -1036,7 +1036,7 @@ function ListsPageContent() {
 
       {/* Floating action button for mobile */}
       <button
-        className="fixed bottom-8 right-8 z-50 sm:hidden bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-full shadow-xl p-4 flex items-center justify-center transition-all duration-300 transform hover:scale-110"
+        className="cursor-pointer fixed bottom-8 right-8 z-50 sm:hidden bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-full shadow-xl p-4 flex items-center justify-center transition-all duration-300 transform hover:scale-110"
         aria-label="Add new Marketing List"
       >
         <Plus size={28} className="stroke-2" />

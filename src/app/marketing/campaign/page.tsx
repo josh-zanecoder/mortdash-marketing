@@ -482,7 +482,7 @@ function CampaignPageContent() {
                           const url = token ? `/marketing/lists/new?token=${token}` : '/marketing/lists/new';
                           router.push(url);
                         }}
-                        className="text-[#ff6600] hover:text-[#ff7a2f] text-[15px] font-medium transition-colors"
+                        className="cursor-pointer text-[#ff6600] hover:text-[#ff7a2f] text-[15px] font-medium transition-colors"
                       >
                         Create New List
                       </button>
@@ -520,7 +520,7 @@ function CampaignPageContent() {
                           const url = token ? `/marketing/lists/new?token=${token}` : '/marketing/lists/new';
                           router.push(url);
                         }}
-                        className="text-[#ff6600] hover:text-[#ff7a2f] text-[15px] font-medium transition-colors"
+                        className="cursor-pointer text-[#ff6600] hover:text-[#ff7a2f] text-[15px] font-medium transition-colors"
                       >
                         Create New List
                       </button>
@@ -569,7 +569,7 @@ function CampaignPageContent() {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <button
-                          className={`px-4 py-2 rounded-lg text-[15px] font-medium transition-colors ${
+                          className={`cursor-pointer px-4 py-2 rounded-lg text-[15px] font-medium transition-colors ${
                             activeFilter === 'all'
                               ? 'bg-[#ff6600] text-white' 
                               : 'bg-gray-50 text-[#666666] hover:bg-gray-100'
@@ -584,7 +584,7 @@ function CampaignPageContent() {
                         {!categoriesLoading && categories.map(cat => (
                           <button
                             key={cat.id}
-                            className={`px-4 py-2 rounded-lg text-[15px] font-medium transition-colors ${
+                            className={`cursor-pointer px-4 py-2 rounded-lg text-[15px] font-medium transition-colors ${
                               activeFilter === cat.id
                                 ? 'bg-[#ff6600] text-white' 
                                 : 'bg-gray-50 text-[#666666] hover:bg-gray-100'
@@ -651,7 +651,7 @@ function CampaignPageContent() {
                               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
                                 <button
                                   onClick={() => handlePreview(tpl)}
-                                  className="bg-white text-[#1a1a1a] px-6 py-2.5 rounded-lg font-medium transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2 hover:bg-gray-50"
+                                  className="cursor-pointer bg-white text-[#1a1a1a] px-6 py-2.5 rounded-lg font-medium transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2 hover:bg-gray-50"
                                 >
                                   <Eye className="w-5 h-5" />
                                   Preview
@@ -670,7 +670,7 @@ function CampaignPageContent() {
                                     handleArchive(tpl.id, tpl.is_archived_by_user);
                                   }}
                                   disabled={archivingTemplate === tpl.id}
-                                  className={`text-[#666666] hover:text-[#ff6600] p-1.5 rounded-full hover:bg-[#ff6600]/5 transition-colors ${
+                                  className={`cursor-pointer text-[#666666] hover:text-[#ff6600] p-1.5 rounded-full hover:bg-[#ff6600]/5 transition-colors ${
                                     tpl.is_archived_by_user ? 'text-[#ff6600] bg-[#ff6600]/10' : ''
                                   }`}
                                   title={tpl.is_archived_by_user ? 'Unarchive template' : 'Archive template'}
