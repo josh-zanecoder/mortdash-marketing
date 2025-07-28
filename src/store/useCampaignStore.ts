@@ -7,6 +7,7 @@ interface CampaignTemplate {
   audience_type_id: number | null;
   thumbnail: string;
   category: string | null;
+  email_template_category_id: number | null;
   date_created: string;
   date_updated: string;
   is_archived: number;

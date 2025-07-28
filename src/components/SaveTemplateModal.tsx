@@ -22,6 +22,7 @@ interface SaveTemplateModalProps {
     version: number;
     language: string | null;
     email_template_id?: number;
+    email_template_category_id?: number;
   }) => Promise<void>;
   html: string;
   json: string;
@@ -37,6 +38,14 @@ interface AudienceType {
   created_at: string | null;
   updated_at: string | null;
   value?: string; // Optional, will be derived from name
+}
+
+interface EmailCategory {
+  id: number;
+  slug: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function SaveTemplateModal({
@@ -57,6 +66,9 @@ export default function SaveTemplateModal({
   const [isSaving, setIsSaving] = useState(false);
   const [audienceTypes, setAudienceTypes] = useState<AudienceType[]>([]);
   const [audienceTypesLoading, setAudienceTypesLoading] = useState(false);
+  const [categories, setCategories] = useState<EmailCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
   // Helper function to create a normalized value from name
   const createValueFromName = (name: string): string => {
@@ -67,6 +79,7 @@ export default function SaveTemplateModal({
   useEffect(() => {
     if (open) {
       fetchAudienceTypes();
+      fetchCategories();
       
       // Log detected merge tags when modal opens
       const extractMergeTags = (html: string): string[] => {
@@ -157,6 +170,26 @@ export default function SaveTemplateModal({
     }
   };
 
+  const fetchCategories = async () => {
+    setCategoriesLoading(true);
+    try {
+      const response = await fetch('/api/campaign/get-email-categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      const data = await response.json();
+      if (data.success && Array.isArray(data.data)) {
+        setCategories(data.data);
+        setSelectedCategoryId(data.data[0]?.id ?? null);
+      } else {
+        setCategories([]);
+        setSelectedCategoryId(null);
+      }
+    } catch (e) {
+      setCategories([]);
+      setSelectedCategoryId(null);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
 
 
   const handleSave = async () => {
@@ -172,7 +205,10 @@ export default function SaveTemplateModal({
       alert('Please select at least one template type');
       return;
     }
-
+    if (!selectedCategoryId) {
+      alert('Please select a category');
+      return;
+    }
     setIsSaving(true);
     try {
       await onSave({
@@ -185,13 +221,14 @@ export default function SaveTemplateModal({
         ampHtml,
         version,
         language,
-        email_template_id
+        email_template_id,
+        email_template_category_id: selectedCategoryId,
       });
       onClose();
-      // Reset form
       setName('');
       setSubject('');
       setSelectedTemplateTypes([]);
+      setSelectedCategoryId(categories[0]?.id ?? null);
     } catch (error) {
       console.error('Error saving template:', error);
     } finally {
@@ -292,6 +329,25 @@ export default function SaveTemplateModal({
                 {audienceTypesLoading && <div className="text-sm text-gray-500">Loading template types...</div>}
               </div>
 
+              <div className="space-y-3">
+                <Label htmlFor="category" className="text-lg font-medium">
+                  Category <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  id="category"
+                  value={selectedCategoryId ?? ''}
+                  onChange={e => setSelectedCategoryId(Number(e.target.value))}
+                  disabled={categoriesLoading || isSaving}
+                  className="w-full text-lg h-12 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  required
+                >
+                  {categoriesLoading && <option value="">Loading...</option>}
+                  {!categoriesLoading && categories.length === 0 && <option value="">No categories</option>}
+                  {!categoriesLoading && categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
 
               <div className="space-y-3">
                 <Label className="text-lg font-medium">Template Info</Label>
@@ -360,7 +416,7 @@ export default function SaveTemplateModal({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isSaving || !name.trim() || !subject.trim() || selectedTemplateTypes.length === 0 || audienceTypesLoading}
+            disabled={isSaving || !name.trim() || !subject.trim() || selectedTemplateTypes.length === 0 || audienceTypesLoading || !selectedCategoryId}
             className="bg-[#ff6600] hover:bg-[#ff7a2f] text-white h-12 px-8 shadow-lg shadow-orange-100/40"
             size="lg"
           >
