@@ -207,7 +207,7 @@ export default function ContactsPage() {
           <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
             <button
               onClick={() => setActiveTab('marketing')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === 'marketing'
                   ? 'bg-white text-[#ff6600] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -217,7 +217,7 @@ export default function ContactsPage() {
             </button>
             <button
               onClick={() => setActiveTab('prospects')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === 'prospects'
                   ? 'bg-white text-[#ff6600] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -227,7 +227,7 @@ export default function ContactsPage() {
             </button>
             <button
               onClick={() => setActiveTab('clients')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === 'clients'
                   ? 'bg-white text-[#ff6600] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -255,7 +255,7 @@ export default function ContactsPage() {
                   />
                 </div>
                 <select 
-                  className="px-4 py-2 border border-[#ffe3d1] rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent shadow-sm"
+                  className="cursor-pointer px-4 py-2 border border-[#ffe3d1] rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent shadow-sm"
                   value={branchFilter}
                   onChange={(e) => setBranchFilter(e.target.value)}
                 >
@@ -265,10 +265,10 @@ export default function ContactsPage() {
                   ))}
                 </select>
               </div>
-              <Button className="px-4 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold rounded-lg shadow transition-all" onClick={() => setShowAddModal(true)}>
+              <Button className="px-4 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold rounded-lg shadow transition-all cursor-pointer" onClick={() => setShowAddModal(true)}>
                 Add a New Contact
               </Button>
-              <Button variant="default" className="px-4 font-bold rounded-lg shadow transition-all" onClick={() => setShowUploadModal(true)}>
+              <Button variant="default" className="px-4 font-bold rounded-lg shadow transition-all cursor-pointer" onClick={() => setShowUploadModal(true)}>
                 Upload Contacts
               </Button>
             </div>
@@ -306,7 +306,7 @@ export default function ContactsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                              className="cursor-pointer text-blue-600 border-blue-200 hover:bg-blue-50"
                               onClick={() => {
                                 setEditingContact(contact);
                                 setShowEditModal(true);
@@ -322,7 +322,7 @@ export default function ContactsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-red-600 border-red-200 hover:bg-red-50"
+                              className="text-red-600 border-red-200 hover:bg-red-50 cursor-pointer"
                               onClick={() => {
                                 setDeletingContact(contact);
                                 setShowDeleteDialog(true);
@@ -350,6 +350,7 @@ export default function ContactsPage() {
                             if (page > 1) setPage(page - 1);
                           }}
                           aria-disabled={page === 1}
+                          className="cursor-pointer"
                         />
                       </PaginationItem>
                       {[...Array(pageCount)].map((_, i) => (
@@ -361,6 +362,7 @@ export default function ContactsPage() {
                               e.preventDefault();
                               setPage(i + 1);
                             }}
+                            className="cursor-pointer"
                           >
                             {i + 1}
                           </PaginationLink>
@@ -374,6 +376,7 @@ export default function ContactsPage() {
                             if (page < pageCount) setPage(page + 1);
                           }}
                           aria-disabled={page === pageCount}
+                          className="cursor-pointer"
                         />
                       </PaginationItem>
                     </PaginationContent>
