@@ -141,7 +141,7 @@ export default function ContactsPage() {
   }, [searchInput, setSearch]);
 
   return (
-    <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center pt-16 px-4">
+    <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center pt-8 sm:pt-16 px-2 sm:px-4">
       <AddContactModal open={showAddModal} onClose={() => {
         setShowAddModal(false);
       }} onSubmit={() => {
@@ -193,47 +193,50 @@ export default function ContactsPage() {
       <UploadContactsModal open={showUploadModal} onClose={() => setShowUploadModal(false)} onSuccess={handleUploadSuccess} />
       <Toaster />
       <div
-        className="w-full max-w-6xl bg-white rounded-2xl shadow-xl p-12 flex flex-col items-center"
+        className="w-full max-w-6xl bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-12 flex flex-col items-center"
         style={{ minHeight: "700px" }}
       >
         {/* Header: Title/Subtitle */}
-        <div className="w-full mb-8">
-          <h1 className="text-4xl font-extrabold text-[#232323] mb-1 text-left">Contacts</h1>
-          <p className="text-lg text-[#6d6d6d] text-left">Manage your contacts and view member information.</p>
+        <div className="w-full mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#232323] mb-1 text-left">Contacts</h1>
+          <p className="text-base sm:text-lg text-[#6d6d6d] text-left">Manage your contacts and view member information.</p>
         </div>
 
         {/* Tab Navigation */}
-        <div className="w-full mb-8">
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+        <div className="w-full mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-1 bg-gray-100 p-1 rounded-lg">
             <button
               onClick={() => setActiveTab('marketing')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+              className={`flex-1 py-2 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === 'marketing'
                   ? 'bg-white text-[#ff6600] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Marketing Contacts ({total})
+              <span className="hidden sm:inline">Marketing Contacts</span>
+              <span className="sm:hidden">Marketing</span> ({total})
             </button>
             <button
               onClick={() => setActiveTab('prospects')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+              className={`flex-1 py-2 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === 'prospects'
                   ? 'bg-white text-[#ff6600] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Prospect Members ({prospects ? prospects.length : 0})
+              <span className="hidden sm:inline">Prospect Members</span>
+              <span className="sm:hidden">Prospects</span> ({prospects ? prospects.length : 0})
             </button>
             <button
               onClick={() => setActiveTab('clients')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+              className={`flex-1 py-2 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === 'clients'
                   ? 'bg-white text-[#ff6600] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Client Members ({clients ? clients.filter(c => c.members && c.members.length > 0).length : 0})
+              <span className="hidden sm:inline">Client Members</span>
+              <span className="sm:hidden">Clients</span> ({clients ? clients.filter(c => c.members && c.members.length > 0).length : 0})
             </button>
           </div>
         </div>
@@ -242,20 +245,20 @@ export default function ContactsPage() {
         {activeTab === 'marketing' && (
           <div className="w-full">
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-6">
-              <div className="flex-1 flex gap-2">
-                <div className="flex items-center w-full max-w-xs bg-white border border-[#ffe3d1] rounded-lg shadow-sm px-4 py-2">
-                  <Search className="text-[#ff6600] mr-2" size={20} />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 mb-6">
+              <div className="flex flex-col sm:flex-row gap-2 sm:flex-1">
+                <div className="flex items-center w-full bg-white border border-[#ffe3d1] rounded-lg shadow-sm px-3 sm:px-4 py-2">
+                  <Search className="text-[#ff6600] mr-2" size={18} />
                   <input
                     type="text"
                     placeholder="Search contacts..."
-                    className="flex-1 bg-transparent outline-none text-base text-[#232323] placeholder-[#bdbdbd]"
+                    className="flex-1 bg-transparent outline-none text-sm sm:text-base text-[#232323] placeholder-[#bdbdbd]"
                     value={searchInput}
                     onChange={e => setSearchInput(e.target.value)}
                   />
                 </div>
                 <select 
-                  className="cursor-pointer px-4 py-2 border border-[#ffe3d1] rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent shadow-sm"
+                  className="cursor-pointer px-3 sm:px-4 py-2 border border-[#ffe3d1] rounded-lg bg-white text-sm sm:text-base text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent shadow-sm"
                   value={branchFilter}
                   onChange={(e) => setBranchFilter(e.target.value)}
                 >
@@ -265,12 +268,16 @@ export default function ContactsPage() {
                   ))}
                 </select>
               </div>
-              <Button className="px-4 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold rounded-lg shadow transition-all cursor-pointer" onClick={() => setShowAddModal(true)}>
-                Add a New Contact
-              </Button>
-              <Button variant="default" className="px-4 font-bold rounded-lg shadow transition-all cursor-pointer" onClick={() => setShowUploadModal(true)}>
-                Upload Contacts
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button className="px-3 sm:px-4 py-2 bg-[#ff6600] hover:bg-[#ff7a2f] text-white text-sm sm:text-base font-bold rounded-lg shadow transition-all cursor-pointer" onClick={() => setShowAddModal(true)}>
+                  <span className="hidden sm:inline">Add a New Contact</span>
+                  <span className="sm:hidden">Add Contact</span>
+                </Button>
+                <Button variant="default" className="px-3 sm:px-4 py-2 text-sm sm:text-base font-bold rounded-lg shadow transition-all cursor-pointer" onClick={() => setShowUploadModal(true)}>
+                  <span className="hidden sm:inline">Upload Contacts</span>
+                  <span className="sm:hidden">Upload</span>
+                </Button>
+              </div>
             </div>
 
             {/* Loading/Error States */}
@@ -280,57 +287,59 @@ export default function ContactsPage() {
             {/* Marketing Contacts Table */}
             {!loading && !error && (
               <>
-                <div className="overflow-hidden border border-gray-200 rounded-lg">
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-50 dark:bg-gray-800">
                       <tr>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Full Name</th>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Email</th>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Phone</th>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Company</th>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Branch</th>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Actions</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3.5 text-xs sm:text-sm font-normal text-left text-gray-500 dark:text-gray-400">Full Name</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3.5 text-xs sm:text-sm font-normal text-left text-gray-500 dark:text-gray-400">Email</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3.5 text-xs sm:text-sm font-normal text-left text-gray-500 dark:text-gray-400">Phone</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3.5 text-xs sm:text-sm font-normal text-left text-gray-500 dark:text-gray-400">Company</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3.5 text-xs sm:text-sm font-normal text-left text-gray-500 dark:text-gray-400">Branch</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3.5 text-xs sm:text-sm font-normal text-left text-gray-500 dark:text-gray-400">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-900">
                       {filteredContacts.map((contact) => (
                         <tr key={contact.id}>
-                          <td className="px-4 py-4 text-sm text-gray-800 dark:text-white font-medium">
+                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-800 dark:text-white font-medium">
                             {contact.first_name} {contact.last_name}
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{contact.email_address || contact.email}</td>
-                          <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{contact.phone_number || 'N/A'}</td>
-                          <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{contact.company}</td>
-                          <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{contact.branch || 'N/A'}</td>
-                          <td className="px-4 py-4 text-sm flex gap-2">
+                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">{contact.email_address || contact.email}</td>
+                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">{contact.phone_number || 'N/A'}</td>
+                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">{contact.company}</td>
+                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">{contact.branch || 'N/A'}</td>
+                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm flex flex-col sm:flex-row gap-1 sm:gap-2">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="cursor-pointer text-blue-600 border-blue-200 hover:bg-blue-50"
+                              className="cursor-pointer text-blue-600 border-blue-200 hover:bg-blue-50 text-xs sm:text-sm"
                               onClick={() => {
                                 setEditingContact(contact);
                                 setShowEditModal(true);
                               }}
                             >
                               <span className="sr-only">Update</span>
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path d="M12 20h9" />
                                 <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z" />
                               </svg>
-                              Update
+                              <span className="hidden sm:inline">Update</span>
+                              <span className="sm:hidden">Edit</span>
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-red-600 border-red-200 hover:bg-red-50 cursor-pointer"
+                              className="text-red-600 border-red-200 hover:bg-red-50 cursor-pointer text-xs sm:text-sm"
                               onClick={() => {
                                 setDeletingContact(contact);
                                 setShowDeleteDialog(true);
                               }}
                             >
                               <span className="sr-only">Delete</span>
-                              <Trash2 className="w-4 h-4 mr-1" />
-                              Delete
+                              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                              <span className="hidden sm:inline">Delete</span>
+                              <span className="sm:hidden">Del</span>
                             </Button>
                           </td>
                         </tr>
@@ -339,9 +348,9 @@ export default function ContactsPage() {
                   </table>
                 </div>
                 {/* Pagination Controls */}
-                <div className="flex justify-center mt-6">
+                <div className="flex justify-center mt-4 sm:mt-6">
                   <Pagination>
-                    <PaginationContent>
+                    <PaginationContent className="flex flex-wrap justify-center gap-1 sm:gap-2">
                       <PaginationItem>
                         <PaginationPrevious
                           href="#"
@@ -350,7 +359,7 @@ export default function ContactsPage() {
                             if (page > 1) setPage(page - 1);
                           }}
                           aria-disabled={page === 1}
-                          className="cursor-pointer"
+                          className="cursor-pointer text-xs sm:text-sm"
                         />
                       </PaginationItem>
                       {[...Array(pageCount)].map((_, i) => (
@@ -362,7 +371,7 @@ export default function ContactsPage() {
                               e.preventDefault();
                               setPage(i + 1);
                             }}
-                            className="cursor-pointer"
+                            className="cursor-pointer text-xs sm:text-sm"
                           >
                             {i + 1}
                           </PaginationLink>
@@ -376,7 +385,7 @@ export default function ContactsPage() {
                             if (page < pageCount) setPage(page + 1);
                           }}
                           aria-disabled={page === pageCount}
-                          className="cursor-pointer"
+                          className="cursor-pointer text-xs sm:text-sm"
                         />
                       </PaginationItem>
                     </PaginationContent>
@@ -390,64 +399,66 @@ export default function ContactsPage() {
         {/* Prospect Members Section */}
         {activeTab === 'prospects' && (
           <div className="w-full">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Users className="w-6 h-6 text-blue-600" />
-                <h3 className="text-lg font-semibold text-blue-900">Prospect Members</h3>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                <h3 className="text-base sm:text-lg font-semibold text-blue-900">Prospect Members</h3>
               </div>
-              <p className="text-blue-700 mb-4">Read-only view of prospect member data from external API.</p>
+              <p className="text-sm sm:text-base text-blue-700 mb-3 sm:mb-4">Read-only view of prospect member data from external API.</p>
               {prospectsLoading ? (
-                <div className="text-blue-700">Loading prospects...</div>
+                <div className="text-sm sm:text-base text-blue-700">Loading prospects...</div>
               ) : prospectsError ? (
-                <div className="text-red-600">{prospectsError}</div>
+                <div className="text-sm sm:text-base text-red-600">{prospectsError}</div>
               ) : prospects ? (
-                <div className="text-2xl font-bold text-blue-900">{prospects.length} Companies</div>
+                <div className="text-xl sm:text-2xl font-bold text-blue-900">{prospects.length} Companies</div>
               ) : null}
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Companies & Members</h4>
-              <div className="space-y-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+              <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Companies & Members</h4>
+              <div className="space-y-4 sm:space-y-6">
                               {prospectsLoading ? (
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {Array.from({ length: 3 }).map((_, idx) => (
                     <CompanySkeleton key={idx} />
                   ))}
                 </div>
               ) : prospectsError ? (
-                <div className="text-red-600">{prospectsError}</div>
+                <div className="text-sm sm:text-base text-red-600">{prospectsError}</div>
               ) : prospects && prospects.length > 0 ? (
                 prospects.filter(p => p.members && p.members.length > 0).map((prospect, idx) => (
-                  <div key={idx} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Building className="w-5 h-5 text-gray-500" />
-                      <span className="font-medium text-gray-900 text-lg">{prospect.company || 'Unknown Company'}</span>
+                  <div key={idx} className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                      <Building className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+                      <span className="font-medium text-gray-900 text-base sm:text-lg">{prospect.company || 'Unknown Company'}</span>
                       <span className="ml-2 text-xs text-blue-700 bg-blue-100 rounded-full px-2 py-0.5">{prospect.members.length} members</span>
                     </div>
-                    <table className="w-full text-sm border-t border-gray-200 mt-2">
-                      <thead>
-                        <tr>
-                          <th className="py-1 px-2 text-left font-semibold text-gray-600">First Name</th>
-                          <th className="py-1 px-2 text-left font-semibold text-gray-600">Last Name</th>
-                          <th className="py-1 px-2 text-left font-semibold text-gray-600">Email</th>
-                          <th className="py-1 px-2 text-left font-semibold text-gray-600">Phone</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {prospect.members.map((member, mIdx) => (
-                          <tr key={mIdx}>
-                            <td className="py-1 px-2">{member.first_name}</td>
-                            <td className="py-1 px-2">{member.last_name}</td>
-                            <td className="py-1 px-2">{member.email}</td>
-                            <td className="py-1 px-2">{member.phone}</td>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs sm:text-sm border-t border-gray-200 mt-2">
+                        <thead>
+                          <tr>
+                            <th className="py-1 px-1 sm:px-2 text-left font-semibold text-gray-600">First Name</th>
+                            <th className="py-1 px-1 sm:px-2 text-left font-semibold text-gray-600">Last Name</th>
+                            <th className="py-1 px-1 sm:px-2 text-left font-semibold text-gray-600">Email</th>
+                            <th className="py-1 px-1 sm:px-2 text-left font-semibold text-gray-600">Phone</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {prospect.members.map((member, mIdx) => (
+                            <tr key={mIdx}>
+                              <td className="py-1 px-1 sm:px-2">{member.first_name}</td>
+                              <td className="py-1 px-1 sm:px-2">{member.last_name}</td>
+                              <td className="py-1 px-1 sm:px-2">{member.email}</td>
+                              <td className="py-1 px-1 sm:px-2">{member.phone}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 ))
               ) : (
-                <div className="text-gray-500">No companies found.</div>
+                <div className="text-sm sm:text-base text-gray-500">No companies found.</div>
               )}
               </div>
             </div>
@@ -457,64 +468,66 @@ export default function ContactsPage() {
         {/* Client Members Section */}
         {activeTab === 'clients' && (
           <div className="w-full">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <UserCheck className="w-6 h-6 text-green-600" />
-                <h3 className="text-lg font-semibold text-green-900">Client Members</h3>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <UserCheck className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+                <h3 className="text-base sm:text-lg font-semibold text-green-900">Client Members</h3>
               </div>
-              <p className="text-green-700 mb-4">Read-only view of client member data from external API.</p>
+              <p className="text-sm sm:text-base text-green-700 mb-3 sm:mb-4">Read-only view of client member data from external API.</p>
               {clientsLoading ? (
-                <div className="text-green-700">Loading clients...</div>
+                <div className="text-sm sm:text-base text-green-700">Loading clients...</div>
               ) : clientsError ? (
-                <div className="text-red-600">{clientsError}</div>
+                <div className="text-sm sm:text-base text-red-600">{clientsError}</div>
               ) : clients ? (
-                <div className="text-2xl font-bold text-green-900">{clients.filter(c => c.members && c.members.length > 0).length} Companies</div>
+                <div className="text-xl sm:text-2xl font-bold text-green-900">{clients.filter(c => c.members && c.members.length > 0).length} Companies</div>
               ) : null}
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Companies & Members</h4>
-              <div className="space-y-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+              <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Companies & Members</h4>
+              <div className="space-y-4 sm:space-y-6">
                 {clientsLoading ? (
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     {Array.from({ length: 3 }).map((_, idx) => (
                       <CompanySkeleton key={idx} />
                     ))}
                   </div>
                 ) : clientsError ? (
-                  <div className="text-red-600">{clientsError}</div>
+                  <div className="text-sm sm:text-base text-red-600">{clientsError}</div>
                 ) : clients && clients.length > 0 ? (
                   clients.filter(c => c.members && c.members.length > 0).map((client, idx) => (
-                    <div key={idx} className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Building className="w-5 h-5 text-gray-500" />
-                        <span className="font-medium text-gray-900 text-lg">{client.company || 'Unknown Company'}</span>
+                    <div key={idx} className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                        <Building className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+                        <span className="font-medium text-gray-900 text-base sm:text-lg">{client.company || 'Unknown Company'}</span>
                         <span className="ml-2 text-xs text-green-700 bg-green-100 rounded-full px-2 py-0.5">{client.members.length} members</span>
                       </div>
-                      <table className="w-full text-sm border-t border-gray-200 mt-2">
-                        <thead>
-                          <tr>
-                            <th className="py-1 px-2 text-left font-semibold text-gray-600">First Name</th>
-                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Last Name</th>
-                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Email</th>
-                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Phone</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {client.members.map((member, mIdx) => (
-                            <tr key={mIdx}>
-                              <td className="py-1 px-2">{member.first_name}</td>
-                              <td className="py-1 px-2">{member.last_name}</td>
-                              <td className="py-1 px-2">{member.email}</td>
-                              <td className="py-1 px-2">{member.phone}</td>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs sm:text-sm border-t border-gray-200 mt-2">
+                          <thead>
+                            <tr>
+                              <th className="py-1 px-1 sm:px-2 text-left font-semibold text-gray-600">First Name</th>
+                              <th className="py-1 px-1 sm:px-2 text-left font-semibold text-gray-600">Last Name</th>
+                              <th className="py-1 px-1 sm:px-2 text-left font-semibold text-gray-600">Email</th>
+                              <th className="py-1 px-1 sm:px-2 text-left font-semibold text-gray-600">Phone</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {client.members.map((member, mIdx) => (
+                              <tr key={mIdx}>
+                                <td className="py-1 px-1 sm:px-2">{member.first_name}</td>
+                                <td className="py-1 px-1 sm:px-2">{member.last_name}</td>
+                                <td className="py-1 px-1 sm:px-2">{member.email}</td>
+                                <td className="py-1 px-1 sm:px-2">{member.phone}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-gray-500">No companies found.</div>
+                  <div className="text-sm sm:text-base text-gray-500">No companies found.</div>
                 )}
               </div>
             </div>
