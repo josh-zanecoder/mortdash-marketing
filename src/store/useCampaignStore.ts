@@ -38,9 +38,17 @@ export const useCampaignStore = create<CampaignStore>((set) => ({
     try {
       const params = new URLSearchParams();
       params.set('audience_type_id', String(audience_type_id));
-      params.set('is_archived', String(is_archived));
-      // Optionally add token if needed: params.set('token', token);
-      const res = await fetch(`/api/campaign?${params.toString()}`);
+      
+      // Use different endpoint for archived templates
+      const endpoint = is_archived ? '/api/campaign/get-archived-templates' : '/api/campaign';
+      
+      if (is_archived) {
+        params.set('is_archived', '1');
+      } else {
+        params.set('is_archived', '0');
+      }
+      
+      const res = await fetch(`${endpoint}?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch templates');
       const data = await res.json();
       set({ templates: Array.isArray(data.data) ? data.data : [], loading: false });
