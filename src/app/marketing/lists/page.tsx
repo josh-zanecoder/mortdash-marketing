@@ -769,6 +769,8 @@ function ListsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams();
   const tokenParam = searchParams.get('token');
+  const successParam = searchParams.get('success');
+  const messageParam = searchParams.get('message');
 
   // Skeleton loader component
   const TableSkeleton = () => (
@@ -825,6 +827,23 @@ function ListsPageContent() {
       </div>
     </div>
   );
+
+  // Handle success parameter from navigation
+  useEffect(() => {
+    if (successParam === 'true') {
+      setToast({
+        isOpen: true,
+        title: 'Success',
+        message: messageParam ? decodeURIComponent(messageParam) : 'Marketing list created successfully!',
+        type: 'success'
+      });
+      // Remove the success and message parameters from URL
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('success');
+      newUrl.searchParams.delete('message');
+      router.replace(newUrl.pathname + newUrl.search);
+    }
+  }, [successParam, messageParam, router]);
 
   useEffect(() => {
     const loadAll = async () => {
