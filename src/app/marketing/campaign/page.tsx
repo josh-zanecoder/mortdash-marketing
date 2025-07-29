@@ -10,19 +10,6 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Toaster } from 'sonner';
 import { Suspense } from "react";
-import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-
-const fadeIn = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 20 }
-};
-
-const pageTransition = {
-  type: "spring" as const,
-  stiffness: 400,
-  damping: 40
-};
 
 interface MarketingListOption {
   id: number | string;
@@ -549,32 +536,18 @@ function CampaignPageContent() {
       <main className="min-h-screen bg-[#fdf6f1]">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Page Header */}
-          <motion.div 
-            initial={fadeIn.initial}
-            animate={fadeIn.animate}
-            className="mb-8"
-          >
+          <div className="mb-8">
             <h1 className="text-2xl font-bold text-[#1a1a1a] tracking-[-0.02em] mb-1">
               Email Campaign
             </h1>
             <p className="text-[15px] text-[#666666]">
               Create and manage your email marketing campaigns
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div 
-            layout
-            transition={pageTransition}
-            className="relative"
-          >
+          <div className="relative">
             {!selectedList ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.3 }}
-                className="max-w-2xl mx-auto"
-              >
+              <div className="max-w-2xl mx-auto">
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
                   <div className="text-center mb-8">
                     <h2 className="text-2xl font-semibold text-[#1a1a1a] mb-3">Select Marketing List</h2>
@@ -615,20 +588,11 @@ function CampaignPageContent() {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ) : (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-8"
-              >
+              <div className="space-y-8">
                 {/* List Selection Bar */}
-                <motion.div 
-                  layout="position"
-                  className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
-                >
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
                     <div className="w-full sm:w-[300px]">
                       <label className="block text-sm font-medium text-[#666666] mb-2">Marketing List</label>
@@ -659,20 +623,12 @@ function CampaignPageContent() {
                       </button>
                     </div>
                   </div>
-                </motion.div>
+                </div>
 
                 {/* Templates Section */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="bg-white rounded-2xl shadow-sm border border-gray-100"
-                >
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
                   {/* Templates Header */}
-                  <motion.div 
-                    layout="position"
-                    className="p-6 border-b border-gray-100"
-                  >
+                  <div className="p-6 border-b border-gray-100">
                     <div className="flex items-center justify-between">
                       <div>
                         <h2 className="text-xl font-semibold text-[#1a1a1a] mb-1">
@@ -694,13 +650,10 @@ function CampaignPageContent() {
                         {showArchived ? 'View Active' : 'View Archived'}
                       </button>
                     </div>
-                  </motion.div>
+                  </div>
 
                   {/* Search and Filters */}
-                  <motion.div 
-                    layout="position"
-                    className="p-6 border-b border-gray-100"
-                  >
+                  <div className="p-6 border-b border-gray-100">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                       <div className="relative flex-1 max-w-2xl">
                         <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -741,21 +694,15 @@ function CampaignPageContent() {
                         ))}
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
 
                   {/* Templates Grid */}
-                  <motion.div 
-                    layout="position"
-                    className="p-6"
-                  >
+                  <div className="p-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {templatesLoading ? (
                         Array.from({ length: 8 }).map((_, i) => (
-                          <motion.div 
+                          <div 
                             key={i}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: i * 0.1 }}
                             className="animate-pulse"
                           >
                             <div className="aspect-[4/3] bg-gray-100 rounded-xl" />
@@ -763,14 +710,10 @@ function CampaignPageContent() {
                               <div className="h-4 bg-gray-100 rounded w-3/4" />
                               <div className="h-4 bg-gray-100 rounded w-1/2" />
                             </div>
-                          </motion.div>
+                          </div>
                         ))
                       ) : filteredTemplates.length === 0 ? (
-                        <motion.div 
-                          initial={fadeIn.initial}
-                          animate={fadeIn.animate}
-                          className="col-span-full py-12 text-center"
-                        >
+                        <div className="col-span-full py-12 text-center">
                           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Archive className="w-8 h-8 text-gray-400" />
                           </div>
@@ -778,18 +721,11 @@ function CampaignPageContent() {
                             {showArchived ? 'No archived templates found' : 'No templates found'}
                           </div>
                           <div className="text-[#999999] text-[15px]">Try adjusting your search or filters</div>
-                        </motion.div>
+                        </div>
                       ) : (
                         filteredTemplates.map((tpl, index) => (
-                          <motion.div
+                          <div
                             key={tpl.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ 
-                              delay: index * 0.1,
-                              duration: 0.3,
-                              ease: "easeOut"
-                            }}
                             className="group rounded-xl border border-gray-100 overflow-hidden bg-white transition-all duration-300 hover:shadow-lg"
                           >
                             <div className="relative aspect-[4/3] bg-gray-50">
@@ -840,15 +776,15 @@ function CampaignPageContent() {
                                 </button>
                               </div>
                             </div>
-                          </motion.div>
+                          </div>
                         ))
                       )}
                     </div>
-                  </motion.div>
-                </motion.div>
-              </motion.div>
+                  </div>
+                </div>
+              </div>
             )}
-          </motion.div>
+          </div>
         </div>
       </main>
     </>
