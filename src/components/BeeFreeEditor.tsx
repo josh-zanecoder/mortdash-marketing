@@ -50,6 +50,23 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
           });
           setShowSaveModal(true);
         },
+        onSaveAsTemplate: (pageJson: string, templateVersion: number) => {
+          // Save JSON file to device
+          const blob = new Blob([pageJson], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `email-template-${Date.now()}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          // Show success toast
+          toast.success('Template JSON saved to device!', {
+            icon: <CheckCircle2 className="text-green-600" />,
+          });
+        },
         onSend: (pageHtml: string) => {
           setCurrentHtml(pageHtml);
           setShowSendTestModal(true);
