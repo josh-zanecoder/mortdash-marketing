@@ -130,7 +130,6 @@ function AddMarketingListPageContent() {
       return;
     }
     
-    setLoading(true);
     try {
       // Filter out empty filters (where filter_type_id is null or empty)
       const validFilters = filters.filter(f => f.filter_type_id !== null && f.filter_type_id !== 0);
@@ -181,6 +180,9 @@ function AddMarketingListPageContent() {
           }
         }),
       };      
+      
+      // Set loading state only when the actual request is about to be sent
+      setLoading(true);
       const res = await axios.post(`/api/marketing/lists/${token}`, body);
       
       // Check if the response indicates success or failure
@@ -193,16 +195,8 @@ function AddMarketingListPageContent() {
           addList(newList);
         }
         
-        setToast({
-          isOpen: true,
-          title: 'Success',
-          message: existingList ? 'Marketing list already exists!' : 'Marketing list created successfully!',
-          type: 'success'
-        });
-        
-        setTimeout(() => {
-          router.push(`/marketing/lists?token=${token}`);
-        }, 1500);
+        // Close modal immediately after successful creation
+        router.push(`/marketing/lists?token=${token}&success=true&message=${encodeURIComponent(existingList ? 'Marketing list already exists!' : 'Marketing list created successfully!')}`);
       } else {
         // Handle business logic errors (success: false)
         const errorMessage = res.data?.data || res.data?.message || 'Failed to create list';
