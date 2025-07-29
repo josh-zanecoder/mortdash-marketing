@@ -193,16 +193,8 @@ function AddMarketingListPageContent() {
           addList(newList);
         }
         
-        setToast({
-          isOpen: true,
-          title: 'Success',
-          message: existingList ? 'Marketing list already exists!' : 'Marketing list created successfully!',
-          type: 'success'
-        });
-        
-        setTimeout(() => {
-          router.push(`/marketing/lists?token=${token}`);
-        }, 1500);
+        // Close modal immediately after successful creation
+        router.push(`/marketing/lists?token=${token}&success=true&message=${encodeURIComponent(existingList ? 'Marketing list already exists!' : 'Marketing list created successfully!')}`);
       } else {
         // Handle business logic errors (success: false)
         const errorMessage = res.data?.data || res.data?.message || 'Failed to create list';
