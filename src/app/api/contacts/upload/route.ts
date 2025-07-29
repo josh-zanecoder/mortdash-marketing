@@ -30,18 +30,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Content-Type must be multipart/form-data' }, { status: 400 });
     }
 
-    // Read the raw body as a buffer
-    const body = await req.arrayBuffer();
-    const buffer = Buffer.from(body);
+    // Parse the form data and add owner_id
+    const formData = await req.formData();
+    const userId = getUserIdFromToken(token);
+    
+    // Add owner_id to the form data
+    if (userId) {
+      formData.append('owner_id', userId);
+    }
 
     // Forward the request to the backend
     const backendRes = await fetch(`${mortdash_url}/api/bank/v1/marketing/account-executive/marketing-contacts/upload`, {
       method: 'POST',
       headers: {
         ...headers,
-        'Content-Type': contentType,
       },
-      body: buffer,
+      body: formData,
     });
 
     const backendText = await backendRes.text();

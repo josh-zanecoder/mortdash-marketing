@@ -22,10 +22,94 @@ export default function ContactsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [deletingContact, setDeletingContact] = useState<any | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [branchFilter, setBranchFilter] = useState('');
   const updateContact = useContactStore((s) => s.updateContact);
   const deleteContact = useContactStore((s) => s.deleteContact);
 
+  // Skeleton loader component
+  const TableSkeleton = () => (
+    <div className="w-full">
+      <div className="overflow-hidden border border-gray-200 rounded-lg">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500">Full Name</th>
+              <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500">Email</th>
+              <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500">Phone</th>
+              <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500">Company</th>
+              <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500">Branch</th>
+              <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <tr key={idx} className="hover:bg-gray-50 transition-colors duration-200">
+                <td className="px-4 py-4">
+                  <div className="w-40 h-4 bg-gray-200 rounded animate-pulse"></div>
+                </td>
+                <td className="px-4 py-4">
+                  <div className="w-40 h-4 bg-gray-200 rounded animate-pulse"></div>
+                </td>
+                <td className="px-4 py-4">
+                  <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+                </td>
+                <td className="px-4 py-4">
+                  <div className="w-36 h-4 bg-gray-200 rounded animate-pulse"></div>
+                </td>
+                <td className="px-4 py-4">
+                  <div className="w-28 h-4 bg-gray-200 rounded animate-pulse"></div>
+                </td>
+                <td className="px-4 py-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-16 h-8 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-16 h-8 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  // Skeleton for prospect/client sections
+  const CompanySkeleton = () => (
+    <div className="bg-gray-50 rounded-lg p-4">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-5 h-5 bg-gray-200 rounded animate-pulse"></div>
+        <div className="w-48 h-6 bg-gray-200 rounded animate-pulse"></div>
+        <div className="w-20 h-5 bg-gray-200 rounded-full animate-pulse"></div>
+      </div>
+      <div className="border-t border-gray-200 mt-2 pt-2">
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className="flex gap-4">
+              <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+              <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+              <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+              <div className="w-28 h-4 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   const { marketingContacts, loading, error, fetchContacts, channels, fetchChannels, page, limit, total, setPage, search, setSearch, prospects, prospectsLoading, prospectsError, fetchProspects, clients, clientsLoading, clientsError, fetchClients } = useContactStore();
+
+  // Filter contacts based on search and branch filter
+  const filteredContacts = marketingContacts.filter(contact => {
+    const matchesSearch = !search || 
+      contact.first_name?.toLowerCase().includes(search.toLowerCase()) ||
+      contact.last_name?.toLowerCase().includes(search.toLowerCase()) ||
+      (contact.email_address || contact.email)?.toLowerCase().includes(search.toLowerCase()) ||
+      contact.company?.toLowerCase().includes(search.toLowerCase());
+    
+    const matchesBranch = !branchFilter || contact.branch === branchFilter;
+    
+    return matchesSearch && matchesBranch;
+  });
 
   useEffect(() => {
     fetchContacts({ page, limit, search });
@@ -38,7 +122,10 @@ export default function ContactsPage() {
 
   // Handler to refresh contacts after upload
   const handleUploadSuccess = () => {
-    fetchContacts({ page, limit, search });
+    // Reset to page 1 to show newly uploaded contacts
+    setPage(1);
+    // Fetch fresh data with current search and limit
+    fetchContacts({ page: 1, limit, search });
     toast.success('Contacts uploaded successfully!', {
       icon: <CheckCircle2 className="text-green-600" />,
     });
@@ -58,6 +145,8 @@ export default function ContactsPage() {
       <AddContactModal open={showAddModal} onClose={() => {
         setShowAddModal(false);
       }} onSubmit={() => {
+        // Refresh contacts after adding
+        fetchContacts({ page, limit, search });
         toast.success('Contact added successfully!', {
           icon: <CheckCircle2 className="text-green-600" />,
         });
@@ -69,7 +158,8 @@ export default function ContactsPage() {
           setEditingContact(null);
         }}
         onSubmit={async (form) => {
-          // Only close modal and refresh, do not show toast here (handled in modal)
+          // Refresh contacts after editing
+          fetchContacts({ page, limit, search });
           setShowEditModal(false);
           setEditingContact(null);
         }}
@@ -86,6 +176,8 @@ export default function ContactsPage() {
           if (deletingContact) {
             const success = await deleteContact(deletingContact.id);
             if (success) {
+              // Refresh contacts after deleting
+              fetchContacts({ page, limit, search });
               toast.success('Contact deleted successfully!', {
                 icon: <CheckCircle2 className="text-green-600" />,
               });
@@ -115,7 +207,7 @@ export default function ContactsPage() {
           <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
             <button
               onClick={() => setActiveTab('marketing')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === 'marketing'
                   ? 'bg-white text-[#ff6600] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -125,7 +217,7 @@ export default function ContactsPage() {
             </button>
             <button
               onClick={() => setActiveTab('prospects')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === 'prospects'
                   ? 'bg-white text-[#ff6600] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -135,7 +227,7 @@ export default function ContactsPage() {
             </button>
             <button
               onClick={() => setActiveTab('clients')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === 'clients'
                   ? 'bg-white text-[#ff6600] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -151,7 +243,7 @@ export default function ContactsPage() {
           <div className="w-full">
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-6">
-              <div className="flex-1">
+              <div className="flex-1 flex gap-2">
                 <div className="flex items-center w-full max-w-xs bg-white border border-[#ffe3d1] rounded-lg shadow-sm px-4 py-2">
                   <Search className="text-[#ff6600] mr-2" size={20} />
                   <input
@@ -162,17 +254,27 @@ export default function ContactsPage() {
                     onChange={e => setSearchInput(e.target.value)}
                   />
                 </div>
+                <select 
+                  className="cursor-pointer px-4 py-2 border border-[#ffe3d1] rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent shadow-sm"
+                  value={branchFilter}
+                  onChange={(e) => setBranchFilter(e.target.value)}
+                >
+                  <option value="">All Branches</option>
+                  {channels.map(channel => (
+                    <option key={channel.value} value={channel.label}>{channel.label}</option>
+                  ))}
+                </select>
               </div>
-              <Button className="px-4 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold rounded-lg shadow transition-all" onClick={() => setShowAddModal(true)}>
+              <Button className="px-4 bg-[#ff6600] hover:bg-[#ff7a2f] text-white font-bold rounded-lg shadow transition-all cursor-pointer" onClick={() => setShowAddModal(true)}>
                 Add a New Contact
               </Button>
-              <Button variant="default" className="px-4 font-bold rounded-lg shadow transition-all" onClick={() => setShowUploadModal(true)}>
+              <Button variant="default" className="px-4 font-bold rounded-lg shadow transition-all cursor-pointer" onClick={() => setShowUploadModal(true)}>
                 Upload Contacts
               </Button>
             </div>
 
             {/* Loading/Error States */}
-            {loading && <div className="py-8 text-center text-lg text-gray-500">Loading contacts...</div>}
+            {loading && <TableSkeleton />}
             {error && <div className="py-8 text-center text-lg text-red-600">{error}</div>}
 
             {/* Marketing Contacts Table */}
@@ -182,25 +284,29 @@ export default function ContactsPage() {
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-50 dark:bg-gray-800">
                       <tr>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">First Name</th>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Last Name</th>
-                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Title</th>
+                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Full Name</th>
+                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Email</th>
+                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Phone</th>
                         <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Company</th>
+                        <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Branch</th>
                         <th className="px-4 py-3.5 text-sm font-normal text-left text-gray-500 dark:text-gray-400">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-900">
-                      {marketingContacts.map((contact) => (
+                      {filteredContacts.map((contact) => (
                         <tr key={contact.id}>
-                          <td className="px-4 py-4 text-sm text-gray-800 dark:text-white">{contact.first_name}</td>
-                          <td className="px-4 py-4 text-sm text-gray-800 dark:text-white">{contact.last_name}</td>
-                          <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{contact.title}</td>
+                          <td className="px-4 py-4 text-sm text-gray-800 dark:text-white font-medium">
+                            {contact.first_name} {contact.last_name}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{contact.email_address || contact.email}</td>
+                          <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{contact.phone_number || 'N/A'}</td>
                           <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{contact.company}</td>
+                          <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{contact.branch || 'N/A'}</td>
                           <td className="px-4 py-4 text-sm flex gap-2">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                              className="cursor-pointer text-blue-600 border-blue-200 hover:bg-blue-50"
                               onClick={() => {
                                 setEditingContact(contact);
                                 setShowEditModal(true);
@@ -216,7 +322,7 @@ export default function ContactsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-red-600 border-red-200 hover:bg-red-50"
+                              className="text-red-600 border-red-200 hover:bg-red-50 cursor-pointer"
                               onClick={() => {
                                 setDeletingContact(contact);
                                 setShowDeleteDialog(true);
@@ -244,6 +350,7 @@ export default function ContactsPage() {
                             if (page > 1) setPage(page - 1);
                           }}
                           aria-disabled={page === 1}
+                          className="cursor-pointer"
                         />
                       </PaginationItem>
                       {[...Array(pageCount)].map((_, i) => (
@@ -255,6 +362,7 @@ export default function ContactsPage() {
                               e.preventDefault();
                               setPage(i + 1);
                             }}
+                            className="cursor-pointer"
                           >
                             {i + 1}
                           </PaginationLink>
@@ -268,6 +376,7 @@ export default function ContactsPage() {
                             if (page < pageCount) setPage(page + 1);
                           }}
                           aria-disabled={page === pageCount}
+                          className="cursor-pointer"
                         />
                       </PaginationItem>
                     </PaginationContent>
@@ -299,43 +408,47 @@ export default function ContactsPage() {
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <h4 className="text-lg font-semibold text-gray-900 mb-4">Companies & Members</h4>
               <div className="space-y-6">
-                {prospectsLoading ? (
-                  <div className="text-blue-700">Loading companies...</div>
-                ) : prospectsError ? (
-                  <div className="text-red-600">{prospectsError}</div>
-                ) : prospects && prospects.length > 0 ? (
-                  prospects.filter(p => p.members && p.members.length > 0).map((prospect, idx) => (
-                    <div key={idx} className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Building className="w-5 h-5 text-gray-500" />
-                        <span className="font-medium text-gray-900 text-lg">{prospect.company || 'Unknown Company'}</span>
-                        <span className="ml-2 text-xs text-blue-700 bg-blue-100 rounded-full px-2 py-0.5">{prospect.members.length} members</span>
-                      </div>
-                      <table className="w-full text-sm border-t border-gray-200 mt-2">
-                        <thead>
-                          <tr>
-                            <th className="py-1 px-2 text-left font-semibold text-gray-600">First Name</th>
-                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Last Name</th>
-                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Email</th>
-                            <th className="py-1 px-2 text-left font-semibold text-gray-600">Phone</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {prospect.members.map((member, mIdx) => (
-                            <tr key={mIdx}>
-                              <td className="py-1 px-2">{member.first_name}</td>
-                              <td className="py-1 px-2">{member.last_name}</td>
-                              <td className="py-1 px-2">{member.email}</td>
-                              <td className="py-1 px-2">{member.phone}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              {prospectsLoading ? (
+                <div className="space-y-6">
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <CompanySkeleton key={idx} />
+                  ))}
+                </div>
+              ) : prospectsError ? (
+                <div className="text-red-600">{prospectsError}</div>
+              ) : prospects && prospects.length > 0 ? (
+                prospects.filter(p => p.members && p.members.length > 0).map((prospect, idx) => (
+                  <div key={idx} className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Building className="w-5 h-5 text-gray-500" />
+                      <span className="font-medium text-gray-900 text-lg">{prospect.company || 'Unknown Company'}</span>
+                      <span className="ml-2 text-xs text-blue-700 bg-blue-100 rounded-full px-2 py-0.5">{prospect.members.length} members</span>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-gray-500">No companies found.</div>
-                )}
+                    <table className="w-full text-sm border-t border-gray-200 mt-2">
+                      <thead>
+                        <tr>
+                          <th className="py-1 px-2 text-left font-semibold text-gray-600">First Name</th>
+                          <th className="py-1 px-2 text-left font-semibold text-gray-600">Last Name</th>
+                          <th className="py-1 px-2 text-left font-semibold text-gray-600">Email</th>
+                          <th className="py-1 px-2 text-left font-semibold text-gray-600">Phone</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {prospect.members.map((member, mIdx) => (
+                          <tr key={mIdx}>
+                            <td className="py-1 px-2">{member.first_name}</td>
+                            <td className="py-1 px-2">{member.last_name}</td>
+                            <td className="py-1 px-2">{member.email}</td>
+                            <td className="py-1 px-2">{member.phone}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))
+              ) : (
+                <div className="text-gray-500">No companies found.</div>
+              )}
               </div>
             </div>
           </div>
@@ -363,7 +476,11 @@ export default function ContactsPage() {
               <h4 className="text-lg font-semibold text-gray-900 mb-4">Companies & Members</h4>
               <div className="space-y-6">
                 {clientsLoading ? (
-                  <div className="text-green-700">Loading companies...</div>
+                  <div className="space-y-6">
+                    {Array.from({ length: 3 }).map((_, idx) => (
+                      <CompanySkeleton key={idx} />
+                    ))}
+                  </div>
                 ) : clientsError ? (
                   <div className="text-red-600">{clientsError}</div>
                 ) : clients && clients.length > 0 ? (

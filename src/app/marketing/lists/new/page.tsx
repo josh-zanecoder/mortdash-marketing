@@ -93,6 +93,17 @@ function AddMarketingListPageContent() {
       return;
     }
 
+    // Check if list name is empty or contains only whitespace
+    if (!listName || !listName.trim()) {
+      setToast({
+        isOpen: true,
+        title: 'Error',
+        message: 'Please enter a valid list name',
+        type: 'error'
+      });
+      return;
+    }
+
     if (!audienceTypeId) {
       setToast({
         isOpen: true,
@@ -124,42 +135,28 @@ function AddMarketingListPageContent() {
       // Filter out empty filters (where filter_type_id is null or empty)
       const validFilters = filters.filter(f => f.filter_type_id !== null && f.filter_type_id !== 0);
       
-      // For Prospect lists, use actual filters if selected, otherwise send a minimal valid filter
-      const filtersToSend = audienceTypeId === 1 ? 
-        (validFilters.length > 0 ? validFilters : [{
-          filter_type_id: 1,
-          filter_type_name: 'Channel',
-          filter_value: '1',
-          filter_value_id: '1',
-          filter_value_name: 'Wholesale'
-        }]) : 
-        (validFilters.length > 0 ? validFilters : [{
-          filter_type_id: null,
-          filter_type_name: 'Channel',
-          filter_value: '',
-          filter_value_id: '',
-          filter_value_name: 'All'
-        }]);
+      // Use only valid filters that the user has actually selected
+      const filtersToSend = validFilters.length > 0 ? validFilters : [];
       
-      // For Prospect lists with State filter, try to avoid the backend issue by using a different approach
-      if (audienceTypeId === 1 && validFilters.some(f => f.filter_type_name === 'State')) {
-        setToast({
-          isOpen: true,
-          title: 'Warning',
-          message: 'Prospect lists with State filters may have limited functionality due to backend limitations. Try using Channel filters instead.',
-          type: 'warning'
-        });
-      }
+      // Filter out any filters that don't have proper values
+      const finalFilters = filtersToSend.filter(filter => 
+        filter.filter_type_id && 
+        filter.filter_value && 
+        filter.filter_value.trim() !== '' &&
+        filter.filter_value !== 'All'
+      );
+      
+
       
       const body = {
-        name: listName,
+        name: listName.trim(),
         audience_type: String(audienceTypeId),
-        filters: filtersToSend.map(({ filter_type_id, filter_type_name, filter_value, filter_value_id, filter_value_name }) => {
+        filters: finalFilters.map(({ filter_type_id, filter_type_name, filter_value, filter_value_id, filter_value_name }) => {
           const baseFilter = {
             filter_type_id: filter_type_id ? String(filter_type_id) : '',
             filter_type_name: filter_type_name || '',
             filter_value_id: filter_value_id || filter_value || '',
-            value_name: filter_value_name || filter_type_name || 'All',
+            value_name: filter_value_name || filter_value || filter_value_id || '',
           };
           
           // Add audience-specific fields based on backend expectations
@@ -177,7 +174,7 @@ function AddMarketingListPageContent() {
             return {
               ...baseFilter,
               // For Prospect, ensure we have the value_name that the backend expects
-              value_name: filter_value_name || filter_value || filter_value_id || 'All'
+              value_name: filter_value_name || filter_value || filter_value_id || ''
             };
           } else {
             return baseFilter;
@@ -246,147 +243,373 @@ function AddMarketingListPageContent() {
   
   const updateFilter = (idx: number, key: keyof FilterRow, value: any) => {
     const newFilters = [...filters];
-    newFilters[idx] = { ...newFilters[idx], [key]: value };
-  
-    // Reset value if filter type changes
+    
+    // If updating filter type
     if (key === 'filter_type_id') {
-      const selected = audienceTypeFilters.find(ft => ft.value === value);
-      newFilters[idx].filter_type_name = selected?.name || '';
-      newFilters[idx].filter_value = ''; // reset selected value
-      newFilters[idx].filter_value_id = '';
-      newFilters[idx].filter_value_name = '';
+      const selected = audienceTypeFilters.find(ft => ft.value === Number(value));
+      if (selected) {
+        newFilters[idx] = {
+          ...newFilters[idx],
+          filter_type_id: Number(value),
+          filter_type_name: selected.code || selected.name, // Use code for type identification
+          filter_value: '',
+          filter_value_id: '',
+          filter_value_name: ''
+        };
+      }
+    } else {
+      newFilters[idx] = { ...newFilters[idx], [key]: value };
     }
-  
+
     setFilters(newFilters);
   };
   const removeFilter = (idx: number) => setFilters(filters.filter((_, i) => i !== idx));
 
   return (
-    <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center pt-16 px-4">
-      <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl p-10">
-        <h1 className="text-3xl font-extrabold text-[#232323] mb-6">Add Marketing List</h1>
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-50 flex flex-col items-center pt-16 px-4">
+      {/* Backdrop overlay */}
+      <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-40"></div>
+      
+      {/* Modal container */}
+      <div className="relative z-50 w-full max-w-2xl bg-white/95 backdrop-blur-sm border-0 shadow-2xl rounded-2xl p-8 md:p-12">
+        {/* Header Section */}
+        <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200/60">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Add Marketing List</h1>
+              <p className="text-slate-600 text-sm mt-1">Create a new marketing list to target your audience effectively.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => router.back()}
+            className="cursor-pointer w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-xl flex items-center justify-center transition-all duration-200"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">List Name</label>
-            <input
-              type="text"
-              value={listName}
-              onChange={(e) => setListName(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Audience Type</label>
-            <select
-              value={audienceTypeId || ''}
-              onChange={(e) => handleAudienceTypeChange(Number(e.target.value))}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]"
-            >
-              <option value="" disabled>Select Audience Type</option>
-              {audienceTypes.map((at) => (
-                <option key={at.value} value={at.value}>{at.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xl font-semibold text-gray-800 mb-3">Filters</label>
-            {filters.map((f, idx) => (
-              <div key={idx} className="flex items-center gap-2 mb-3">
-                <button type="button" onClick={() => removeFilter(idx)} className="text-red-500">➖</button>
-
-                {/* Filter Type Dropdown */}
-                <select
-                  value={f.filter_type_id ?? ''}
-                  onChange={(e) => {
-                    updateFilter(idx, 'filter_type_id', Number(e.target.value));
-                  }}
-                  className="px-3 py-2 border rounded-lg flex-1"
-                >
-                  <option value="" disabled>Select filter</option>
-                  {audienceTypeFilters
-                    .filter(ft => ft.audience_type_id === audienceTypeId && ft.type === 'all')
-                    .map(ft => {
-                      return (
-                        <option key={ft.value} value={ft.value}>{ft.name}</option>
-                      );
-                    })}
-                </select>
-
-                <span>=</span>
-
-                {/* Filter Value Dropdown */}
-                {f.filter_type_name === 'Channel' && (
-                  <select
-                    value={f.filter_value || ''}
-                    onChange={(e) => {
-                      const selectedChannel = bankChannels.find(channel => String(channel.value) === e.target.value);
-                      
-                      // Update all filter fields at once
-                      const newFilters = [...filters];
-                      newFilters[idx] = {
-                        ...newFilters[idx],
-                        filter_value: e.target.value,
-                        filter_value_id: e.target.value,
-                        filter_value_name: selectedChannel?.name || ''
-                      };
-                      setFilters(newFilters);
-                    }}
-                    className="px-3 py-2 border rounded-lg flex-1"
-                  >
-                    <option value="" disabled>Select channel</option>
-                    {bankChannels.map((channel) => {
-                      return (
-                        <option key={channel.value} value={String(channel.value)}>
-                          {channel.name}
-                        </option>
-                      );
-                    })}
-                  </select>
-                )}
-
-                {f.filter_type_name === 'State' && (
-                  <select
-                    value={f.filter_value || ''}
-                    onChange={(e) => {
-                      const stateName = Object.entries(State).find(([name, abbr]) => abbr === e.target.value)?.[0];
-                      
-                      // Update all filter fields at once
-                      const newFilters = [...filters];
-                      newFilters[idx] = {
-                        ...newFilters[idx],
-                        filter_value: e.target.value,
-                        filter_value_id: e.target.value,
-                        filter_value_name: stateName || ''
-                      };
-                      setFilters(newFilters);
-                    }}
-                    className="px-3 py-2 border rounded-lg flex-1"
-                  >
-                    <option value="" disabled>Select state</option>
-                    {Object.entries(State).map(([name, abbr]) => (
-                      <option key={abbr} value={abbr}>
-                        {name.replace(/([A-Z])/g, ' $1').trim()}
-                      </option>
-                    ))}
-                  </select>
-                )}
-
-                {/* Show placeholder when no filter type is selected */}
-                {!f.filter_type_name && f.filter_type_id && (
-                  <div className="px-3 py-2 border rounded-lg flex-1 text-gray-400 bg-gray-50">
-                    Select filter type first
-                  </div>
-                )}
+          {/* List Name Section */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              
+              List Name
+              <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={listName}
+                onChange={(e) => setListName(e.target.value)}
+                required
+                placeholder="Enter a descriptive name for your list"
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm transition-all duration-200 hover:shadow-md"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <div className="w-2 h-2 bg-orange-500 rounded-full opacity-60"></div>
               </div>
-            ))}
-            <button type="button" onClick={addFilter} className="text-[#ff6600] font-semibold">➕ Add Filter</button>
+            </div>
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <div className="flex justify-end gap-4">
-            <Button type="button" onClick={() => router.back()} className="bg-gray-200 text-gray-700 hover:bg-gray-300">Cancel</Button>
-            <Button type="submit" disabled={loading} className="bg-[#ff6600] hover:bg-[#ff7a2f] text-white">
-              {loading ? 'Saving...' : 'Save'}
+
+          {/* Audience Type Section */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+             
+              Audience Type
+              <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <select
+                value={audienceTypeId || ''}
+                onChange={(e) => handleAudienceTypeChange(Number(e.target.value))}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm transition-all duration-200 hover:shadow-md appearance-none cursor-pointer"
+              >
+                <option value="">Select an audience type</option>
+                {audienceTypes.map((at) => (
+                  <option key={`audience-type-${at.value}-${at.name}`} value={at.value}>
+                    {at.name}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters Section */}
+          <div className="space-y-5 border-t border-slate-200/60 pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-slate-800">List Filters</h3>
+                  <p className="text-xs text-slate-500">Define targeting criteria for your list</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
+                  {filters.length} active
+                </span>
+              </div>
+            </div>
+            
+            {/* Filters Container */}
+            <div className="space-y-3">
+              {filters.map((f, idx) => (
+                <div key={idx} className="group relative bg-gradient-to-r from-slate-50 to-slate-100/50 rounded-xl p-4 border border-slate-200/60 shadow-sm hover:shadow-md transition-all duration-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-slate-700">Filter {idx + 1}</span>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => removeFilter(idx)} 
+                      className="cursor-pointer w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105 opacity-0 group-hover:opacity-100"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-4 items-center">
+                    {/* Filter Type Dropdown */}
+                    <div className="relative col-span-5">
+                      <select
+                        value={f.filter_type_id ?? ''}
+                        onChange={(e) => {
+                          const selectedFilter = audienceTypeFilters.find(
+                            ft => ft.value === Number(e.target.value)
+                          );
+                          if (selectedFilter) {
+                            const newFilters = [...filters];
+                            newFilters[idx] = {
+                              ...newFilters[idx],
+                              filter_type_id: selectedFilter.value,
+                              filter_type_name: selectedFilter.name,
+                              filter_value: '',
+                              filter_value_id: '',
+                              filter_value_name: ''
+                            };
+                            setFilters(newFilters);
+                          }
+                        }}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
+                      >
+                        <option value="">Select filter</option>
+                        {audienceTypeFilters
+                          .filter(ft => ft.audience_type_id === audienceTypeId && ft.type === 'all')
+                          .filter(ft => {
+                            // Always show the current filter's type, even if all values are used
+                            if (f.filter_type_name === ft.name) {
+                              return true;
+                            }
+                            
+                            // For Channel filters, check if all channel values are already selected
+                            if (ft.name === 'Channel') {
+                              const selectedChannelValues = filters
+                                .filter(filter => filter.filter_type_name === 'Channel')
+                                .map(filter => filter.filter_value)
+                                .filter(Boolean);
+                              const allChannelValues = bankChannels.map(channel => String(channel.value));
+                              return selectedChannelValues.length < allChannelValues.length;
+                            }
+                            
+                            // For State filters, check if all state values are already selected
+                            if (ft.name === 'State') {
+                              const selectedStateValues = filters
+                                .filter(filter => filter.filter_type_name === 'State')
+                                .map(filter => filter.filter_value)
+                                .filter(Boolean);
+                              const allStateValues = Object.keys(State);
+                              return selectedStateValues.length < allStateValues.length;
+                            }
+                            
+                            return true;
+                          })
+                          .map(ft => (
+                            <option key={`filter-type-${ft.name}`} value={ft.value}>
+                              {ft.name}
+                            </option>
+                          ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-center col-span-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-slate-500 to-slate-600 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">=</span>
+                      </div>
+                    </div>
+
+                    {/* Filter Value Dropdown */}
+                    <div className="relative col-span-5">
+                      {f.filter_type_name === 'Channel' && (
+                        <select
+                          value={f.filter_value || ''}
+                          onChange={(e) => {
+                            const selectedChannel = bankChannels.find(channel => channel.value === Number(e.target.value));
+                            if (selectedChannel) {
+                              const newFilters = [...filters];
+                              newFilters[idx] = {
+                                ...newFilters[idx],
+                                filter_value: String(selectedChannel.value),
+                                filter_value_id: String(selectedChannel.value),
+                                filter_value_name: selectedChannel.name
+                              };
+                              setFilters(newFilters);
+                            }
+                          }}
+                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
+                        >
+                          <option value="">Select channel</option>
+                          {bankChannels
+                            .filter(channel => {
+                              // Don't show channels that are already selected in other Channel filters
+                              const existingChannelValues = filters
+                                .map((filter, filterIdx) => 
+                                  filterIdx !== idx && filter.filter_type_name === 'Channel' ? filter.filter_value : null
+                                )
+                                .filter(Boolean);
+                              return !existingChannelValues.includes(String(channel.value));
+                            })
+                            .map((channel) => (
+                              <option key={`channel-${channel.value}-${channel.name}`} value={channel.value}>
+                                {channel.name}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+
+                      {f.filter_type_name === 'State' && (
+                        <select
+                          value={f.filter_value || ''}
+                          onChange={(e) => {
+                            const stateValue = e.target.value;
+                            const newFilters = [...filters];
+                            newFilters[idx] = {
+                              ...newFilters[idx],
+                              filter_value: stateValue,
+                              filter_value_id: stateValue,
+                              filter_value_name: stateValue
+                            };
+                            setFilters(newFilters);
+                          }}
+                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
+                        >
+                          <option value="">Select state</option>
+                          {Object.entries(State)
+                            .filter(([abbr, name]) => {
+                              // Don't show states that are already selected in other State filters
+                              const existingStateValues = filters
+                                .map((filter, filterIdx) => 
+                                  filterIdx !== idx && filter.filter_type_name === 'State' ? filter.filter_value : null
+                                )
+                                .filter(Boolean);
+                              return !existingStateValues.includes(abbr);
+                            })
+                            .map(([abbr, name]) => (
+                              <option key={`state-${abbr}`} value={abbr}>
+                                {name} ({abbr})
+                              </option>
+                            ))}
+                        </select>
+                      )}
+
+                      {f.filter_type_name && (
+                        <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add Filter Button */}
+            {audienceTypeId ? (
+              <button 
+                type="button" 
+                onClick={addFilter} 
+                className="cursor-pointer w-full py-4 px-6 border-2 border-dashed border-blue-300 rounded-xl text-blue-600 hover:text-blue-700 hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-200 font-medium flex items-center justify-center gap-3 group bg-gradient-to-r from-blue-50/30 to-indigo-50/30"
+              >
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-200">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <span>Add New Filter</span>
+              </button>
+            ) : (
+              <div className="w-full py-4 px-6 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 bg-slate-50/50 flex items-center justify-center gap-3">
+                <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium">Please select an audience type to add filters</span>
+              </div>
+            )}
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-6 border-t border-slate-200/60">
+            <Button 
+              type="button" 
+              onClick={() => router.back()} 
+              className="cursor-pointer px-6 py-2.5 bg-slate-800 text-white hover:bg-slate-700 rounded-xl transition-all duration-200"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={loading} 
+              className="cursor-pointer px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Creating...
+                </div>
+              ) : (
+                'Create List'
+              )}
             </Button>
           </div>
         </form>

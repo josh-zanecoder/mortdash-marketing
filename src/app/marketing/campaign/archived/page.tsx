@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
-import { Archive, Eye, X, Plus, Search, ChevronDown } from 'lucide-react';
+import { Archive, Eye, X, Plus, Search, ChevronDown, ArrowLeft } from 'lucide-react';
 import { useListsStore } from '@/store/listsStore';
 import { useCampaignStore } from '@/store/useCampaignStore';
 import axios from 'axios';
@@ -125,12 +125,13 @@ function SearchableSelect({
   );
 }
 
-function CampaignPageContent() {
+function ArchivedTemplatesPageContent() {
   const [selectedList, setSelectedList] = useState('');
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<number | 'all'>('all');
   const [loading, setLoading] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+  const [archivedTemplates, setArchivedTemplates] = useState<any[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
   const lists = useListsStore((state) => state.lists);
   const setLists = useListsStore((state) => state.setLists);
   const searchParams = useSearchParams();
@@ -141,7 +142,7 @@ function CampaignPageContent() {
     from?: string;
     subject?: string;
     html?: string;
-    template?: number;  // Add template to the interface
+    template?: number;
   } | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -149,8 +150,6 @@ function CampaignPageContent() {
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const router = useRouter();
-  // Campaign templates store
-  const { templates, loading: templatesLoading, fetchTemplates, clearTemplates } = useCampaignStore();
   const [categories, setCategories] = useState<{ 
     id: number; 
     slug: string; 
@@ -161,16 +160,7 @@ function CampaignPageContent() {
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [archivingTemplate, setArchivingTemplate] = useState<number | null>(null);
 
-  // Clear templates when component unmounts or when selectedList changes to empty
-  useEffect(() => {
-    if (!selectedList) {
-      clearTemplates();
-    }
-    return () => {
-      clearTemplates(); // Clear templates on unmount
-    };
-  }, [selectedList, clearTemplates]);
-
+  // Fetch lists on mount
   useEffect(() => {
     const fetchLists = async () => {
       if (!tokenParam) return;
@@ -203,20 +193,43 @@ function CampaignPageContent() {
       .finally(() => setCategoriesLoading(false));
   }, []);
 
-  // Fetch templates when a list is selected or archived status changes
+  // Fetch archived templates on mount
   useEffect(() => {
-    const list = lists.find(l => String(l.id) === String(selectedList));
-    const audience_type_id = list?.audience_type_id || null;
-    fetchTemplates(audience_type_id, showArchived);
-  }, [selectedList, lists, showArchived, fetchTemplates]);
+    const fetchArchivedTemplates = async () => {
+      setTemplatesLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.append('is_archived', '1');
+        
+        const url = tokenParam 
+          ? `/api/campaign/get-archived-templates?${params.toString()}&token=${tokenParam}`
+          : `/api/campaign/get-archived-templates?${params.toString()}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success) {
+          setArchivedTemplates(data.data || []);
+        } else {
+          setArchivedTemplates([]);
+        }
+      } catch (error) {
+        console.error('Error fetching archived templates:', error);
+        setArchivedTemplates([]);
+      } finally {
+        setTemplatesLoading(false);
+      }
+    };
 
-  // Filter templates by search, filter, and archive status
-  const filteredTemplates = templates
+    fetchArchivedTemplates();
+  }, [tokenParam]);
+
+  // Filter templates by search and category
+  const filteredTemplates = archivedTemplates
     .filter((tpl) => {
       const matchesFilter = activeFilter === 'all' || tpl.email_template_category_id === activeFilter;
       const matchesSearch = tpl.name?.toLowerCase().includes(search.toLowerCase());
-      const matchesArchiveStatus = showArchived ? tpl.is_archived === 1 : tpl.is_archived === 0;
-      return matchesFilter && matchesSearch && matchesArchiveStatus;
+      return matchesFilter && matchesSearch;
     });
 
   // Helper to fetch and show preview
@@ -233,7 +246,7 @@ function CampaignPageContent() {
   
       setPreviewData({
         ...data,
-        template: tpl.id // Store the template ID from tpl
+        template: tpl.id
       });
     } catch (err) {
       console.error('Preview error:', err);
@@ -247,17 +260,14 @@ function CampaignPageContent() {
   const handleSend = async (isScheduled = false, scheduledDateTime: string | null = null) => {
     if (!previewData || !selectedList) return;
     
-    // Get the selected list details
     const list = lists.find(l => String(l.id) === String(selectedList));
     if (!list) return;
 
-    // Ensure we have required data
     if (!previewData.template) {
       toast.error('Template ID is missing');
       return;
     }
 
-    // Validate scheduled date/time if scheduling
     if (isScheduled && scheduledDateTime) {
       const scheduledDate = new Date(scheduledDateTime);
       const now = new Date();
@@ -280,7 +290,6 @@ function CampaignPageContent() {
       }
     };
 
-    // Show loading toast
     const loadingToast = toast.loading(isScheduled ? 'Scheduling campaign...' : 'Sending campaign...');
 
     try {
@@ -297,7 +306,6 @@ function CampaignPageContent() {
         throw new Error(errorData.error || `Failed to ${isScheduled ? 'schedule' : 'send'} campaign`);
       }
 
-      // Dismiss loading toast and show success
       toast.dismiss(loadingToast);
       toast.success(isScheduled ? 'Campaign scheduled successfully!' : 'Campaign sent successfully!', {
         description: isScheduled 
@@ -306,13 +314,11 @@ function CampaignPageContent() {
         duration: 5000,
       });
 
-      // Close modals
       setPreviewOpen(false);
       setScheduleModalOpen(false);
       setScheduledDate('');
       setScheduledTime('');
     } catch (err) {
-      // Dismiss loading toast and show error
       toast.dismiss(loadingToast);
       toast.error(`Failed to ${isScheduled ? 'schedule' : 'send'} campaign`, {
         description: err instanceof Error ? err.message : 'An unexpected error occurred',
@@ -345,10 +351,8 @@ function CampaignPageContent() {
       const url = tokenParam ? `/api/campaign/archive?token=${tokenParam}` : '/api/campaign/archive';
       const payload = {
         id: templateId,
-        archive: Boolean(!isCurrentlyArchived) // Toggle the archive status (true for archive, false for unarchive)
+        archive: Boolean(!isCurrentlyArchived)
       };
-      console.log('Archive payload:', payload);
-      console.log('Archive URL:', url);
       
       const response = await fetch(url, {
         method: 'POST',
@@ -358,19 +362,23 @@ function CampaignPageContent() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Archive error response:', errorData);
         throw new Error(errorData.error || errorData.message || 'Failed to archive template');
       }
 
-      // Refresh templates to get updated archive status
-      const list = lists.find(l => String(l.id) === String(selectedList));
-      const audience_type_id = list?.audience_type_id || null;
+      // Refresh archived templates
+      const params = new URLSearchParams();
+      params.append('is_archived', '1');
       
-      // Clear current templates first to avoid showing stale data
-      clearTemplates();
+      const refreshUrl = tokenParam 
+        ? `/api/campaign/get-archived-templates?${params.toString()}&token=${tokenParam}`
+        : `/api/campaign/get-archived-templates?${params.toString()}`;
       
-      // Fetch fresh templates with current archive status
-      await fetchTemplates(audience_type_id, showArchived);
+      const refreshResponse = await fetch(refreshUrl);
+      const refreshData = await refreshResponse.json();
+      
+      if (refreshData.success) {
+        setArchivedTemplates(refreshData.data || []);
+      }
 
       toast.success(
         isCurrentlyArchived 
@@ -401,6 +409,7 @@ function CampaignPageContent() {
   return (
     <>
       <Toaster richColors position="top-right" />
+      
       {/* Preview Modal */}
       {previewOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8">
@@ -554,11 +563,24 @@ function CampaignPageContent() {
             animate={fadeIn.animate}
             className="mb-8"
           >
+            <div className="flex items-center gap-4 mb-4">
+              <button
+                onClick={() => {
+                  const token = tokenParam;
+                  const url = token ? `/marketing/campaign?token=${token}` : '/marketing/campaign';
+                  router.push(url);
+                }}
+                className="flex items-center gap-2 text-[#ff6600] hover:text-[#ff7a2f] transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="text-[15px] font-medium">Back to Campaigns</span>
+              </button>
+            </div>
             <h1 className="text-2xl font-bold text-[#1a1a1a] tracking-[-0.02em] mb-1">
-              Email Campaign
+              Archived Templates
             </h1>
             <p className="text-[15px] text-[#666666]">
-              Create and manage your email marketing campaigns
+              View and manage your archived email templates
             </p>
           </motion.div>
 
@@ -567,101 +589,15 @@ function CampaignPageContent() {
             transition={pageTransition}
             className="relative"
           >
-            {!selectedList ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.3 }}
-                className="max-w-2xl mx-auto"
-              >
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-                  <div className="text-center mb-8">
-                    <h2 className="text-2xl font-semibold text-[#1a1a1a] mb-3">Select Marketing List</h2>
-                    <p className="text-[15px] text-[#666666]">Choose a marketing list to start creating your campaign</p>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="relative">
-                      <label className="block text-sm font-medium text-[#666666] mb-2">Marketing List</label>
-                      <SearchableSelect
-                        value={selectedList}
-                        onChange={setSelectedList}
-                        options={lists}
-                        disabled={loading}
-                      />
-                    </div>
-
-                    {loading && (
-                      <div className="flex justify-center py-4">
-                        <div className="w-6 h-6 border-2 border-[#ff6600]/30 border-t-[#ff6600] rounded-full animate-spin" />
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <p className="text-[15px] text-[#666666]">
-                        Need to create a new list?
-                      </p>
-                      <button
-                        onClick={() => {
-                          const token = tokenParam;
-                          const url = token ? `/marketing/lists/new?token=${token}` : '/marketing/lists/new';
-                          router.push(url);
-                        }}
-                        className="cursor-pointer text-[#ff6600] hover:text-[#ff7a2f] text-[15px] font-medium transition-colors"
-                      >
-                        Create New List
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-8"
-              >
-                {/* List Selection Bar */}
-                <motion.div 
-                  layout="position"
-                  className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
+                              <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-8"
                 >
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                    <div className="w-full sm:w-[300px]">
-                      <label className="block text-sm font-medium text-[#666666] mb-2">Marketing List</label>
-                      <SearchableSelect
-                        value={selectedList}
-                        onChange={setSelectedList}
-                        options={lists}
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="flex items-center gap-4 ml-auto">
-                      <button
-                        onClick={() => {
-                          const token = tokenParam;
-                          const url = token ? `/marketing/lists/new?token=${token}` : '/marketing/lists/new';
-                          router.push(url);
-                        }}
-                        className="cursor-pointer text-[#ff6600] hover:text-[#ff7a2f] text-[15px] font-medium transition-colors"
-                      >
-                        Create New List
-                      </button>
-                      <button 
-                        onClick={() => router.push('/email-builder')}
-                        className="cursor-pointer bg-[#ff6600] text-white rounded-lg px-5 py-2.5 font-medium hover:bg-[#ff7a2f] transition-colors inline-flex items-center gap-2"
-                      >
-                        <Plus className="w-5 h-5" />
-                        Create Template
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
 
-                {/* Templates Section */}
+                {/* Archived Templates Section */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -673,27 +609,13 @@ function CampaignPageContent() {
                     layout="position"
                     className="p-6 border-b border-gray-100"
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h2 className="text-xl font-semibold text-[#1a1a1a] mb-1">
-                          {showArchived ? 'Archived Templates' : 'Email Templates'}
-                        </h2>
-                        <p className="text-[15px] text-[#666666]">
-                          {showArchived ? 'View and restore your archived templates' : 'Select a template for your campaign'}
-                        </p>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-[#ff6600]/10 rounded-full flex items-center justify-center">
+                        <Archive className="w-4 h-4 text-[#ff6600]" />
                       </div>
-                      <button
-                        onClick={() => setShowArchived(!showArchived)}
-                        className={`cursor-pointer text-[15px] font-medium transition-colors inline-flex items-center gap-2 ${
-                          showArchived 
-                            ? 'text-white bg-[#ff6600] hover:bg-[#ff7a2f] px-3 py-1.5 rounded-lg' 
-                            : 'text-[#ff6600] hover:text-[#ff7a2f]'
-                        }`}
-                      >
-                        <Archive className="w-4 h-4" />
-                        {showArchived ? 'View Active' : 'View Archived'}
-                      </button>
+                      <h2 className="text-xl font-semibold text-[#1a1a1a]">Archived Templates</h2>
                     </div>
+                    <p className="text-[15px] text-[#666666]">View and restore your archived email templates</p>
                   </motion.div>
 
                   {/* Search and Filters */}
@@ -706,7 +628,7 @@ function CampaignPageContent() {
                         <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
-                          placeholder="Search templates..."
+                          placeholder="Search archived templates..."
                           className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#ff6600]/20 text-[15px]"
                           value={search}
                           onChange={e => setSearch(e.target.value)}
@@ -721,7 +643,7 @@ function CampaignPageContent() {
                           }`}
                           onClick={() => setActiveFilter('all')}
                         >
-                          {showArchived ? 'All Archived' : 'All Templates'}
+                          All Archived
                         </button>
                         {categoriesLoading && (
                           <span className="px-4 py-2 text-[15px] text-gray-400">Loading...</span>
@@ -774,9 +696,7 @@ function CampaignPageContent() {
                           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Archive className="w-8 h-8 text-gray-400" />
                           </div>
-                          <div className="text-[#666666] text-lg mb-2">
-                            {showArchived ? 'No archived templates found' : 'No templates found'}
-                          </div>
+                          <div className="text-[#666666] text-lg mb-2">No archived templates found</div>
                           <div className="text-[#999999] text-[15px]">Try adjusting your search or filters</div>
                         </motion.div>
                       ) : (
@@ -798,13 +718,6 @@ function CampaignPageContent() {
                                 alt={tpl.name}
                                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                               />
-                              {showArchived && (
-                                <div className="absolute top-2 left-2">
-                                  <div className="bg-[#ff6600] text-white text-xs px-2 py-1 rounded-full font-medium">
-                                    Archived
-                                  </div>
-                                </div>
-                              )}
                               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
                                 <button
                                   onClick={() => handlePreview(tpl)}
@@ -813,6 +726,11 @@ function CampaignPageContent() {
                                   <Eye className="w-5 h-5" />
                                   Preview
                                 </button>
+                              </div>
+                              <div className="absolute top-2 left-2">
+                                <div className="bg-[#ff6600] text-white text-xs px-2 py-1 rounded-full font-medium">
+                                  Archived
+                                </div>
                               </div>
                             </div>
                             <div className="p-4">
@@ -827,15 +745,15 @@ function CampaignPageContent() {
                                     handleArchive(tpl.id, tpl.is_archived_by_user);
                                   }}
                                   disabled={archivingTemplate === tpl.id}
-                                  className={`cursor-pointer text-[#666666] hover:text-[#ff6600] p-1.5 rounded-full hover:bg-[#ff6600]/5 transition-colors ${
-                                    tpl.is_archived_by_user ? 'text-[#ff6600] bg-[#ff6600]/10' : ''
-                                  }`}
-                                  title={tpl.is_archived_by_user ? 'Unarchive template' : 'Archive template'}
+                                  className="cursor-pointer text-[#ff6600] hover:text-[#ff7a2f] p-1.5 rounded-full hover:bg-[#ff6600]/5 transition-colors"
+                                  title="Restore template"
                                 >
                                   {archivingTemplate === tpl.id ? (
                                     <div className="w-4 h-4 border-2 border-[#ff6600]/30 border-t-[#ff6600] rounded-full animate-spin" />
                                   ) : (
-                                    <Archive className="w-4 h-4" />
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                    </svg>
                                   )}
                                 </button>
                               </div>
@@ -847,7 +765,6 @@ function CampaignPageContent() {
                   </motion.div>
                 </motion.div>
               </motion.div>
-            )}
           </motion.div>
         </div>
       </main>
@@ -858,7 +775,7 @@ function CampaignPageContent() {
 export default function Page() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <CampaignPageContent />
+      <ArchivedTemplatesPageContent />
     </Suspense>
   );
 } 
