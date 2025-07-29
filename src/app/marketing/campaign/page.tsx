@@ -334,8 +334,7 @@ function CampaignPageContent() {
         id: templateId,
         archive: Boolean(!isCurrentlyArchived) // Toggle the archive status (true for archive, false for unarchive)
       };
-      console.log('Archive payload:', payload);
-      console.log('Archive URL:', url);
+
       
       const response = await fetch(url, {
         method: 'POST',
