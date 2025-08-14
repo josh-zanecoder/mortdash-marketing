@@ -87,7 +87,7 @@ export default function UploadContactsModal({ open, onClose, onSuccess }: {
               />
               <span className="text-blue-600 font-semibold cursor-pointer hover:underline">Click to upload</span>
               <span className="text-gray-600"> or drag and drop</span>
-              <div className="mt-2 text-gray-500 text-sm">XSLX (MAX FILE SIZE 100MB)</div>
+              <div className="mt-2 text-gray-500 text-sm">XLSX (MAX FILE SIZE 100MB)</div>
               {file && <div className="mt-2 text-sm text-green-700">Selected: {file.name}</div>}
             </div>
             {error && <div className="mt-2 text-sm text-red-600">{error}</div>}
