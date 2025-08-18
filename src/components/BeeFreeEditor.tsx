@@ -50,6 +50,23 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
           });
           setShowSaveModal(true);
         },
+        onSaveAsTemplate: (pageJson: string, templateVersion: number) => {
+          // Save JSON file to device
+          const blob = new Blob([pageJson], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `email-template-${Date.now()}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          // Show success toast
+          toast.success('Template JSON saved to device!', {
+            icon: <CheckCircle2 className="text-green-600" />,
+          });
+        },
         onSend: (pageHtml: string) => {
           setCurrentHtml(pageHtml);
           setShowSendTestModal(true);
@@ -197,25 +214,39 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
   // Helper function to get description for merge tags
   const getTagDescription = (tag: string): string => {
     const commonTags: Record<string, string> = {
-      '{{first_name}}': 'First Name',
-      '{{last_name}}': 'Last Name', 
-      '{{email}}': 'Email Address',
-      '{{company_name}}': 'Company Name',
-      '{{account_executive}}': 'Account Executive',
-      '{{account_executive_phone}}': 'Account Executive Phone',
-      '{{account_executive_email}}': 'Account Executive Email',
-      '{{bank_name}}': 'Bank Name',
-      '{{date}}': 'Current Date',
-      '{{unsubscribe_link}}': 'Unsubscribe Link',
-      '{{preview_text}}': 'Preview Text',
-      '{{custom_field}}': 'Custom Field'
+      '{{first_name}}': 'first_name',
+      '{{last_name}}': 'last_name', 
+      '{{email}}': 'email',
+      '{{company_name}}': 'company_name',
+      '{{account_executive}}': 'account_executive',
+      '{{phone}}': 'phone',
+      '{{email}}': 'email',
+      '{{bank_name}}': 'bank_name',
+      '{{date}}': 'date',
+      '{{unsubscribe_link}}': 'unsubscribe_link',
+      '{{preview_text}}': 'preview_text',
+      '{{custom_field}}': 'custom_field'
     };
     
-    return commonTags[tag] || tag.replace(/[{}]/g, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    return commonTags[tag] || tag.replace(/[{}]/g, '');
   };
 
   // Helper function to convert merge tag to kebab-case for type field
   const getTagType = (tag: string): string => {
+    // Special mappings for specific merge tags
+    const specialMappings: Record<string, string> = {
+      '{{first_name}}': 'account-executive',
+      '{{last_name}}': 'account-executive',
+      '{{email}}': 'account-executive',
+      '{{account_executive_phone}}': 'account-executive-phone'
+    };
+    
+    // Check if we have a special mapping for this tag
+    if (specialMappings[tag]) {
+      return specialMappings[tag];
+    }
+    
+    // Default conversion for other tags
     return tag.replace(/[{}]/g, '').replace(/_/g, '-');
   };
 
