@@ -2,7 +2,7 @@ name: Marketing Production Deployment
 
 on:
   push:
-    branches: [feature/MM-54]
+    branches: [master]
   workflow_dispatch:
 
 env:
