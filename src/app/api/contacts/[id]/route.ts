@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mortdash_url } from '@/config/mortdash';
+import { getMortdashUrlFromRequest } from '@/utils/mortdash';
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -9,6 +9,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const body = await req.text();
+    const mortdash_url = getMortdashUrlFromRequest(req);
     const res = await fetch(`${mortdash_url}/api/bank/v1/marketing/account-executive/marketing-contacts/${id}`, {
       method: 'PUT',
       headers,
@@ -33,6 +34,7 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     const token = currentUrl.searchParams.get('token') || req.cookies.get('auth_token')?.value;
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    const mortdash_url = getMortdashUrlFromRequest(req);
     const res = await fetch(`${mortdash_url}/api/bank/v1/marketing/account-executive/marketing-contacts/${id}`, {
       method: 'DELETE',
       headers,

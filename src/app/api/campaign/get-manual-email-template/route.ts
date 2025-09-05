@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-import { mortdash_url } from '@/config/mortdash';
-
-const backendUrl = `${mortdash_url}/api/bank/v1/marketing/get-manual-email-template-fields-by-template-id`;
+import { getMortdashUrlFromRequest } from '@/utils/mortdash';
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,6 +14,8 @@ export async function GET(req: NextRequest) {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    const mortdash_url = getMortdashUrlFromRequest(req);
+    const backendUrl = `${mortdash_url}/api/bank/v1/marketing/get-manual-email-template-fields-by-template-id`;
     const backendRequestUrl = `${backendUrl}?id=${encodeURIComponent(id)}`;
     const response = await axios.get(backendRequestUrl, { headers, validateStatus: () => true });
     return NextResponse.json(response.data, { status: response.status });
