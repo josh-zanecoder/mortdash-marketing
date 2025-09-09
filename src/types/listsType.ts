@@ -66,6 +66,17 @@ export interface BankChannelApiResponse {
   success: boolean;
 }
 
+export interface CompanyOption {
+  value: string;
+  name: string;
+}
+
+export interface CompanyOptionApiResponse {
+  data: CompanyOption[];
+  message: string;
+  success: boolean;
+}
+
 export interface AudienceTypeApiResponse {
   data: AudienceType[];
   message: string;

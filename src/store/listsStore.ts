@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { MarketingList, AudienceType, BankChannel, AudienceTypeFilter } from '@/types/listsType'
+import type { MarketingList, AudienceType, BankChannel, AudienceTypeFilter, CompanyOption } from '@/types/listsType'
 
 interface ListsStore {
   lists: MarketingList[];
@@ -11,6 +11,8 @@ interface ListsStore {
   setAudienceTypeFilters: (audienceTypeFilters: AudienceTypeFilter[]) => void;
   bankChannels: BankChannel[];
   setBankChannels: (bankChannels: BankChannel[]) => void;
+  companies: CompanyOption[];
+  setCompanies: (companies: CompanyOption[]) => void;
   selectedList: MarketingList | null;
   setSelectedList: (list: MarketingList | null) => void;
   isMemberDetailsOpen: boolean;
@@ -27,6 +29,8 @@ export const useListsStore = create<ListsStore>((set) => ({
   setAudienceTypeFilters: (audienceTypeFilters) => set({ audienceTypeFilters }),
   bankChannels: [],
   setBankChannels: (bankChannels) => set({ bankChannels }),
+  companies: [],
+  setCompanies: (companies) => set({ companies }),
   selectedList: null,
   setSelectedList: (list) => set({ selectedList: list }),
   isMemberDetailsOpen: false,
