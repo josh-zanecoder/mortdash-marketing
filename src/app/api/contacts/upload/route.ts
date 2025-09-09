@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mortdash_url } from '@/config/mortdash';
+import { getMortdashUrlFromRequest } from '@/utils/mortdash';
 import jwt from 'jsonwebtoken';
 import FormData from 'form-data';
 
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Forward the request to the backend
+    const mortdash_url = getMortdashUrlFromRequest(req);
     const backendRes = await fetch(`${mortdash_url}/api/bank/v1/marketing/account-executive/marketing-contacts/upload`, {
       method: 'POST',
       headers: {

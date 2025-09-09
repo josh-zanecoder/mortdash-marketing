@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-import { mortdash_url } from '@/config/mortdash';
-
-const backendUrl = `${mortdash_url}/api/bank/v1/marketing/get-email-template-by-bank-v2`;
+import { getMortdashUrlFromRequest } from '@/utils/mortdash';
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,6 +20,8 @@ export async function GET(req: NextRequest) {
     }
     params.set('is_archived', is_archived);
 
+    const mortdash_url = getMortdashUrlFromRequest(req);
+    const backendUrl = `${mortdash_url}/api/bank/v1/marketing/get-email-template-by-bank-v2`;
     const backendRequestUrl = `${backendUrl}?${params.toString()}`;
     const response = await axios.get(backendRequestUrl, { headers, validateStatus: () => true });
     return NextResponse.json(response.data, { status: response.status });

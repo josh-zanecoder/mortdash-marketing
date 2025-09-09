@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getMortdashAEUrlFromRequest } from '@/utils/mortdash';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const mortdash_ae_url = getMortdashAEUrlFromRequest(req);
   return NextResponse.json({
-    mortdash_ae_url: process.env.NEXT_PUBLIC_MORTDASH_AE_URL,
+    mortdash_ae_url: mortdash_ae_url,
   });
 } 

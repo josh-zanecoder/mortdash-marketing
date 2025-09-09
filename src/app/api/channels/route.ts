@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mortdash_url } from '@/config/mortdash';
+import { getMortdashUrlFromRequest } from '@/utils/mortdash';
+
 
 export async function GET(req: NextRequest) {
     try {
@@ -9,6 +10,9 @@ export async function GET(req: NextRequest) {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
+      
+      const mortdash_url = getMortdashUrlFromRequest(req);
+      
       const res = await fetch(`${mortdash_url}/api/bank/v1/marketing/account-executive/marketing-list-channels`, {
         headers,
       });
