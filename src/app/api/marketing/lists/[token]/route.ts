@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-
-const mortdash_url = process.env.NEXT_PUBLIC_MORTDASH_BASE_URL || 'http://localhost:1005';
-const baseUrl = `${mortdash_url}/api/bank/v1/marketing`;
+import { getMortdashUrlFromRequest } from '@/utils/mortdash';
 
 export async function GET(request: NextRequest, context: { params: Promise<{ token: string }> }) {
   const { token } = await context.params;
 
 
   try {
+    const mortdash_url = getMortdashUrlFromRequest(request);
+    const baseUrl = `${mortdash_url}/api/bank/v1/marketing`;
     const res = await axios.get(`${baseUrl}/account-executive/marketing-list`, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -52,6 +52,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ to
   
     // Test connectivity first
     try {
+      const mortdash_url = getMortdashUrlFromRequest(request);
+      const baseUrl = `${mortdash_url}/api/bank/v1/marketing`;
       const testRes = await axios.get(`${baseUrl.replace('/api/bank/v1/marketing', '')}/health`, {
         timeout: 5000,
         validateStatus: () => true,
@@ -61,6 +63,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ to
     
     }
     
+    const mortdash_url = getMortdashUrlFromRequest(request);
+    const baseUrl = `${mortdash_url}/api/bank/v1/marketing`;
     const res = await axios.post(`${baseUrl}/account-executive/marketing-list`, body, {
       headers: {
         'Authorization': `Bearer ${token}`,

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-import { mortdash_url } from '@/config/mortdash';
-
-const backendUrl = `${mortdash_url}/api/bank/v1/marketing/process-send-marketing-email`;
+import { getMortdashUrlFromRequest } from '@/utils/mortdash';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,6 +26,8 @@ export async function POST(req: NextRequest) {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
     
+    const mortdash_url = getMortdashUrlFromRequest(req);
+    const backendUrl = `${mortdash_url}/api/bank/v1/marketing/process-send-marketing-email`;
     const response = await axios.post(backendUrl, body, { headers, validateStatus: () => true });
     return NextResponse.json(response.data, { status: response.status });
   } catch (error: any) {

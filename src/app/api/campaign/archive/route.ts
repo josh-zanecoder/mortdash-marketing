@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mortdash_url } from '@/config/mortdash';
+import { getMortdashUrlFromRequest } from '@/utils/mortdash';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     
     // Proxy the request to your backend
+    const mortdash_url = getMortdashUrlFromRequest(req);
     const backendRes = await fetch(`${mortdash_url}/api/bank/v1/marketing/account-executive/email-template-archive-unarchive`, {
       method: 'POST',
       headers,

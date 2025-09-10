@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mortdash_url } from '@/config/mortdash';
+import { getMortdashUrlFromRequest } from '@/utils/mortdash';
 import jwt from 'jsonwebtoken';
 
 function getUserIdFromToken(token: string | undefined): string | null {
@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
         headers['Authorization'] = `Bearer ${token}`;
       }
       // Build backend URL for prospects with external members
+      const mortdash_url = getMortdashUrlFromRequest(req);
       const backendUrl = new URL(`${mortdash_url}/api/bank/v1/marketing/get-all-prospects-with-external-members`);
       const res = await fetch(backendUrl.toString(), {
         headers,

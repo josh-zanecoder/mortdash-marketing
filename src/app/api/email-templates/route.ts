@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mortdash_url } from '@/config/mortdash';
+import { getMortdashUrlFromRequest } from '@/utils/mortdash';
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       backendFormData.append('audience_type_id', audienceTypeId.toString());
       
       // Proxy the request to your backend
+      const mortdash_url = getMortdashUrlFromRequest(req);
       const backendRes = await fetch(`${mortdash_url}/api/bank/v1/marketing/create-email-template`, {
         method: 'POST',
         headers: {
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
       headers['Content-Type'] = 'application/json';
       
       // Proxy the request to your backend
+      const mortdash_url = getMortdashUrlFromRequest(req);
       const backendRes = await fetch(`${mortdash_url}/api/bank/v1/marketing/create-email-template`, {
         method: 'POST',
         headers,
@@ -104,6 +106,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Proxy the request to your backend
+    const mortdash_url = getMortdashUrlFromRequest(req);
     const backendRes = await fetch(`${mortdash_url}/api/bank/v1/marketing/email-templates`, {
       method: 'GET',
       headers,
