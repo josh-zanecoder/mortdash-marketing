@@ -2,16 +2,16 @@ name: Marketing Deployment
 
 on:
   push:
-    branches: [main]
+    branches: [infra/test-instance]
   workflow_dispatch:
 
 env:
   PROJECT_ID: ameritrust
-  SERVICE_NAME: ameritrust-mortdash-marketing
+  SERVICE_NAME: ameritrust-mortdash-marketing-test
   REGION: us-west1
-  ARTIFACT_REGISTRY: us-west1-docker.pkg.dev/ameritrust/ameritrust-mortdash-marketing
+  ARTIFACT_REGISTRY: us-west1-docker.pkg.dev/ameritrust/ameritrust-mortdash-marketing-test
   SERVICE_ACCOUNT: 448528717330-compute@developer.gserviceaccount.com
-  SECRET_NAME: ameritrust-mortdash-marketing
+  SECRET_NAME: ameritrust-mortdash-marketing-test
     
 jobs:
   deploy:
