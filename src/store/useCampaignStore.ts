@@ -20,6 +20,7 @@ interface CampaignStore {
   loading: boolean;
   error: string | null;
   fetchTemplates: (audience_type_id: number | null, is_archived?: boolean) => Promise<void>;
+  updateTemplate: (templateId: number, formData: FormData, token?: string) => Promise<{ success: boolean; message?: string }>;
   clearTemplates: () => void;
 }
 
@@ -54,6 +55,29 @@ export const useCampaignStore = create<CampaignStore>((set) => ({
       set({ templates: Array.isArray(data.data) ? data.data : [], loading: false });
     } catch (err: any) {
       set({ error: err.message || 'Unknown error', loading: false });
+    }
+  },
+  updateTemplate: async (templateId: number, formData: FormData, token?: string) => {
+    try {
+      const url = token 
+        ? `/api/campaign/update-email-template/${templateId}?token=${token}`
+        : `/api/campaign/update-email-template/${templateId}`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update template');
+      }
+
+      return { success: true, message: data.message };
+    } catch (error: any) {
+      console.error('Error updating template:', error);
+      return { success: false, message: error.message || 'Failed to update template' };
     }
   },
   clearTemplates: () => {

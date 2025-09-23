@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
-import { Archive, Eye, X, Plus, Search, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Archive, Eye, X, Plus, Search, ChevronDown, ArrowLeft, Edit } from 'lucide-react';
 import { useListsStore } from '@/store/listsStore';
 import { useCampaignStore } from '@/store/useCampaignStore';
 import axios from 'axios';
@@ -150,6 +150,7 @@ function ArchivedTemplatesPageContent() {
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const router = useRouter();
+  const { updateTemplate } = useCampaignStore();
   const [categories, setCategories] = useState<{ 
     id: number; 
     slug: string; 
@@ -159,6 +160,16 @@ function ArchivedTemplatesPageContent() {
   }[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [archivingTemplate, setArchivingTemplate] = useState<number | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    subject: '',
+    email_template_category_id: '',
+    audience_type_id: ''
+  });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [updatingTemplate, setUpdatingTemplate] = useState(false);
 
   // Fetch lists on mount
   useEffect(() => {
@@ -342,6 +353,70 @@ function ArchivedTemplatesPageContent() {
 
     const scheduledDateTime = `${scheduledDate}T${scheduledTime}`;
     handleSend(true, scheduledDateTime);
+  };
+
+  // Edit template handler
+  const handleEdit = (template: any) => {
+    setEditingTemplate(template);
+    setEditFormData({
+      name: template.name || '',
+      subject: template.subject || '',
+      email_template_category_id: template.email_template_category_id || '',
+      audience_type_id: template.audience_type_id || ''
+    });
+    setSelectedFile(null); // Reset file selection
+    setEditModalOpen(true);
+  };
+
+  // Update template handler
+  const handleUpdateTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTemplate) return;
+
+    setUpdatingTemplate(true);
+    try {
+      const formData = new FormData();
+      formData.append('name', editFormData.name);
+      formData.append('subject', editFormData.subject);
+      formData.append('email_template_category_id', editFormData.email_template_category_id);
+      formData.append('audience_type_id', editFormData.audience_type_id);
+      
+      // Add file if selected
+      if (selectedFile) {
+        formData.append('file', selectedFile);
+      }
+
+      const result = await updateTemplate(editingTemplate.id, formData, tokenParam || undefined);
+      
+      if (result.success) {
+        toast.success('Template updated successfully!');
+        setEditModalOpen(false);
+        setEditingTemplate(null);
+        setSelectedFile(null);
+        
+        // Refresh archived templates
+        const params = new URLSearchParams();
+        params.append('is_archived', '1');
+        
+        const refreshUrl = tokenParam 
+          ? `/api/campaign/get-archived-templates?${params.toString()}&token=${tokenParam}`
+          : `/api/campaign/get-archived-templates?${params.toString()}`;
+        
+        const refreshResponse = await fetch(refreshUrl);
+        const refreshData = await refreshResponse.json();
+        
+        if (refreshData.success) {
+          setArchivedTemplates(refreshData.data || []);
+        }
+      } else {
+        toast.error(result.message || 'Failed to update template');
+      }
+    } catch (error) {
+      console.error('Error updating template:', error);
+      toast.error('Failed to update template');
+    } finally {
+      setUpdatingTemplate(false);
+    }
   };
 
   // Archive/Unarchive handler
@@ -554,6 +629,133 @@ function ArchivedTemplatesPageContent() {
         </div>
       )}
 
+      {/* Edit Template Modal */}
+      {editModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setEditModalOpen(false)} />
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+              <div className="text-lg font-semibold text-gray-900">Edit Template</div>
+              <button 
+                onClick={() => setEditModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Close edit modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <form onSubmit={handleUpdateTemplate} className="p-6 space-y-6">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-[#ff6600]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Edit className="w-6 h-6 text-[#ff6600]" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Update Template</h3>
+                <p className="text-sm text-gray-600">Modify template information</p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Template Name</label>
+                  <input
+                    type="text"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]/20 text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Subject</label>
+                  <input
+                    type="text"
+                    value={editFormData.subject}
+                    onChange={(e) => setEditFormData({...editFormData, subject: e.target.value})}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]/20 text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                  <select
+                    value={editFormData.email_template_category_id}
+                    onChange={(e) => setEditFormData({...editFormData, email_template_category_id: e.target.value})}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]/20 text-sm"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Audience Type</label>
+                  <select
+                    value={editFormData.audience_type_id}
+                    onChange={(e) => setEditFormData({...editFormData, audience_type_id: e.target.value})}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]/20 text-sm"
+                  >
+                    <option value="">Select Audience</option>
+                    <option value="1">Prospects</option>
+                    <option value="2">Clients</option>
+                    <option value="3">Brokers</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Template File (Optional)</label>
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      accept=".html,.htm"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600]/20 text-sm file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#ff6600]/10 file:text-[#ff6600] hover:file:bg-[#ff6600]/20"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Leave empty to keep current file. Upload a new HTML file to replace the existing template.
+                    </p>
+                    {selectedFile && (
+                      <div className="flex items-center gap-2 text-sm text-green-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {selectedFile.name}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(false)}
+                  className="flex-1 px-4 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                  disabled={updatingTemplate}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2.5 bg-[#ff6600] hover:bg-[#ff7a2f] text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  disabled={updatingTemplate}
+                >
+                  {updatingTemplate ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Template'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="min-h-screen bg-[#fdf6f1]">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -718,13 +920,20 @@ function ArchivedTemplatesPageContent() {
                                 alt={tpl.name}
                                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                               />
-                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-3">
                                 <button
                                   onClick={() => handlePreview(tpl)}
                                   className="cursor-pointer bg-white text-[#1a1a1a] px-6 py-2.5 rounded-lg font-medium transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2 hover:bg-gray-50"
                                 >
                                   <Eye className="w-5 h-5" />
                                   Preview
+                                </button>
+                                <button
+                                  onClick={() => handleEdit(tpl)}
+                                  className="cursor-pointer bg-[#ff6600] text-white px-6 py-2.5 rounded-lg font-medium transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2 hover:bg-[#ff7a2f]"
+                                >
+                                  <Edit className="w-5 h-5" />
+                                  Edit
                                 </button>
                               </div>
                               <div className="absolute top-2 left-2">
