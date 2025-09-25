@@ -258,6 +258,7 @@ function CampaignPageContent() {
       template: previewData.template,
       marketing_list_id: selectedList,
       recipient_type: 'marketing_list',
+      is_schedule: isScheduled,
       schedule_at: scheduledDateTime,
       time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       subject: previewData.subject || 'Marketing Campaign',
@@ -271,7 +272,9 @@ function CampaignPageContent() {
     const loadingToast = toast.loading(isScheduled ? 'Scheduling campaign...' : 'Sending campaign...');
 
     try {
-      const endpoint = isScheduled ? '/api/campaign/send-later-marketing-email' : '/api/campaign/send-marketing-email';
+      // Use the same endpoint for both immediate and scheduled sends
+      // The backend will handle the difference based on is_schedule field
+      const endpoint = '/api/campaign/send-marketing-email';
       const url = tokenParam ? `${endpoint}?token=${tokenParam}` : endpoint;
       const response = await fetch(url, {
         method: 'POST',
