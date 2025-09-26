@@ -196,22 +196,24 @@ export default function TrackingPage() {
       items.push(1);
       
       if (current <= 3) {
-        // Show first 2 pages, then ellipsis, then last page
-        for (let i = 2; i <= 2; i++) {
+        // Show first 3 pages, then ellipsis, then last page
+        for (let i = 2; i <= 3; i++) {
           items.push(i);
         }
         items.push('ellipsis');
         items.push(totalPages);
       } else if (current >= totalPages - 2) {
-        // Show first page, ellipsis, then last 2 pages
+        // Show first page, ellipsis, then last 3 pages
         items.push('ellipsis');
-        for (let i = totalPages - 1; i <= totalPages; i++) {
+        for (let i = totalPages - 2; i <= totalPages; i++) {
           items.push(i);
         }
       } else {
-        // Show first page, ellipsis, current page, ellipsis, last page
+        // Show first page, ellipsis, current-1, current, current+1, ellipsis, last page
         items.push('ellipsis');
+        items.push(current - 1);
         items.push(current);
+        items.push(current + 1);
         items.push('ellipsis');
         items.push(totalPages);
       }
