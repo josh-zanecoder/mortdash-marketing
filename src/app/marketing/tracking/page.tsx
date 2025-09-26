@@ -132,13 +132,13 @@ export default function TrackingPage() {
 
   // Flatten all emails from all event types for the table
   const allEmails = [
-    ...emailsToArray(data.delivered?.emails),
-    ...emailsToArray(data.clicks?.emails),
-    ...emailsToArray(data.softBounce?.emails),
-    ...emailsToArray(data.hardBounce?.emails),
-    ...emailsToArray(data.blocked?.emails),
-    ...emailsToArray(data.opened?.emails),
-    ...emailsToArray(data.requests?.emails),
+    ...emailsToArray(data.delivered?.emails).map((email: any) => ({ ...email, event: 'delivered' })),
+    ...emailsToArray(data.clicks?.emails).map((email: any) => ({ ...email, event: 'clicked' })),
+    ...emailsToArray(data.softBounce?.emails).map((email: any) => ({ ...email, event: 'soft_bounced' })),
+    ...emailsToArray(data.hardBounce?.emails).map((email: any) => ({ ...email, event: 'hard_bounced' })),
+    ...emailsToArray(data.blocked?.emails).map((email: any) => ({ ...email, event: 'blocked' })),
+    ...emailsToArray(data.opened?.emails).map((email: any) => ({ ...email, event: 'opened' })),
+    ...emailsToArray(data.requests?.emails).map((email: any) => ({ ...email, event: 'sent' })),
   ];
 
   // Transform and filter data
@@ -162,6 +162,11 @@ export default function TrackingPage() {
   const totalFilteredRecords = filteredData.length;
   const totalFilteredPages = Math.ceil(totalFilteredRecords / ITEMS_PER_PAGE);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedStatus]);
 
   // Get current page's data
   const getCurrentPageData = () => {
@@ -190,7 +195,7 @@ export default function TrackingPage() {
   ];
 
   // Prepare chart data
-  const prepareChartData = (data: any) => {
+  const prepareChartData = (data: any, statusFilter: string = 'all') => {
     if (!data) return null;
 
     const { startDate, endDate } = getDateRange(dateRange);
@@ -237,129 +242,144 @@ export default function TrackingPage() {
     processEmails('hardBounce', data.hardBounce?.emails, 'hard_bounced');
     processEmails('blocked', data.blocked?.emails, 'blocked');
 
+    // Define all possible datasets
+    const allDatasets = [
+      {
+        label: 'Sent',
+        eventType: 'sent',
+        data: dates.map(date => eventCounts[date].sent),
+        borderColor: '#ff8ba7',
+        backgroundColor: '#ff8ba7',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 1,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#fff',
+        pointHoverBackgroundColor: '#ff8ba7',
+        pointBorderColor: '#ff8ba7',
+        pointBorderWidth: 2,
+        pointHoverBorderWidth: 2,
+        stack: 'stack1'
+      },
+      {
+        label: 'Delivered',
+        eventType: 'delivered',
+        data: dates.map(date => eventCounts[date].delivered),
+        borderColor: '#33a1fd',
+        backgroundColor: '#33a1fd',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 1,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#fff',
+        pointHoverBackgroundColor: '#33a1fd',
+        pointBorderColor: '#33a1fd',
+        pointBorderWidth: 2,
+        pointHoverBorderWidth: 2,
+        stack: 'stack1'
+      },
+      {
+        label: 'Opened',
+        eventType: 'opened',
+        data: dates.map(date => eventCounts[date].opened),
+        borderColor: '#4cc9f0',
+        backgroundColor: '#4cc9f0',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 1,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#fff',
+        pointHoverBackgroundColor: '#4cc9f0',
+        pointBorderColor: '#4cc9f0',
+        pointBorderWidth: 2,
+        pointHoverBorderWidth: 2,
+        stack: 'stack1'
+      },
+      {
+        label: 'Clicks',
+        eventType: 'clicked',
+        data: dates.map(date => eventCounts[date].clicked),
+        borderColor: '#ffd60a',
+        backgroundColor: '#ffd60a',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 1,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#fff',
+        pointHoverBackgroundColor: '#ffd60a',
+        pointBorderColor: '#ffd60a',
+        pointBorderWidth: 2,
+        pointHoverBorderWidth: 2,
+        stack: 'stack1'
+      },
+      {
+        label: 'Soft Bounces',
+        eventType: 'soft_bounced',
+        data: dates.map(date => eventCounts[date].soft_bounced),
+        borderColor: '#fb8500',
+        backgroundColor: '#fb8500',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 1,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#fff',
+        pointHoverBackgroundColor: '#fb8500',
+        pointBorderColor: '#fb8500',
+        pointBorderWidth: 2,
+        pointHoverBorderWidth: 2,
+        stack: 'stack1'
+      },
+      {
+        label: 'Hard Bounces',
+        eventType: 'hard_bounced',
+        data: dates.map(date => eventCounts[date].hard_bounced),
+        borderColor: '#219ebc',
+        backgroundColor: '#219ebc',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 1,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#fff',
+        pointHoverBackgroundColor: '#219ebc',
+        pointBorderColor: '#219ebc',
+        pointBorderWidth: 2,
+        pointHoverBorderWidth: 2,
+        stack: 'stack1'
+      },
+      {
+        label: 'Blocked',
+        eventType: 'blocked',
+        data: dates.map(date => eventCounts[date].blocked),
+        borderColor: '#8338ec',
+        backgroundColor: '#8338ec',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 1,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#fff',
+        pointHoverBackgroundColor: '#8338ec',
+        pointBorderColor: '#8338ec',
+        pointBorderWidth: 2,
+        pointHoverBorderWidth: 2,
+        stack: 'stack1'
+      },
+    ];
+
+    // Filter datasets based on selected status
+    const filteredDatasets = statusFilter === 'all' 
+      ? allDatasets 
+      : allDatasets.filter(dataset => dataset.eventType === statusFilter);
+
     return {
       labels: dates,
-      datasets: [
-        {
-          label: 'Sent',
-          data: dates.map(date => eventCounts[date].sent),
-          borderColor: '#ff8ba7',
-          backgroundColor: '#ff8ba7',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#ff8ba7',
-          pointBorderColor: '#ff8ba7',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Delivered',
-          data: dates.map(date => eventCounts[date].delivered),
-          borderColor: '#33a1fd',
-          backgroundColor: '#33a1fd',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#33a1fd',
-          pointBorderColor: '#33a1fd',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Opened',
-          data: dates.map(date => eventCounts[date].opened),
-          borderColor: '#4cc9f0',
-          backgroundColor: '#4cc9f0',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#4cc9f0',
-          pointBorderColor: '#4cc9f0',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Clicks',
-          data: dates.map(date => eventCounts[date].clicked),
-          borderColor: '#ffd60a',
-          backgroundColor: '#ffd60a',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#ffd60a',
-          pointBorderColor: '#ffd60a',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Soft Bounces',
-          data: dates.map(date => eventCounts[date].soft_bounced),
-          borderColor: '#fb8500',
-          backgroundColor: '#fb8500',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#fb8500',
-          pointBorderColor: '#fb8500',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Hard Bounces',
-          data: dates.map(date => eventCounts[date].hard_bounced),
-          borderColor: '#219ebc',
-          backgroundColor: '#219ebc',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#219ebc',
-          pointBorderColor: '#219ebc',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Blocked',
-          data: dates.map(date => eventCounts[date].blocked),
-          borderColor: '#8338ec',
-          backgroundColor: '#8338ec',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#8338ec',
-          pointBorderColor: '#8338ec',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-      ],
+      datasets: filteredDatasets,
     };
   };
 
@@ -480,7 +500,7 @@ export default function TrackingPage() {
   };
 
   // Replace the chart placeholder with actual chart
-  const chartData = prepareChartData(data);
+  const chartData = prepareChartData(data, selectedStatus);
 
   return (
     <div className="min-h-screen bg-[#fdf6f1]">
@@ -632,10 +652,16 @@ export default function TrackingPage() {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             item.event === 'delivered' ? 'bg-green-50 text-green-700' :
                             item.event === 'clicked' ? 'bg-blue-50 text-blue-700' :
-                            item.event === 'bounced' ? 'bg-red-50 text-red-700' :
+                            item.event === 'opened' ? 'bg-purple-50 text-purple-700' :
+                            item.event === 'sent' ? 'bg-gray-50 text-gray-700' :
+                            item.event === 'soft_bounced' ? 'bg-orange-50 text-orange-700' :
+                            item.event === 'hard_bounced' ? 'bg-red-50 text-red-700' :
+                            item.event === 'blocked' ? 'bg-pink-50 text-pink-700' :
                             'bg-gray-50 text-gray-700'
                           }`}>
-                            {item.event ? item.event.charAt(0).toUpperCase() + item.event.slice(1).toLowerCase() : ''}
+                            {item.event === 'soft_bounced' ? 'Soft Bounced' :
+                             item.event === 'hard_bounced' ? 'Hard Bounced' :
+                             item.event ? item.event.charAt(0).toUpperCase() + item.event.slice(1).toLowerCase() : ''}
                           </span>
                         </TableCell>
                         <TableCell className="text-sm text-gray-600">
