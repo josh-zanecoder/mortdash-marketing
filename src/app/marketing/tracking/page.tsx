@@ -180,6 +180,46 @@ export default function TrackingPage() {
     setCurrentPage(newPage);
   };
 
+  // Generate condensed pagination items
+  const generatePaginationItems = () => {
+    const items = [];
+    const totalPages = totalFilteredPages;
+    const current = currentPage;
+    
+    if (totalPages <= 3) {
+      // Show all pages if 3 or fewer
+      for (let i = 1; i <= totalPages; i++) {
+        items.push(i);
+      }
+    } else {
+      // Always show first page
+      items.push(1);
+      
+      if (current <= 3) {
+        // Show first 2 pages, then ellipsis, then last page
+        for (let i = 2; i <= 2; i++) {
+          items.push(i);
+        }
+        items.push('ellipsis');
+        items.push(totalPages);
+      } else if (current >= totalPages - 2) {
+        // Show first page, ellipsis, then last 2 pages
+        items.push('ellipsis');
+        for (let i = totalPages - 1; i <= totalPages; i++) {
+          items.push(i);
+        }
+      } else {
+        // Show first page, ellipsis, current page, ellipsis, last page
+        items.push('ellipsis');
+        items.push(current);
+        items.push('ellipsis');
+        items.push(totalPages);
+      }
+    }
+    
+    return items;
+  };
+
   const currentPageData = getCurrentPageData();
 
   // Calculate percentages for stats
@@ -681,11 +721,12 @@ export default function TrackingPage() {
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-between py-4">
+        <div className="flex flex-col gap-4 py-4">
           <p className="text-sm text-gray-500">
             Showing {filteredData.length > 0 ? ((currentPage - 1) * ITEMS_PER_PAGE) + 1 : 0} to {Math.min(currentPage * ITEMS_PER_PAGE, totalFilteredRecords)} of {totalFilteredRecords} entries
           </p>
-          <Pagination>
+          <div className="flex justify-center">
+            <Pagination>
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious 
@@ -700,18 +741,22 @@ export default function TrackingPage() {
                   className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
                 />
               </PaginationItem>
-              {[...Array(totalFilteredPages)].map((_, idx) => (
+              {generatePaginationItems().map((item, idx) => (
                 <PaginationItem key={idx}>
-                  <PaginationLink
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handlePageChange(idx + 1);
-                    }}
-                    isActive={currentPage === idx + 1}
-                  >
-                    {idx + 1}
-                  </PaginationLink>
+                  {item === 'ellipsis' ? (
+                    <PaginationEllipsis />
+                  ) : (
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handlePageChange(item as number);
+                      }}
+                      isActive={currentPage === item}
+                    >
+                      {item}
+                    </PaginationLink>
+                  )}
                 </PaginationItem>
               ))}
               <PaginationItem>
@@ -729,6 +774,7 @@ export default function TrackingPage() {
               </PaginationItem>
             </PaginationContent>
           </Pagination>
+          </div>
         </div>
       </div>
     </div>
