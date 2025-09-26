@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-const mortdash_url = process.env.NEXT_PUBLIC_MORTDASH_BASE_URL || 'http://localhost:1005';
+import { getMortdashUrlFromRequest } from '@/utils/mortdash';
 
 export async function GET(request: NextRequest) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
 
   try {
+    const mortdash_url = getMortdashUrlFromRequest(request);
     const res = await axios.get(`${mortdash_url}/api/bank/v1/marketing/groupByCompany`, {
       headers: {
         'Authorization': `Bearer ${token}`,
