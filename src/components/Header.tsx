@@ -93,6 +93,9 @@ export default function Header() {
           <Link href="/email-builder" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
             pathname === '/email-builder' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
           }`}>Email Builder</Link>
+          <Link href="/marketing/email-template" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
+            pathname === '/marketing/email-template' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
+          }`}>Upload Template</Link>
         </div>
         {/* Mobile nav menu */}
         {mobileOpen && (
@@ -125,6 +128,9 @@ export default function Header() {
             <Link href="/email-builder" className={`py-2 text-lg font-semibold w-full text-center transition-colors ${
               pathname === '/email-builder' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
             }`} onClick={() => setMobileOpen(false)}>Email Builder</Link>
+            <Link href="/marketing/email-template" className={`py-2 text-lg font-semibold w-full text-center transition-colors ${
+              pathname === '/marketing/email-template' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
+            }`} onClick={() => setMobileOpen(false)}>Upload Template</Link>
           </div>
         )}
       </nav>

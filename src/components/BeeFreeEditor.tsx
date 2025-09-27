@@ -220,7 +220,6 @@ export default function BeeFreeEditor({ onLoad }: BeeFreeEditorProps) {
       '{{company_name}}': 'company_name',
       '{{account_executive}}': 'account_executive',
       '{{phone}}': 'phone',
-      '{{email}}': 'email',
       '{{bank_name}}': 'bank_name',
       '{{date}}': 'date',
       '{{unsubscribe_link}}': 'unsubscribe_link',
