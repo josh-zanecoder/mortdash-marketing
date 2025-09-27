@@ -406,7 +406,8 @@ export default function EmailTemplatePage() {
                 </select>
               </div>
 
-              <div className="space-y-3">
+              {/* Temporarily hidden Fields section */}
+              {/* <div className="space-y-3">
                 <Label className="text-lg font-medium">Fields</Label>
                 <div className="space-y-3">
                   {fields.map((field, index) => (
@@ -457,7 +458,7 @@ export default function EmailTemplatePage() {
                     ADD FIELD
                   </Button>
                 </div>
-              </div>
+              </div> */}
 
               <div className="space-y-3">
                 <Label className="text-lg font-medium">Template Info</Label>
