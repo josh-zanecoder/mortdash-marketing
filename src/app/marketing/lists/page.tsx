@@ -198,7 +198,6 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
   const audienceTypes = useListsStore((state) => state.audienceTypes);
   const audienceTypeFilters = useListsStore((state) => state.audienceTypeFilters);
   const bankChannels = useListsStore((state) => state.bankChannels);
-  const companies = useListsStore((state) => state.companies);
   const [filters, setFilters] = useState<any[]>([]);
   const [error, setError] = useState('');
 
@@ -554,38 +553,6 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
 
                     {/* Filter Value Dropdown */}
                     <div className="relative col-span-5">
-                      {f.filter_type_name && f.filter_type_name.toLowerCase().includes('company') && (
-                        <select
-                          value={f.filter_value || ''}
-                          onChange={(e) => {
-                            const selected = companies.find(c => String(c.value ?? c.name) === e.target.value);
-                            if (selected) {
-                              const newFilters = [...filters];
-                              newFilters[idx] = {
-                                ...newFilters[idx],
-                                filter_value: String(selected.value ?? selected.name ?? ''),
-                                filter_value_id: String(selected.value ?? selected.name ?? ''),
-                                filter_value_name: selected.name ?? String(selected.value ?? '')
-                              };
-                              setFilters(newFilters);
-                            }
-                          }}
-                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
-                        >
-                          <option value="">Select company</option>
-                          {companies.map((company, i) => {
-                            const optionValue = String(company.value ?? company.name ?? i);
-                            const optionLabel = company.name ?? String(company.value ?? '');
-                            const key = `company-${company.value ?? company.name ?? i}`;
-                            return (
-                              <option key={key} value={optionValue}>
-                                {optionLabel}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      )}
-
                       {f.filter_type_name === 'Channel' && (
                         <select
                           value={f.filter_value || ''}
@@ -768,7 +735,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
 }
 
 function ListsPageContent() {
-  const { setLists, setAudienceTypes, setBankChannels, setAudienceTypeFilters, setSelectedList, setIsMemberDetailsOpen, setCompanies } = useListsStore((state) => state);
+  const { setLists, setAudienceTypes, setBankChannels, setAudienceTypeFilters, setSelectedList, setIsMemberDetailsOpen } = useListsStore((state) => state);
   const lists = useListsStore((state) => state.lists);
   const audienceTypes = useListsStore((state) => state.audienceTypes);
   const audienceTypeFilters = useListsStore((state) => state.audienceTypeFilters);
@@ -891,19 +858,17 @@ function ListsPageContent() {
           },
         };
   
-        const [listRes, typeRes, filterRes, bankRes, companiesRes] = await Promise.all([
+        const [listRes, typeRes, filterRes, bankRes] = await Promise.all([
           axios.get(`/api/marketing/lists/${tokenParam}`),
           axios.get(`/api/marketing/lists/new/audience-types`, authHeaders),
           axios.get(`/api/marketing/lists/new/audience-types-filter/`, authHeaders),
           axios.get(`/api/marketing/lists/new/bank-channels`, authHeaders),
-          axios.get(`/api/marketing/lists/new/companies`, authHeaders),
         ]);
   
         setLists(listRes.data.data);
         setAudienceTypes(typeRes.data.data);
         setAudienceTypeFilters(Array.isArray(filterRes.data.data) ? filterRes.data.data : []);
         setBankChannels(bankRes.data.data);
-        setCompanies(companiesRes.data.data || []);
       } catch (err) {
         setToast({
           isOpen: true,
