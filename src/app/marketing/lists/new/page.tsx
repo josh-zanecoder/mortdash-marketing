@@ -9,7 +9,7 @@ import LoadingModal from "@/components/ui/loading-modal";
 import Toast from "@/components/ui/toast";
 
 type FilterRow = {
-  filter_type_id: number | null;      // e.g. 1 for "Channel"
+  filter_type_id: number | string | null;      // e.g. 1 for "Channel" or "company" for Company
   filter_type_name: string;           // e.g. "Channel"
   filter_value: string;               // e.g. "1" (channel value) or "CA" (state abbreviation)
   filter_value_id: string;            // e.g. "1" (channel ID)
@@ -38,7 +38,8 @@ function AddMarketingListPageContent() {
   const audienceTypes = useListsStore(state => state.audienceTypes);
   const audienceTypeFilters = useListsStore(state => state.audienceTypeFilters);
   const bankChannels = useListsStore(state => state.bankChannels);
-  const { setAudienceTypes, setAudienceTypeFilters, setBankChannels } = useListsStore(state => state);
+  const companies = useListsStore(state => state.companies);
+  const { setAudienceTypes, setAudienceTypeFilters, setBankChannels, setCompanies } = useListsStore(state => state);
 
   // Load data when component mounts
   useEffect(() => {
@@ -53,15 +54,17 @@ function AddMarketingListPageContent() {
           },
         };
 
-        const [typeRes, filterRes, bankRes] = await Promise.all([
+        const [typeRes, filterRes, bankRes, companiesRes] = await Promise.all([
           axios.get(`/api/marketing/lists/new/audience-types`, authHeaders),
           axios.get(`/api/marketing/lists/new/audience-types-filter/`, authHeaders),
           axios.get(`/api/marketing/lists/new/bank-channels`, authHeaders),
+          axios.get(`/api/marketing/lists/new/companies`, authHeaders),
         ]);
 
         setAudienceTypes(typeRes.data.data);
         setAudienceTypeFilters(Array.isArray(filterRes.data.data) ? filterRes.data.data : []);
         setBankChannels(bankRes.data.data);
+        setCompanies(companiesRes.data.data);
       } catch (err) {
         setToast({
           isOpen: true,
@@ -73,7 +76,7 @@ function AddMarketingListPageContent() {
     };
 
     loadData();
-  }, [token, setAudienceTypes, setAudienceTypeFilters, setBankChannels]);
+  }, [token, setAudienceTypes, setAudienceTypeFilters, setBankChannels, setCompanies]);
 
   const handleAudienceTypeChange = (audienceTypeId: number) => {
     setAudienceTypeId(audienceTypeId);
@@ -151,6 +154,20 @@ function AddMarketingListPageContent() {
         name: listName.trim(),
         audience_type: String(audienceTypeId),
         filters: finalFilters.map(({ filter_type_id, filter_type_name, filter_value, filter_value_id, filter_value_name }) => {
+          // Handle Company filter specially - need to find a valid audience_type_filter_id
+          if (filter_type_name === 'Company') {
+            // For Company filters, we need to find an existing filter type ID for Company
+            // or create a special handling for the backend
+            const companyFilterType = audienceTypeFilters.find(ft => ft.name === 'Company' && ft.audience_type_id === audienceTypeId);
+            return {
+              filter_type_id: companyFilterType ? String(companyFilterType.value) : '999', // Use 999 as fallback for Company
+              filter_type_name: 'Company',
+              filter_value: filter_value || '',
+              filter_value_id: filter_value_id || filter_value || '',
+              value_name: filter_value_name || filter_value || filter_value_id || '',
+            };
+          }
+          
           const baseFilter = {
             filter_type_id: filter_type_id ? String(filter_type_id) : '',
             filter_type_name: filter_type_name || '',
@@ -395,20 +412,34 @@ function AddMarketingListPageContent() {
                       <select
                         value={f.filter_type_id ?? ''}
                         onChange={(e) => {
-                          const selectedFilter = audienceTypeFilters.find(
-                            ft => ft.value === Number(e.target.value)
-                          );
-                          if (selectedFilter) {
+                          if (e.target.value === 'company') {
+                            // Handle Company filter (custom)
                             const newFilters = [...filters];
                             newFilters[idx] = {
                               ...newFilters[idx],
-                              filter_type_id: selectedFilter.value,
-                              filter_type_name: selectedFilter.name,
+                              filter_type_id: 'company' as any,
+                              filter_type_name: 'Company',
                               filter_value: '',
                               filter_value_id: '',
                               filter_value_name: ''
                             };
                             setFilters(newFilters);
+                          } else {
+                            const selectedFilter = audienceTypeFilters.find(
+                              ft => ft.value === Number(e.target.value)
+                            );
+                            if (selectedFilter) {
+                              const newFilters = [...filters];
+                              newFilters[idx] = {
+                                ...newFilters[idx],
+                                filter_type_id: selectedFilter.value,
+                                filter_type_name: selectedFilter.name,
+                                filter_value: '',
+                                filter_value_id: '',
+                                filter_value_name: ''
+                              };
+                              setFilters(newFilters);
+                            }
                           }
                         }}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
@@ -449,6 +480,10 @@ function AddMarketingListPageContent() {
                               {ft.name}
                             </option>
                           ))}
+                        {/* Add Company filter option for marketing contact */}
+                        {audienceTypeId === 3 && !audienceTypeFilters.some(ft => ft.name === 'Company') && ( // Marketing Contact audience type and no existing Company filter
+                          <option value="company">Company</option>
+                        )}
                       </select>
                       <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
                         <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -532,6 +567,43 @@ function AddMarketingListPageContent() {
                             .map(([abbr, name]) => (
                               <option key={`state-${abbr}`} value={abbr}>
                                 {name} ({abbr})
+                              </option>
+                            ))}
+                        </select>
+                      )}
+
+                      {f.filter_type_name === 'Company' && (
+                        <select
+                          value={f.filter_value || ''}
+                          onChange={(e) => {
+                            const newFilters = [...filters];
+                            newFilters[idx] = {
+                              ...newFilters[idx],
+                              filter_value: e.target.value,
+                              filter_value_id: e.target.value,
+                              filter_value_name: e.target.value
+                            };
+                            setFilters(newFilters);
+                          }}
+                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
+                        >
+                          <option value="">Select company</option>
+                          {companies
+                            .filter(company => {
+                              // Don't show companies that are already selected in other Company filters
+                              const existingCompanyValues = filters
+                                .map((filter, filterIdx) => 
+                                  filterIdx !== idx && filter.filter_type_name === 'Company' ? filter.filter_value : null
+                                )
+                                .filter(Boolean);
+                              return !existingCompanyValues.includes(company.name);
+                            })
+                            .map((company) => (
+                              <option 
+                                key={`company-${company.value}`} 
+                                value={company.name}
+                              >
+                                {company.name}
                               </option>
                             ))}
                         </select>
