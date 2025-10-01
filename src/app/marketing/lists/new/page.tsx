@@ -9,7 +9,7 @@ import LoadingModal from "@/components/ui/loading-modal";
 import Toast from "@/components/ui/toast";
 
 type FilterRow = {
-  filter_type_id: number | string | null;      // e.g. 1 for "Channel" or "company" for Company
+  filter_type_id: number | string | null;      // e.g. 1 for "Channel"
   filter_type_name: string;           // e.g. "Channel"
   filter_value: string;               // e.g. "1" (channel value) or "CA" (state abbreviation)
   filter_value_id: string;            // e.g. "1" (channel ID)
@@ -154,19 +154,6 @@ function AddMarketingListPageContent() {
         name: listName.trim(),
         audience_type: String(audienceTypeId),
         filters: finalFilters.map(({ filter_type_id, filter_type_name, filter_value, filter_value_id, filter_value_name }) => {
-          // Handle Company filter specially - need to find a valid audience_type_filter_id
-          if (filter_type_name === 'Company') {
-            // For Company filters, we need to find an existing filter type ID for Company
-            // or create a special handling for the backend
-            const companyFilterType = audienceTypeFilters.find(ft => ft.name === 'Company' && ft.audience_type_id === audienceTypeId);
-            return {
-              filter_type_id: companyFilterType ? String(companyFilterType.value) : '999', // Use 999 as fallback for Company
-              filter_type_name: 'Company',
-              filter_value: filter_value || '',
-              filter_value_id: filter_value_id || filter_value || '',
-              value_name: filter_value_name || filter_value || filter_value_id || '',
-            };
-          }
           
           const baseFilter = {
             filter_type_id: filter_type_id ? String(filter_type_id) : '',
@@ -412,34 +399,20 @@ function AddMarketingListPageContent() {
                       <select
                         value={f.filter_type_id ?? ''}
                         onChange={(e) => {
-                          if (e.target.value === 'company') {
-                            // Handle Company filter (custom)
+                          const selectedFilter = audienceTypeFilters.find(
+                            ft => ft.value === Number(e.target.value)
+                          );
+                          if (selectedFilter) {
                             const newFilters = [...filters];
                             newFilters[idx] = {
                               ...newFilters[idx],
-                              filter_type_id: 'company' as any,
-                              filter_type_name: 'Company',
+                              filter_type_id: selectedFilter.value,
+                              filter_type_name: selectedFilter.name,
                               filter_value: '',
                               filter_value_id: '',
                               filter_value_name: ''
                             };
                             setFilters(newFilters);
-                          } else {
-                            const selectedFilter = audienceTypeFilters.find(
-                              ft => ft.value === Number(e.target.value)
-                            );
-                            if (selectedFilter) {
-                              const newFilters = [...filters];
-                              newFilters[idx] = {
-                                ...newFilters[idx],
-                                filter_type_id: selectedFilter.value,
-                                filter_type_name: selectedFilter.name,
-                                filter_value: '',
-                                filter_value_id: '',
-                                filter_value_name: ''
-                              };
-                              setFilters(newFilters);
-                            }
                           }
                         }}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
@@ -480,10 +453,6 @@ function AddMarketingListPageContent() {
                               {ft.name}
                             </option>
                           ))}
-                        {/* Add Company filter option for marketing contact */}
-                        {audienceTypeId === 3 && !audienceTypeFilters.some(ft => ft.name === 'Company') && ( // Marketing Contact audience type and no existing Company filter
-                          <option value="company">Company</option>
-                        )}
                       </select>
                       <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
                         <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -572,7 +541,7 @@ function AddMarketingListPageContent() {
                         </select>
                       )}
 
-                      {f.filter_type_name === 'Company' && (
+                      {f.filter_type_name === 'Company Name' && (
                         <select
                           value={f.filter_value || ''}
                           onChange={(e) => {
@@ -590,10 +559,10 @@ function AddMarketingListPageContent() {
                           <option value="">Select company</option>
                           {companies
                             .filter(company => {
-                              // Don't show companies that are already selected in other Company filters
+                              // Don't show companies that are already selected in other Company Name filters
                               const existingCompanyValues = filters
                                 .map((filter, filterIdx) => 
-                                  filterIdx !== idx && filter.filter_type_name === 'Company' ? filter.filter_value : null
+                                  filterIdx !== idx && filter.filter_type_name === 'Company Name' ? filter.filter_value : null
                                 )
                                 .filter(Boolean);
                               return !existingCompanyValues.includes(company.name);
