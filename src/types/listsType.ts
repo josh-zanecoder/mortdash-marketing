@@ -33,7 +33,7 @@ export interface AudienceType {
 }
 
 export interface AudienceTypeFilter {
-  value: number;  // Changed to value
+  value: number | string;  // Allow both number and string for custom filters like 'company'
   name: string;
   audience_type_id: number;
   type: string;
@@ -43,7 +43,7 @@ export interface AudienceTypeFilter {
 export interface MarketingListFilter {
   id?: number;
   marketing_list_id?: number;
-  audience_type_filter_id: number;
+  audience_type_filter_id: number | string;  // Allow string for custom filters like 'company'
   value: string;
   audience_type_filter?: AudienceTypeFilter;
 }
@@ -70,6 +70,11 @@ export interface AudienceTypeApiResponse {
   data: AudienceType[];
   message: string;
   success: boolean;
+}
+
+export interface Company {
+  value: string;
+  name: string;
 }
 
 export enum State {
