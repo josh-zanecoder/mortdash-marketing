@@ -224,16 +224,25 @@ export default function TrackingPage() {
 
   const currentPageData = getCurrentPageData();
 
-  // Calculate percentages for stats
-  const total = stats.total || 1; // Avoid division by zero
-  const getPercentage = (value: number) => Math.round((value / total) * 100);
+  // Derive card values from the CURRENT FILTERED emails so cards react to filters/search
+  const countByEvent = (arr: any[], evt: string) => arr.filter(i => i?.event === evt).length;
+  const deliveredCount = countByEvent(filteredData, 'delivered');
+  const clicksCount = countByEvent(filteredData, 'clicked');
+  const softBounceCount = countByEvent(filteredData, 'soft_bounced');
+  const hardBounceCount = countByEvent(filteredData, 'hard_bounced');
+  const blockedCount = countByEvent(filteredData, 'blocked');
+  const totalCount = filteredData.length;
+
+  // Calculate percentages for stats using derived totals from emails
+  const totalBase = totalCount || 1; // Avoid division by zero
+  const getPercentage = (value: number) => Math.round((value / totalBase) * 100);
 
   const statsConfig = [
-    { label: "Delivered", value: stats.delivered, color: "bg-green-200", percentage: getPercentage(stats.delivered) },
-    { label: "Unique Clickers", value: stats.unique_clickers, color: "bg-blue-200", percentage: getPercentage(stats.unique_clickers) },
-    { label: "Soft Bounces", value: stats.soft_bounces, color: "bg-orange-200", percentage: getPercentage(stats.soft_bounces) },
-    { label: "Hard Bounces", value: stats.hard_bounces, color: "bg-gray-400", percentage: getPercentage(stats.hard_bounces) },
-    { label: "Blocked", value: stats.blocked, color: "bg-pink-300", percentage: getPercentage(stats.blocked) },
+    { label: "Delivered", value: deliveredCount, color: "bg-green-200", percentage: getPercentage(deliveredCount) },
+    { label: "Unique Clickers", value: clicksCount, color: "bg-blue-200", percentage: getPercentage(clicksCount) },
+    { label: "Soft Bounces", value: softBounceCount, color: "bg-orange-200", percentage: getPercentage(softBounceCount) },
+    { label: "Hard Bounces", value: hardBounceCount, color: "bg-gray-400", percentage: getPercentage(hardBounceCount) },
+    { label: "Blocked", value: blockedCount, color: "bg-pink-300", percentage: getPercentage(blockedCount) },
   ];
 
   // Prepare chart data
