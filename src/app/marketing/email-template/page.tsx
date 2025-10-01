@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useEmailTemplateStore } from '@/store/useEmailTemplateStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,10 +33,11 @@ interface EmailTemplateField {
   is_required: boolean;
 }
 
-const FIELD_TYPES = [
+const BASE_FIELD_TYPES = [
   { value: 'audience', label: 'Audience' },
-  { value: 'account_executive', label: 'Account Executive' },
-  { value: 'member', label: 'Member' },
+  { value: 'account-executive-avatar', label: 'Account Executive Avatar' },
+  { value: 'account-executive-phone', label: 'Account Executive Phone' },
+  { value: 'account-executive', label: 'Account Executive' },
   { value: 'bank', label: 'Bank' },
   { value: 'date', label: 'Date' }
 ];
@@ -65,6 +66,14 @@ export default function EmailTemplatePage() {
   const [audienceTypesLoading, setAudienceTypesLoading] = useState(false);
   const [categories, setCategories] = useState<EmailCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  // Only include member field type when 'client' template type is selected
+  const displayedFieldTypes = useMemo(() => {
+    const hasClient = selectedTemplateTypes.includes('client');
+    return hasClient
+      ? [...BASE_FIELD_TYPES, { value: 'member', label: 'Member' }]
+      : BASE_FIELD_TYPES;
+  }, [selectedTemplateTypes]);
 
   // Helper function to create a normalized value from name
   const createValueFromName = (name: string): string => {
@@ -407,7 +416,7 @@ export default function EmailTemplatePage() {
               </div>
 
               {/* Temporarily hidden Fields section */}
-              {/* <div className="space-y-3">
+               <div className="space-y-3">
                 <Label className="text-lg font-medium">Fields</Label>
                 <div className="space-y-3">
                   {fields.map((field, index) => (
@@ -425,7 +434,7 @@ export default function EmailTemplatePage() {
                         disabled={isUploading}
                         className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {FIELD_TYPES.map(type => (
+                        {displayedFieldTypes.map(type => (
                           <option key={type.value} value={type.value}>{type.label}</option>
                         ))}
                       </select>
@@ -458,7 +467,7 @@ export default function EmailTemplatePage() {
                     ADD FIELD
                   </Button>
                 </div>
-              </div> */}
+              </div>
 
               <div className="space-y-3">
                 <Label className="text-lg font-medium">Template Info</Label>
