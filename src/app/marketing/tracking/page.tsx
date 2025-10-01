@@ -67,14 +67,10 @@ export default function TrackingPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
 
-  // Calculate date range based on selection using user's timezone
+  // Calculate date range based on selection
   const getDateRange = (range: string) => {
-    const now = new Date();
-    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
-    // Get current date in user's timezone
-    const today = new Date(now.toLocaleString("en-US", { timeZone: userTimezone }));
-    const startDate = new Date(now.toLocaleString("en-US", { timeZone: userTimezone }));
+    const today = new Date();
+    const startDate = new Date();
     
     switch (range) {
       case "Today":
@@ -98,16 +94,9 @@ export default function TrackingPage() {
         startDate.setHours(0, 0, 0, 0);
     }
     
-    // Convert back to ISO date strings in user's timezone
-    const formatDateInTimezone = (date: Date) => {
-      return new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
-        .toISOString()
-        .split('T')[0];
-    };
-    
     return {
-      startDate: formatDateInTimezone(startDate),
-      endDate: formatDateInTimezone(today)
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: today.toISOString().split('T')[0]
     };
   };
 
