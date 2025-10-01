@@ -176,6 +176,13 @@ function AddMarketingListPageContent() {
               ...baseFilter,
               value_name: isChannel ? (filter_value_id || filter_value || '') : (filter_value_name || filter_value || filter_value_id || '')
             };
+          } else if (audienceTypeId === 2) { // Client
+            // For Client Channel, also send the numeric channel id as value_name
+            const isChannel = (filter_type_name === 'Channel');
+            return {
+              ...baseFilter,
+              value_name: isChannel ? (filter_value_id || filter_value || '') : (filter_value_name || filter_value || filter_value_id || '')
+            };
           } else {
             return baseFilter;
           }

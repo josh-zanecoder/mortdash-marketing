@@ -316,8 +316,8 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
               value: filter.filter_value_id // acronym
             };
           }
-          // For prospect channel, send the channel id
-          if (selectedAudienceType === 1 && filter.filter_type_name === 'Channel') {
+          // For prospect/client channel, send the channel id
+          if ((selectedAudienceType === 1 || selectedAudienceType === 2) && filter.filter_type_name === 'Channel') {
             return {
               audience_type_filter_id: filter.filter_type_id,
               value: filter.filter_value_id // numeric id
@@ -1189,9 +1189,9 @@ function ListsPageContent() {
                                     {list.marketing_list_filter.map((filter) => {
                                       const label = filter.audience_type_filter?.name || '';
                                       let valueToShow: string = String(filter.value ?? '');
-                                      // If Prospect list and Channel filter, map id -> name for display
+                                      // If Prospect/Client list and Channel filter, map id -> name for display
                                       const audienceTypeId = (list as MarketingList).audience_type?.id || (list as MarketingList).audienceType?.id;
-                                      if (audienceTypeId === 1 && label === 'Channel') {
+                                      if ((audienceTypeId === 1 || audienceTypeId === 2) && label === 'Channel') {
                                         const ch = bankChannels.find(ch => String(ch.value) === String(filter.value));
                                         if (ch) valueToShow = ch.name;
                                       }
