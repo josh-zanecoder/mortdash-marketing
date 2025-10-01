@@ -131,15 +131,33 @@ export default function TrackingPage() {
   };
 
   // Flatten all emails from all event types for the table
-  const allEmails = [
-    ...emailsToArray(data.delivered?.emails).map((email: any) => ({ ...email, event: 'delivered' })),
-    ...emailsToArray(data.clicks?.emails).map((email: any) => ({ ...email, event: 'clicked' })),
-    ...emailsToArray(data.softBounce?.emails).map((email: any) => ({ ...email, event: 'soft_bounced' })),
-    ...emailsToArray(data.hardBounce?.emails).map((email: any) => ({ ...email, event: 'hard_bounced' })),
-    ...emailsToArray(data.blocked?.emails).map((email: any) => ({ ...email, event: 'blocked' })),
-    ...emailsToArray(data.opened?.emails).map((email: any) => ({ ...email, event: 'opened' })),
-    ...emailsToArray(data.requests?.emails).map((email: any) => ({ ...email, event: 'sent' })),
-  ];
+  // Also merge in marketingEmails if present (some responses provide a flat list)
+  const mergedByMessageId = new Map<string, any>();
+
+  const pushUnique = (arr: any[], eventName: string) => {
+    arr.forEach((email: any) => {
+      const id = email.messageId || `${email.email}-${email.date}-${eventName}`;
+      const normalized = { ...email, event: eventName };
+      if (!mergedByMessageId.has(id)) mergedByMessageId.set(id, normalized);
+    });
+  };
+
+  pushUnique(emailsToArray(data.delivered?.emails), 'delivered');
+  pushUnique(emailsToArray(data.clicks?.emails), 'clicked');
+  pushUnique(emailsToArray(data.softBounce?.emails), 'soft_bounced');
+  pushUnique(emailsToArray(data.hardBounce?.emails), 'hard_bounced');
+  pushUnique(emailsToArray(data.blocked?.emails), 'blocked');
+  pushUnique(emailsToArray(data.opened?.emails), 'opened');
+  pushUnique(emailsToArray(data.requests?.emails), 'sent');
+
+  // marketingEmails can include mixed event types; respect their provided event
+  emailsToArray(data.marketingEmails).forEach((email: any) => {
+    const id = email.messageId || `${email.email}-${email.date}-${email.event || 'unknown'}`;
+    const normalized = { ...email, event: (email.event === 'requests' ? 'sent' : (email.event || 'unknown')) };
+    if (!mergedByMessageId.has(id)) mergedByMessageId.set(id, normalized);
+  });
+
+  const allEmails = Array.from(mergedByMessageId.values());
 
   // Transform and filter data
   const filteredData = allEmails.filter(item => {
