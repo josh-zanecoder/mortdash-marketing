@@ -170,10 +170,11 @@ function AddMarketingListPageContent() {
               filter_value: filter_value_id || filter_value || ''
             };
           } else if (audienceTypeId === 1) { // Prospect
+            // For Prospect Channel, send the numeric channel id as value_name
+            const isChannel = (filter_type_name === 'Channel');
             return {
               ...baseFilter,
-              // For Prospect, ensure we have the value_name that the backend expects
-              value_name: filter_value_name || filter_value || filter_value_id || ''
+              value_name: isChannel ? (filter_value_id || filter_value || '') : (filter_value_name || filter_value || filter_value_id || '')
             };
           } else {
             return baseFilter;

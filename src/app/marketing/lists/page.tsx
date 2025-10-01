@@ -313,7 +313,14 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
           if (filter.filter_type_name === 'State') {
             return {
               audience_type_filter_id: filter.filter_type_id,
-              value: filter.filter_value_id // Use the acronym directly from filter_value_id
+              value: filter.filter_value_id // acronym
+            };
+          }
+          // For prospect channel, send the channel id
+          if (selectedAudienceType === 1 && filter.filter_type_name === 'Channel') {
+            return {
+              audience_type_filter_id: filter.filter_type_id,
+              value: filter.filter_value_id // numeric id
             };
           }
           return {
@@ -1179,14 +1186,24 @@ function ListsPageContent() {
                                 {/* Display Filters */}
                                 {list.marketing_list_filter && list.marketing_list_filter.length > 0 && (
                                   <div className="flex flex-wrap gap-2">
-                                    {list.marketing_list_filter.map((filter) => (
-                                      <span
-                                        key={filter.id}
-                                        className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200/50 shadow-sm"
-                                      >
-                                        {filter.audience_type_filter?.name}: {filter.value}
-                                      </span>
-                                    ))}
+                                    {list.marketing_list_filter.map((filter) => {
+                                      const label = filter.audience_type_filter?.name || '';
+                                      let valueToShow: string = String(filter.value ?? '');
+                                      // If Prospect list and Channel filter, map id -> name for display
+                                      const audienceTypeId = (list as MarketingList).audience_type?.id || (list as MarketingList).audienceType?.id;
+                                      if (audienceTypeId === 1 && label === 'Channel') {
+                                        const ch = bankChannels.find(ch => String(ch.value) === String(filter.value));
+                                        if (ch) valueToShow = ch.name;
+                                      }
+                                      return (
+                                        <span
+                                          key={filter.id}
+                                          className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200/50 shadow-sm"
+                                        >
+                                          {label}: {valueToShow}
+                                        </span>
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
