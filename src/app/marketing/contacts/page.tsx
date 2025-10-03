@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus, MoreVertical, User, Search, Download, Upload, UserCheck, UserX, Building, Users, X, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { useState, useEffect } from "react";
+import * as XLSX from 'xlsx';
 import AddContactModal from '@/components/AddContactModal';
 import UploadContactsModal from '@/components/UploadContactsModal';
 import { useContactStore } from '@/store/useContactStore';
@@ -140,27 +141,18 @@ export default function ContactsPage() {
     return () => clearTimeout(handler);
   }, [searchInput, setSearch]);
 
-  // Download Excel template
+  // Download Excel template (.xlsx)
   const downloadTemplate = () => {
     const templateData = [
       ['branch', 'company', 'email_address', 'first_name', 'last_name', 'phone_number', 'title'],
       ['Wholesale', 'Example Company Inc', 'john@example.com', 'John', 'Doe', '(555) 123-4567', 'CEO'],
     ];
 
-    // Convert to CSV format (Excel can open CSV files)
-    const csvContent = templateData.map(row => row.join(',')).join('\n');
-    
-    // Create and download file as CSV (Excel will open it correctly)
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'marketing_contacts_template.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
+    const worksheet = XLSX.utils.aoa_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
+    XLSX.writeFile(workbook, 'marketing_contacts_template.xlsx');
+
     toast.success('Template downloaded successfully!', {
       icon: <FileSpreadsheet className="text-blue-600" />,
     });
@@ -299,7 +291,6 @@ export default function ContactsPage() {
                   <span className="hidden sm:inline">Add a New Contact</span>
                   <span className="sm:hidden">Add Contact</span>
                 </Button>
-                {/*
                 <Button variant="default" className="px-3 sm:px-4 py-2 text-sm sm:text-base font-bold rounded-lg shadow transition-all cursor-pointer" onClick={() => setShowUploadModal(true)}>
                   <span className="hidden sm:inline">Upload Contacts</span>
                   <span className="sm:hidden">Upload</span>
@@ -309,7 +300,6 @@ export default function ContactsPage() {
                   <span className="hidden sm:inline">Template</span>
                   <span className="sm:hidden">Template</span>
                 </Button>
-                */}
               </div>
             </div>
 
