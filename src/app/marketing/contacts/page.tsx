@@ -299,6 +299,7 @@ export default function ContactsPage() {
                   <span className="hidden sm:inline">Add a New Contact</span>
                   <span className="sm:hidden">Add Contact</span>
                 </Button>
+                {/*
                 <Button variant="default" className="px-3 sm:px-4 py-2 text-sm sm:text-base font-bold rounded-lg shadow transition-all cursor-pointer" onClick={() => setShowUploadModal(true)}>
                   <span className="hidden sm:inline">Upload Contacts</span>
                   <span className="sm:hidden">Upload</span>
@@ -308,6 +309,7 @@ export default function ContactsPage() {
                   <span className="hidden sm:inline">Template</span>
                   <span className="sm:hidden">Template</span>
                 </Button>
+                */}
               </div>
             </div>
 
