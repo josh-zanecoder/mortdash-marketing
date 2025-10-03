@@ -408,6 +408,7 @@ function CampaignPageContent() {
                   </svg>
                   Send
                 </button>
+                {/*
                 <button 
                   onClick={handleSchedule}
                   className="cursor-pointer bg-white hover:bg-gray-50 text-[#ff6600] border border-[#ff6600] px-3 sm:px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all text-sm sm:text-base font-medium flex items-center gap-2"
@@ -417,6 +418,7 @@ function CampaignPageContent() {
                   </svg>
                   Schedule
                 </button>
+                */}
                 <button 
                   onClick={() => setPreviewOpen(false)}
                   className="cursor-pointer text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
