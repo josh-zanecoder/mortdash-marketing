@@ -251,7 +251,7 @@ export default function ContactsPage() {
               }`}
             >
               <span className="hidden sm:inline">Prospect Members</span>
-              <span className="sm:hidden">Prospects</span> ({prospects ? prospects.length : 0})
+              <span className="sm:hidden">Prospects</span> ({prospects ? prospects.filter(p => p.members && p.members.length > 0).length : 0})
             </button>
             <button
               onClick={() => setActiveTab('clients')}
@@ -443,12 +443,14 @@ export default function ContactsPage() {
               ) : prospectsError ? (
                 <div className="text-sm sm:text-base text-red-600">{prospectsError}</div>
               ) : prospects ? (
-                <div className="text-xl sm:text-2xl font-bold text-blue-900">{prospects.length} Companies</div>
+                <div className="text-xl sm:text-2xl font-bold text-blue-900">
+                  {prospects.filter(p => p.members && p.members.length > 0).length} Prospects
+                </div>
               ) : null}
             </div>
 
             <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
-              <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Companies & Members</h4>
+              <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Prospects & Members</h4>
               <div className="space-y-4 sm:space-y-6">
                               {prospectsLoading ? (
                 <div className="space-y-4 sm:space-y-6">

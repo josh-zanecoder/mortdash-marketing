@@ -92,9 +92,11 @@ export default function DashboardPage() {
 
   // Calculate actual contact statistics
   const marketingOnly = total;
-  const totalProspects = prospects ? prospects.reduce((sum, group) => sum + group.members.length, 0) : 0;
-  const totalClients = clients ? clients.reduce((sum, group) => sum + group.members.length, 0) : 0;
-  const totalContacts = marketingOnly + totalProspects + totalClients;
+  const totalProspectCompanies = prospects ? prospects.filter(p => p.members && p.members.length > 0).length : 0;
+  const totalProspectMembers = prospects ? prospects.reduce((sum, group) => sum + (group.members?.length || 0), 0) : 0;
+  const totalClientCompanies = clients ? clients.filter(c => c.members && c.members.length > 0).length : 0;
+  const totalClientMembers = clients ? clients.reduce((sum, group) => sum + (group.members?.length || 0), 0) : 0;
+  const totalContacts = marketingOnly + totalProspectMembers + totalClientMembers;
 
   // Fetch data on component mount
   useEffect(() => {
@@ -119,8 +121,8 @@ export default function DashboardPage() {
 
   const contactStats = [
     { label: 'Total Contacts', value: totalContacts, color: 'bg-blue-100', icon: <Users className="w-6 h-6 text-blue-600" /> },
-    { label: 'Prospects', value: totalProspects, color: 'bg-green-100', icon: <Users className="w-6 h-6 text-green-600" /> },
-    { label: 'Clients', value: totalClients, color: 'bg-purple-100', icon: <Users className="w-6 h-6 text-purple-600" /> },
+    { label: 'Prospect Companies', value: totalProspectCompanies, color: 'bg-green-100', icon: <Users className="w-6 h-6 text-green-600" /> },
+    { label: 'Client Companies', value: totalClientCompanies, color: 'bg-purple-100', icon: <Users className="w-6 h-6 text-purple-600" /> },
     { label: 'Marketing Only', value: marketingOnly, color: 'bg-orange-100', icon: <Users className="w-6 h-6 text-orange-500" /> },
   ];
 
