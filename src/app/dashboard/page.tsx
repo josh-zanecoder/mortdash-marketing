@@ -121,8 +121,8 @@ export default function DashboardPage() {
 
   const contactStats = [
     { label: 'Total Contacts', value: totalContacts, color: 'bg-blue-100', icon: <Users className="w-6 h-6 text-blue-600" /> },
-    { label: 'Prospect Companies', value: totalProspectCompanies, color: 'bg-green-100', icon: <Users className="w-6 h-6 text-green-600" /> },
-    { label: 'Client Companies', value: totalClientCompanies, color: 'bg-purple-100', icon: <Users className="w-6 h-6 text-purple-600" /> },
+    { label: 'Prospects', value: totalProspectCompanies, color: 'bg-green-100', icon: <Users className="w-6 h-6 text-green-600" /> },
+    { label: 'Clients', value: totalClientCompanies, color: 'bg-purple-100', icon: <Users className="w-6 h-6 text-purple-600" /> },
     { label: 'Marketing Only', value: marketingOnly, color: 'bg-orange-100', icon: <Users className="w-6 h-6 text-orange-500" /> },
   ];
 
