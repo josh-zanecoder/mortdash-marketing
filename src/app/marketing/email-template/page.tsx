@@ -39,7 +39,8 @@ const BASE_FIELD_TYPES = [
   { value: 'account-executive-phone', label: 'Account Executive Phone' },
   { value: 'account-executive', label: 'Account Executive' },
   { value: 'bank', label: 'Bank' },
-  { value: 'date', label: 'Date' }
+  { value: 'date', label: 'Date' },
+  { value: 'register-link', label: 'Register Link' },
 ];
 
 export default function EmailTemplatePage() {
