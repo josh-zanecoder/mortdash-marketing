@@ -68,11 +68,11 @@ export default function EmailTemplatePage() {
   const [categories, setCategories] = useState<EmailCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
-  // Only include member field type when 'client' template type is selected
+  // Only include member field type when 'client' or 'prospect' template type is selected
   const displayedFieldTypes = useMemo(() => {
-    const hasClient = selectedTemplateTypes.includes('client');
-    return hasClient
-      ? [...BASE_FIELD_TYPES, { value: 'member', label: 'Member' }]
+    const hasClientOrProspect = selectedTemplateTypes.includes('client') || selectedTemplateTypes.includes('prospect');
+    return hasClientOrProspect
+      ? [...BASE_FIELD_TYPES, { value: 'related', label: 'Member' }]
       : BASE_FIELD_TYPES;
   }, [selectedTemplateTypes]);
 
