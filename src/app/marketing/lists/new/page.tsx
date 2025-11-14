@@ -54,17 +54,31 @@ function AddMarketingListPageContent() {
           },
         };
 
-        const [typeRes, filterRes, bankRes, companiesRes] = await Promise.all([
+        const [typeRes, bankRes, companiesRes] = await Promise.all([
           axios.get(`/api/marketing/lists/new/audience-types`, authHeaders),
-          axios.get(`/api/marketing/lists/new/audience-types-filter/`, authHeaders),
           axios.get(`/api/marketing/lists/new/bank-channels`, authHeaders),
           axios.get(`/api/marketing/lists/new/companies`, authHeaders),
         ]);
 
         setAudienceTypes(typeRes.data.data);
-        setAudienceTypeFilters(Array.isArray(filterRes.data.data) ? filterRes.data.data : []);
         setBankChannels(bankRes.data.data);
         setCompanies(companiesRes.data.data);
+        
+        // Fetch all audience-type-filters for all audience types
+        if (typeRes.data.data && Array.isArray(typeRes.data.data)) {
+          const filterPromises = typeRes.data.data
+            .filter((audienceType: any) => audienceType.value != null || audienceType.id != null)
+            .map((audienceType: any) => {
+              const audienceTypeId = audienceType.value ?? audienceType.id;
+              return axios.get(`/api/marketing/lists/new/audience-types-filter?audienceTypeId=${audienceTypeId}`, authHeaders)
+                .then(res => res.data.data || [])
+                .catch(() => []);
+            });
+          
+          const filterResults = await Promise.all(filterPromises);
+          const allFilters = filterResults.flat();
+          setAudienceTypeFilters(allFilters);
+        }
       } catch (err) {
         setToast({
           isOpen: true,
@@ -274,7 +288,7 @@ function AddMarketingListPageContent() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-50 flex flex-col items-center pt-16 px-4">
       {/* Backdrop overlay */}
-      <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-40"></div>
+      <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-40 pointer-events-none"></div>
       
       {/* Modal container */}
       <div className="relative z-50 w-full max-w-2xl bg-white/95 backdrop-blur-sm border-0 shadow-2xl rounded-2xl p-8 md:p-12">
@@ -331,18 +345,37 @@ function AddMarketingListPageContent() {
               Audience Type
               <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
+            <div className="relative z-[60]">
               <select
                 value={audienceTypeId || ''}
-                onChange={(e) => handleAudienceTypeChange(Number(e.target.value))}
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm transition-all duration-200 hover:shadow-md appearance-none cursor-pointer"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value && value !== '') {
+                    const numValue = Number(value);
+                    console.log('Selecting audience type:', numValue, value);
+                    handleAudienceTypeChange(numValue);
+                  } else {
+                    setAudienceTypeId(undefined);
+                    setFilters([]);
+                  }
+                }}
+                disabled={loading || !audienceTypes || audienceTypes.length === 0}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm transition-all duration-200 hover:shadow-md appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed relative z-[60]"
+                style={{ zIndex: 60 }}
               >
                 <option value="">Select an audience type</option>
-                {audienceTypes.map((at) => (
-                  <option key={`audience-type-${at.value}-${at.name}`} value={at.value}>
-                    {at.name}
-                  </option>
-                ))}
+                {audienceTypes && audienceTypes.length > 0 ? (
+                  audienceTypes.map((at: any) => {
+                    const optionValue = at.value ?? at.id ?? '';
+                    return (
+                      <option key={`audience-type-${optionValue}-${at.name}`} value={String(optionValue)}>
+                        {at.name}
+                      </option>
+                    );
+                  })
+                ) : (
+                  <option value="" disabled>Loading audience types...</option>
+                )}
               </select>
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -400,13 +433,13 @@ function AddMarketingListPageContent() {
                         value={f.filter_type_id ?? ''}
                         onChange={(e) => {
                           const selectedFilter = audienceTypeFilters.find(
-                            ft => ft.value === Number(e.target.value)
+                            ft => (ft.id ?? ft.value) === Number(e.target.value)
                           );
                           if (selectedFilter) {
                             const newFilters = [...filters];
                             newFilters[idx] = {
                               ...newFilters[idx],
-                              filter_type_id: selectedFilter.value,
+                              filter_type_id: selectedFilter.id ?? selectedFilter.value ?? null,
                               filter_type_name: selectedFilter.name,
                               filter_value: '',
                               filter_value_id: '',
@@ -419,7 +452,7 @@ function AddMarketingListPageContent() {
                       >
                         <option value="">Select filter</option>
                         {audienceTypeFilters
-                          .filter(ft => ft.audience_type_id === audienceTypeId && ft.type === 'all')
+                          .filter(ft => (ft.audienceTypeId || ft.audience_type_id) === audienceTypeId && (ft.filterType === 'all' || ft.type === 'all'))
                           .filter(ft => {
                             // Always show the current filter's type, even if all values are used
                             if (f.filter_type_name === ft.name) {
@@ -449,7 +482,7 @@ function AddMarketingListPageContent() {
                             return true;
                           })
                           .map(ft => (
-                            <option key={`filter-type-${ft.name}`} value={ft.value}>
+                            <option key={`filter-type-${ft.name}`} value={ft.id ?? ft.value ?? ''}>
                               {ft.name}
                             </option>
                           ))}

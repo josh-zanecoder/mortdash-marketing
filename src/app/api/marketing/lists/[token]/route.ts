@@ -8,11 +8,14 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
 
   try {
     const mortdash_url = getMortdashUrlFromRequest(request);
-    const baseUrl = `${mortdash_url}/api/bank/v1/marketing`;
-    const res = await axios.get(`${baseUrl}/account-executive/marketing-list`, {
+    const baseUrl = `${mortdash_url}/api/v1/marketing-lists`;
+    const clientOrigin = request.headers.get('x-client-origin') || request.nextUrl.origin;
+    const res = await axios.get(`http://localhost:3000/api/v1/marketing-lists`, {
       headers: {
+        'accept': 'application/json',
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'x-client-origin': clientOrigin,
       },
       validateStatus: () => true,
     });
@@ -65,10 +68,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ to
     
     const mortdash_url = getMortdashUrlFromRequest(request);
     const baseUrl = `${mortdash_url}/api/bank/v1/marketing`;
+    const clientOrigin = request.headers.get('x-client-origin') || request.nextUrl.origin;
     const res = await axios.post(`${baseUrl}/account-executive/marketing-list`, body, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'x-client-origin': clientOrigin,
       },
       validateStatus: () => true,
       timeout: 30000, // 30 second timeout

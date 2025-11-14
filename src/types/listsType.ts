@@ -1,28 +1,34 @@
 export interface MarketingList {
   id: number;
-  list_name: string;
-  audience_type_id: number;
+  listName: string;
+  audienceTypeId: number;
   count: number;
-  email_sent: number;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-  added_by: number;
-  recipient_count: number;
-  has_member_count: number;
-  added_by_name: string;
-  audience_type_name: string;
-  member_details?: {
+  emailSent: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  addedBy?: number;
+  recipientCount: number;
+  hasMemberCount: boolean;
+  addedByName?: string;
+  audienceTypeName?: string;
+  memberDetails?: {
     type: string;
     members: any[];
-  };
-  audience_type?: {
-    id: number;
-    name: string;
   };
   audienceType?: {
     id: number;
     name: string;
+  } | null;
+  filters?: MarketingListFilter[] | null;
+  // Legacy snake_case support (for backward compatibility)
+  list_name?: string;
+  audience_type_id?: number;
+  created_at?: string;
+  updated_at?: string;
+  member_details?: {
+    type: string;
+    members: any[];
   };
   marketing_list_filter?: MarketingListFilter[];
 }
@@ -33,19 +39,28 @@ export interface AudienceType {
 }
 
 export interface AudienceTypeFilter {
-  value: number | string;  // Allow both number and string for custom filters like 'company'
+  id?: number;
+  value?: number | string;  // Allow both number and string for custom filters like 'company'
   name: string;
-  audience_type_id: number;
-  type: string;
-  code?: string;  // Made optional since it's not in API response
+  audienceTypeId: number;  // camelCase (primary)
+  audience_type_id?: number;  // snake_case (legacy support)
+  filterType?: string;  // camelCase from API
+  type?: string;  // snake_case (legacy support)
+  code?: string;
+  valueType?: string;  // camelCase from API
+  createdAt?: string;  // camelCase from API
+  updatedAt?: string;  // camelCase from API
 }
 
 export interface MarketingListFilter {
   id?: number;
-  marketing_list_id?: number;
-  audience_type_filter_id: number | string;  // Allow string for custom filters like 'company'
+  marketingListId?: number;
+  marketing_list_id?: number;  // Legacy support
+  audienceTypeFilterId?: number | string;  // camelCase
+  audience_type_filter_id?: number | string;  // snake_case (legacy)
   value: string;
-  audience_type_filter?: AudienceTypeFilter;
+  audienceTypeFilter?: AudienceTypeFilter;  // camelCase
+  audience_type_filter?: AudienceTypeFilter;  // snake_case (legacy)
 }
 
 export interface MarketingListApiResponse {

@@ -1,7 +1,7 @@
 'use client'
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus, Eye, Edit2 } from "lucide-react";
-import { useEffect, useState, Suspense, useMemo } from "react";
+import { useEffect, useState, Suspense, useMemo, useRef } from "react";
 import axios from "axios";
 import { useListsStore } from "@/store/listsStore";
 import Link from 'next/link';
@@ -15,6 +15,27 @@ import { State } from "@/types/listsType";
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { CheckCircle2 } from 'lucide-react';
+
+// Helper functions to get values with fallback for both camelCase and snake_case
+const getListName = (list: MarketingList | null | undefined): string => {
+  return list?.listName || list?.list_name || '';
+};
+
+const getAudienceTypeId = (list: MarketingList | null | undefined): number => {
+  return list?.audienceTypeId || list?.audience_type_id || 0;
+};
+
+const getCreatedAt = (list: MarketingList | null | undefined): string => {
+  return list?.createdAt || list?.created_at || '';
+};
+
+const getMemberDetails = (list: MarketingList | null | undefined) => {
+  return list?.memberDetails || list?.member_details;
+};
+
+const getFilters = (list: MarketingList | null | undefined) => {
+  return list?.filters || list?.marketing_list_filter || [];
+};
 
 function MemberDetailsModal() {
   const { selectedList, setSelectedList, isMemberDetailsOpen, setIsMemberDetailsOpen } = useListsStore();
@@ -34,8 +55,9 @@ function MemberDetailsModal() {
 
   if (!selectedList) return null;
 
-  const listType = selectedList.member_details?.type || 'unknown';
-  const memberCount = selectedList.member_details?.members?.length || 0;
+  const memberDetails = getMemberDetails(selectedList);
+  const listType = memberDetails?.type || 'unknown';
+  const memberCount = memberDetails?.members?.length || 0;
 
   // Skeleton loader for member cards
   const MemberSkeleton = () => (
@@ -90,7 +112,7 @@ function MemberDetailsModal() {
         className="max-w-3xl max-h-[80vh] overflow-y-auto"
       >
         <DialogHeader>
-          <DialogTitle>{selectedList.list_name} - Member Details</DialogTitle>
+          <DialogTitle>{getListName(selectedList)} - Member Details</DialogTitle>
           <DialogDescription>
             View detailed information about list members including their contact information and status.
           </DialogDescription>
@@ -101,12 +123,12 @@ function MemberDetailsModal() {
         </DialogHeader>
         <div className="mt-4">
           <div className="space-y-4">
-            {loading || !selectedList.member_details?.members ? (
+            {loading || !memberDetails?.members ? (
               // Show skeleton loaders
               Array.from({ length: 5 }).map((_, index) => (
                 <MemberSkeleton key={`skeleton-${index}`} />
               ))
-            ) : selectedList.member_details.members.length === 0 ? (
+            ) : memberDetails.members.length === 0 ? (
               // Show empty state
               <div className="text-center py-8">
                 <div className="text-gray-500 text-lg">No members found in this list.</div>
@@ -114,7 +136,7 @@ function MemberDetailsModal() {
               </div>
             ) : (
               // Show actual members
-              selectedList.member_details.members.map((member: any, index: number) => {
+              memberDetails.members.map((member: any, index: number) => {
                 // For prospects and clients, use member.external_member; for marketing_contact, use member directly
                 const ext = member.external_member || member;
                 const isProspectOrClient = listType === 'prospect' || listType === 'client';
@@ -191,8 +213,8 @@ function MemberDetailsModal() {
 }
 
 function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList | null, isOpen: boolean, onClose: () => void, token: string | null }) {
-  const [listName, setListName] = useState(list?.list_name || '');
-  const [selectedAudienceType, setSelectedAudienceType] = useState<number>(list?.audience_type_id || 0);
+  const [listName, setListName] = useState(getListName(list));
+  const [selectedAudienceType, setSelectedAudienceType] = useState<number>(getAudienceTypeId(list));
   const [loading, setLoading] = useState(false);
   const { lists, setLists } = useListsStore();
   const audienceTypes = useListsStore((state) => state.audienceTypes);
@@ -212,7 +234,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
     
     const baseFilters = audienceTypeFilters.filter(filter => 
       (filter.name === 'State' || filter.name === 'Channel') && 
-      Number(filter.audience_type_id) === selectedAudienceType
+      Number(filter.audienceTypeId || filter.audience_type_id) === selectedAudienceType
     );
     
     
@@ -221,12 +243,12 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
 
   useEffect(() => {
     if (list) {
-      setListName(list.list_name);
-      setSelectedAudienceType(list.audience_type_id);
+      setListName(getListName(list));
+      setSelectedAudienceType(getAudienceTypeId(list));
       // Extract existing filters from the list and convert them to editable format
-      const existingFilters = list.marketing_list_filter?.map(filter => {
+      const existingFilters = getFilters(list).map(filter => {
         const value = filter.value;
-        const filterType = filter.audience_type_filter;
+        const filterType = filter.audienceTypeFilter || filter.audience_type_filter;
         
         // For Channel filters, we need to map the value to the channel name
         let filterValue = value;
@@ -246,7 +268,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
           
           // Find the Channel filter type ID from audienceTypeFilters
           const channelFilterType = audienceTypeFilters.find(ft => 
-            ft.name === 'Channel' && ft.audience_type_id === list.audience_type_id
+            ft.name === 'Channel' && (Number(ft.audienceTypeId || ft.audience_type_id) === getAudienceTypeId(list))
           );
           if (channelFilterType) {
             filterTypeName = 'Channel';
@@ -267,7 +289,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
         if (stateAbbr) {
           // This is definitely a State filter
           const stateFilterType = audienceTypeFilters.find(ft => 
-            ft.name === 'State' && ft.audience_type_id === list.audience_type_id
+            ft.name === 'State' && (Number(ft.audienceTypeId || ft.audience_type_id) === getAudienceTypeId(list))
           );
           if (stateFilterType) {
             return {
@@ -287,8 +309,8 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
         }
 
         return {
-          audience_type_filter_id: filterType?.value || filter.audience_type_filter_id,
-          filter_type_id: filterType?.value || filter.audience_type_filter_id,
+          audience_type_filter_id: filterType?.value || filter.audienceTypeFilterId || filter.audience_type_filter_id,
+          filter_type_id: filterType?.value || filter.audienceTypeFilterId || filter.audience_type_filter_id,
           filter_type_name: filterTypeName,
           filter_value: filterValue,
           filter_value_id: value,
@@ -320,32 +342,32 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
       );
 
       const res = await axios.put(`/api/marketing/lists/${token}/${list.id}`, {
-        list_name: listName,
-        audience_type_id: selectedAudienceType,
+        listName: listName,
+        audienceTypeId: selectedAudienceType,
         filters: validFilters.map(filter => {
           // For state filters, ensure we're sending the acronym
           if (filter.filter_type_name === 'State') {
             return {
-              audience_type_filter_id: filter.filter_type_id,
+              audienceTypeFilterId: filter.filter_type_id,
               value: filter.filter_value_id // acronym
             };
           }
           // For prospect/client channel, send the channel id
           if ((selectedAudienceType === 1 || selectedAudienceType === 2) && filter.filter_type_name === 'Channel') {
             return {
-              audience_type_filter_id: filter.filter_type_id,
+              audienceTypeFilterId: filter.filter_type_id,
               value: filter.filter_value_id // numeric id
             };
           }
           // For company name filters, use the standard handling
           if (filter.filter_type_name === 'Company Name') {
             return {
-              audience_type_filter_id: filter.filter_type_id,
+              audienceTypeFilterId: filter.filter_type_id,
               value: filter.filter_value
             };
           }
           return {
-            audience_type_filter_id: filter.filter_type_id,
+            audienceTypeFilterId: filter.filter_type_id,
             value: filter.filter_value
           };
         })
@@ -509,16 +531,16 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
                     {/* Filter Type Dropdown */}
                     <div className="relative col-span-5">
                       <select
-                        value={f.filter_type_id || f.audience_type_filter_id || ''}
+                        value={f.filter_type_id || f.audienceTypeFilterId || f.audience_type_filter_id || ''}
                         onChange={(e) => {
                           const selectedFilter = audienceTypeFilters.find(
-                            ft => ft.value === Number(e.target.value)
+                            ft => (ft.id || ft.value) === Number(e.target.value)
                           );
                           if (selectedFilter) {
                             const newFilters = [...filters];
                             newFilters[idx] = {
                               ...newFilters[idx],
-                              filter_type_id: selectedFilter.value,
+                              filter_type_id: selectedFilter.id || selectedFilter.value,
                               filter_type_name: selectedFilter.name,
                               filter_value: '',
                               filter_value_id: '',
@@ -531,7 +553,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
                       >
                         <option value="">Select filter</option>
                         {audienceTypeFilters
-                          .filter(ft => ft.audience_type_id === selectedAudienceType && ft.type === 'all')
+                          .filter(ft => Number(ft.audienceTypeId || ft.audience_type_id) === selectedAudienceType && (ft.filterType === 'all' || ft.type === 'all'))
                           .filter(ft => {
                             // Always show the current filter's type, even if all values are used
                             if (f.filter_type_name === ft.name) {
@@ -561,7 +583,7 @@ function EditListModal({ list, isOpen, onClose, token }: { list: MarketingList |
                             return true;
                           })
                           .map(ft => (
-                            <option key={`filter-type-${ft.value}-${ft.name}`} value={ft.value}>
+                            <option key={`filter-type-${ft.id || ft.value}-${ft.name}`} value={ft.id || ft.value}>
                               {ft.name}
                             </option>
                           ))}
@@ -806,6 +828,25 @@ function ListsPageContent() {
   const audienceTypeFilters = useListsStore((state) => state.audienceTypeFilters);
   const bankChannels = useListsStore((state) => state.bankChannels);
   const companies = useListsStore((state) => state.companies);
+
+  // Helper function to get audience type name from the store
+  const getAudienceTypeName = (list: MarketingList): string => {
+    // First try to get it from the list's audienceType object
+    if (list.audienceType?.name) {
+      return list.audienceType.name;
+    }
+    // Otherwise, look it up from the audienceTypes array
+    const audienceTypeId = getAudienceTypeId(list);
+    if (audienceTypeId && audienceTypes.length > 0) {
+      const audienceType = audienceTypes.find(at => {
+        // Match by value or id, ensuring type comparison
+        const atValue = at.value ?? (at as any).id;
+        return Number(atValue) === Number(audienceTypeId);
+      });
+      return audienceType?.name || '—';
+    }
+    return '—';
+  };
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -829,7 +870,7 @@ function ListsPageContent() {
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('all'); // 'all' or audience type id
-  const [sortBy, setSortBy] = useState<'name' | 'count' | 'created_at'>('created_at');
+  const [sortBy, setSortBy] = useState<'name' | 'count' | 'createdAt'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const router = useRouter()
@@ -837,6 +878,7 @@ function ListsPageContent() {
   const tokenParam = searchParams.get('token');
   const successParam = searchParams.get('success');
   const messageParam = searchParams.get('message');
+  const isLoadingRef = useRef(false);
 
   // Skeleton loader component
   const TableSkeleton = () => (
@@ -913,8 +955,9 @@ function ListsPageContent() {
 
   useEffect(() => {
     const loadAll = async () => {
-      if (!tokenParam) return;
+      if (!tokenParam || isLoadingRef.current) return;
   
+      isLoadingRef.current = true;
       setLoading(true);
       try {
         const authHeaders = {
@@ -924,19 +967,56 @@ function ListsPageContent() {
           },
         };
   
-        const [listRes, typeRes, filterRes, bankRes, companiesRes] = await Promise.all([
+        const [listRes, typeRes, bankRes, companiesRes] = await Promise.all([
           axios.get(`/api/marketing/lists/${tokenParam}`),
           axios.get(`/api/marketing/lists/new/audience-types`, authHeaders),
-          axios.get(`/api/marketing/lists/new/audience-types-filter/`, authHeaders),
           axios.get(`/api/marketing/lists/new/bank-channels`, authHeaders),
           axios.get(`/api/marketing/lists/new/companies`, authHeaders),
         ]);
 
-        setLists(listRes.data.data);
         setAudienceTypes(typeRes.data.data);
-        setAudienceTypeFilters(Array.isArray(filterRes.data.data) ? filterRes.data.data : []);
         setBankChannels(bankRes.data.data);
         setCompanies(companiesRes.data.data);
+        
+        // Fetch all audience-type-filters for lookup fallback and for use in "add new list" page
+        if (typeRes.data.data && Array.isArray(typeRes.data.data)) {
+          const filterPromises = typeRes.data.data
+            .filter((audienceType: any) => audienceType.value != null || audienceType.id != null)
+            .map((audienceType: any) => {
+              const audienceTypeId = audienceType.value ?? audienceType.id;
+              return axios.get(`/api/marketing/lists/new/audience-types-filter?audienceTypeId=${audienceTypeId}`, authHeaders)
+                .then(res => res.data.data || [])
+                .catch(() => []);
+            });
+          
+          const filterResults = await Promise.all(filterPromises);
+          const allFilters = filterResults.flat();
+          setAudienceTypeFilters(allFilters);
+        }
+        
+        // Fetch filters for each list individually and update the lists
+        if (listRes.data.data && Array.isArray(listRes.data.data)) {
+          const listFilterPromises = listRes.data.data.map((list: MarketingList) => 
+            axios.get(`/api/marketing/lists/${tokenParam}/${list.id}`, authHeaders)
+              .then(res => ({ listId: list.id, filters: res.data.data?.filters || [] }))
+              .catch(() => ({ listId: list.id, filters: [] }))
+          );
+          
+          const listFilterResults = await Promise.all(listFilterPromises);
+          
+          // Update each list with its filters
+          const updatedLists = listRes.data.data.map((list: MarketingList) => {
+            const filterResult = listFilterResults.find(result => result.listId === list.id);
+            return {
+              ...list,
+              filters: filterResult?.filters || list.filters || []
+            };
+          });
+          
+          setLists(updatedLists);
+        } else {
+          setLists(listRes.data.data || []);
+        }
       } catch (err) {
         setToast({
           isOpen: true,
@@ -946,11 +1026,12 @@ function ListsPageContent() {
         });
       } finally {
         setLoading(false);
+        isLoadingRef.current = false;
       }
     };
   
     loadAll();
-  }, [tokenParam, setLists, setAudienceTypes, setAudienceTypeFilters, setBankChannels]);
+  }, [tokenParam]);
 
   const handleDeleteClick = (id: number, listName: string) => {
     setConfirmModal({
@@ -1019,14 +1100,13 @@ function ListsPageContent() {
   const filteredAndSortedLists = useMemo(() => {
     let filtered = lists.filter(list => {
       // Search filter
-      const matchesSearch = list.list_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (list as MarketingList).audience_type?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (list as MarketingList).audienceType?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const audienceTypeName = getAudienceTypeName(list);
+      const matchesSearch = getListName(list).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           audienceTypeName.toLowerCase().includes(searchTerm.toLowerCase());
       
       // Audience type filter
       const matchesFilter = activeFilter === 'all' || 
-                           (list as MarketingList).audience_type?.id?.toString() === activeFilter ||
-                           (list as MarketingList).audienceType?.id?.toString() === activeFilter;
+                           String(getAudienceTypeId(list)) === String(activeFilter);
       
       return matchesSearch && matchesFilter;
     });
@@ -1037,16 +1117,16 @@ function ListsPageContent() {
       
       switch (sortBy) {
         case 'name':
-          aValue = a.list_name?.toLowerCase() || '';
-          bValue = b.list_name?.toLowerCase() || '';
+          aValue = getListName(a).toLowerCase();
+          bValue = getListName(b).toLowerCase();
           break;
         case 'count':
           aValue = a.count || 0;
           bValue = b.count || 0;
           break;
-        case 'created_at':
-          aValue = new Date(a.created_at || '').getTime();
-          bValue = new Date(b.created_at || '').getTime();
+        case 'createdAt':
+          aValue = new Date(getCreatedAt(a) || 0).getTime();
+          bValue = new Date(getCreatedAt(b) || 0).getTime();
           break;
         default:
           return 0;
@@ -1060,7 +1140,7 @@ function ListsPageContent() {
     });
 
     return filtered;
-  }, [lists, searchTerm, activeFilter, sortBy, sortOrder]);
+  }, [lists, searchTerm, activeFilter, sortBy, sortOrder, audienceTypes]);
 
   // Pagination calculations for filtered lists
   const totalPages = Math.ceil(filteredAndSortedLists.length / itemsPerPage) || 1;
@@ -1125,7 +1205,12 @@ function ListsPageContent() {
             {/* Audience Type Filters */}
             <div className="flex flex-wrap gap-3">
                           <button
-              onClick={() => setActiveFilter('all')}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveFilter('all');
+              }}
               className={`cursor-pointer px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                 activeFilter === 'all'
                   ? 'bg-orange-500 text-white shadow-md'
@@ -1134,22 +1219,32 @@ function ListsPageContent() {
             >
               All Lists ({lists.length})
             </button>
-              {audienceTypes.map((audienceType) => (
+              {audienceTypes
+                .filter((audienceType) => audienceType.value != null)
+                .map((audienceType) => {
+                  const audienceTypeValue = audienceType.value;
+                  return (
                 <button
-                  key={audienceType.value}
-                  onClick={() => setActiveFilter(audienceType.value.toString())}
+                      key={audienceTypeValue}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveFilter(String(audienceTypeValue));
+                      }}
+                      type="button"
                   className={`cursor-pointer px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                    activeFilter === audienceType.value.toString()
+                        String(activeFilter) === String(audienceTypeValue)
                       ? 'bg-orange-500 text-white shadow-md'
                       : 'bg-white/80 text-slate-700 hover:bg-white hover:shadow-sm border border-slate-200'
                   }`}
                 >
                   {audienceType.name} ({lists.filter(list => {
-                    const audienceTypeId = (list as MarketingList).audience_type?.id || (list as MarketingList).audienceType?.id;
-                    return audienceTypeId === audienceType.value;
+                        const audienceTypeId = getAudienceTypeId(list);
+                        return audienceTypeId === audienceTypeValue;
                   }).length})
                 </button>
-              ))}
+                  );
+                })}
             </div>
 
             {/* Sort Options */}
@@ -1158,14 +1253,14 @@ function ListsPageContent() {
               <select
                 value={`${sortBy}-${sortOrder}`}
                 onChange={(e) => {
-                  const [newSortBy, newSortOrder] = e.target.value.split('-') as ['name' | 'count' | 'created_at', 'asc' | 'desc'];
+                  const [newSortBy, newSortOrder] = e.target.value.split('-') as ['name' | 'count' | 'createdAt', 'asc' | 'desc'];
                   setSortBy(newSortBy);
                   setSortOrder(newSortOrder);
                 }}
                 className="cursor-pointer px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white/80 backdrop-blur-sm text-sm"
               >
-                <option value="created_at-desc">Newest First</option>
-                <option value="created_at-asc">Oldest First</option>
+                <option value="createdAt-desc">Newest First</option>
+                <option value="createdAt-asc">Oldest First</option>
                 <option value="name-asc">Name A-Z</option>
                 <option value="name-desc">Name Z-A</option>
                 <option value="count-desc">Most Members</option>
@@ -1218,18 +1313,18 @@ function ListsPageContent() {
                           </tr>
                         ) : (
                           paginatedLists.map((list, idx) => (
-                          <tr key={`${list.id}-${idx}-${list.list_name}-${list.created_at}`} className="hover:bg-slate-50/80 transition-colors duration-200">
+                          <tr key={`${list.id}-${idx}-${getListName(list)}-${getCreatedAt(list)}`} className="hover:bg-slate-50/80 transition-colors duration-200">
                             <td className="px-6 py-5 text-sm font-medium text-slate-900">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
                             <td className="px-6 py-5">
-                              <div className="text-sm font-semibold text-slate-900">{list.list_name}</div>
+                              <div className="text-sm font-semibold text-slate-900">{getListName(list)}</div>
                             </td>
                             <td className="px-6 py-5">
                               <div className="space-y-3">
                                 <div className="flex items-center gap-3">
                                   <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-orange-100 to-amber-100 text-orange-800 border border-orange-200/50">
-                                    {(list as MarketingList).audience_type?.name || (list as MarketingList).audienceType?.name || '—'}
+                                    {getAudienceTypeName(list)}
                                   </span>
-                                  {list.member_details?.members ? (
+                                  {getMemberDetails(list)?.members ? (
                                     <button
                                       onClick={() => {
                                         const token = tokenParam;
@@ -1238,27 +1333,66 @@ function ListsPageContent() {
                                       }}
                                       className="cursor-pointer text-orange-600 hover:text-orange-700 font-medium transition-colors text-sm"
                                     >
-                                      ({list.member_details.members.length} {list.member_details.members.length === 1 ? 'Member' : 'Members'})
+                                      ({getMemberDetails(list)!.members.length} {getMemberDetails(list)!.members.length === 1 ? 'Member' : 'Members'})
                                     </button>
                                   ) : (
                                     <div className="w-20 h-4 bg-slate-200 rounded animate-pulse"></div>
                                   )}
                                 </div>
                                 {/* Display Filters */}
-                                {list.marketing_list_filter && list.marketing_list_filter.length > 0 && (
-                                  <div className="flex flex-wrap gap-2">
-                                    {list.marketing_list_filter.map((filter) => {
-                                      const label = filter.audience_type_filter?.name || '';
+                                {(() => {
+                                  const filters = getFilters(list);
+                                  if (!filters || !Array.isArray(filters) || filters.length === 0) return null;
+                                  
+                                  return (
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                      {filters.map((filter) => {
+                                        // Get filter label from nested object or lookup from audienceTypeFilters
+                                        let label = filter.audienceTypeFilter?.name || filter.audience_type_filter?.name || '';
+                                        
+                                        // If label is missing, try to look it up from audienceTypeFilters using the filter ID
+                                        if (!label) {
+                                          const filterId = filter.audienceTypeFilterId || filter.audience_type_filter_id;
+                                          if (filterId != null) {
+                                            const filterType = audienceTypeFilters.find(
+                                              ft => {
+                                                const ftId = ft.id ?? ft.value;
+                                                return ftId != null && Number(ftId) === Number(filterId);
+                                              }
+                                            );
+                                            if (filterType) label = filterType.name;
+                                          }
+                                        }
+                                        
                                       let valueToShow: string = String(filter.value ?? '');
-                                      // If Prospect/Client list and Channel filter, map id -> name for display
-                                      const audienceTypeId = (list as MarketingList).audience_type?.id || (list as MarketingList).audienceType?.id;
+                                        const audienceTypeId = getAudienceTypeId(list);
+                                        
+                                        // Handle Channel filters for Prospect/Client lists
                                       if ((audienceTypeId === 1 || audienceTypeId === 2) && label === 'Channel') {
                                         const ch = bankChannels.find(ch => String(ch.value) === String(filter.value));
                                         if (ch) valueToShow = ch.name;
                                       }
+                                        
+                                        // Handle State filters - map abbreviation to full state name
+                                        if (label === 'State') {
+                                          const stateEntry = Object.entries(State).find(([abbr]) => abbr === filter.value);
+                                          if (stateEntry) {
+                                            valueToShow = stateEntry[1]; // Full state name
+                                          }
+                                        }
+                                        
+                                        // Handle Company Name filters
+                                        if (label === 'Company Name' || label === 'Company') {
+                                          // Value is already the company name, no mapping needed
+                                          valueToShow = filter.value || '';
+                                        }
+                                        
+                                        // Only show if we have both label and value
+                                        if (!label || !valueToShow) return null;
+                                        
                                       return (
                                         <span
-                                          key={filter.id}
+                                            key={filter.id || `${label}-${filter.value}`}
                                           className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200/50 shadow-sm"
                                         >
                                           {label}: {valueToShow}
@@ -1266,7 +1400,8 @@ function ListsPageContent() {
                                       );
                                     })}
                                   </div>
-                                )}
+                                  );
+                                })()}
                               </div>
                             </td>
                             <td className="px-6 py-5">
@@ -1295,7 +1430,7 @@ function ListsPageContent() {
                                   <Edit2 size={18} className="stroke-2" />
                                 </button>
                                 <button 
-                                  onClick={() => handleDeleteClick(list.id, list.list_name)}
+                                  onClick={() => handleDeleteClick(list.id, getListName(list))}
                                   disabled={deleteLoading}
                                   className="cursor-pointer p-2 text-slate-600 hover:text-red-600 transition-all duration-200 rounded-lg hover:bg-red-50 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" 
                                   aria-label="Delete list"

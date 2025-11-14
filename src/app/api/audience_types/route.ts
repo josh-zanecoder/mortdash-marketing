@@ -1,38 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
+import axios from 'axios';
 import { getMortdashUrlFromRequest } from '@/utils/mortdash';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const currentUrl = req.nextUrl;
-    const token = currentUrl.searchParams.get('token') || req.cookies.get('auth_token')?.value;
+    const token = request.nextUrl.searchParams.get('token') || request.cookies.get('auth_token')?.value;
     
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    // Proxy the request to your backend
-    const mortdash_url = getMortdashUrlFromRequest(req);
-    const backendRes = await fetch(`${mortdash_url}/api/bank/v1/marketing/audience-types`, {
-      method: 'GET',
-      headers,
-    });
-
-    if (!backendRes.ok) {
-      const errorData = await backendRes.text();
+    if (!token) {
       return NextResponse.json(
-        { error: 'Failed to fetch audience types', details: errorData },
-        { status: backendRes.status }
+        { error: 'Token is required' },
+        { status: 401 }
       );
     }
 
-    const data = await backendRes.json();
-    return NextResponse.json(data);
+    const mortdash_url = getMortdashUrlFromRequest(request);
+    const clientOrigin = request.headers.get('x-client-origin') || request.nextUrl.origin;
+    const res = await axios.get(`http://localhost:3000/api/v1/audience-types`, {
+      headers: {
+        'accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'x-client-origin': clientOrigin,
+      },
+      validateStatus: () => true,
+    });
+
+    const contentType = res.headers['content-type'];
+    if (res.status === 401) {
+      return NextResponse.json(
+        { error: 'Unauthorized', backend: res.data, status: 401 },
+        { status: 401 }
+      );
+    }
+    if (contentType && contentType.includes('application/json')) {
+      return NextResponse.json(res.data, { status: res.status });
+    } else {
+      return NextResponse.json(
+        { error: 'Expected JSON from backend', status: res.status, body: res.data },
+        { status: 500 }
+      );
+    }
   } catch (error: any) {
-    console.error('Error fetching audience types:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
+      { error: error.message, details: error.response?.data || null, status: error.response?.status || 500 },
+      { status: error.response?.status || 500 }
     );
   }
 }
