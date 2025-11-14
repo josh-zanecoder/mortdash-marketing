@@ -84,8 +84,8 @@ export default function Header() {
           <Link href="/marketing/lists" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
             pathname.startsWith('/marketing/lists') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
           }`}>Lists</Link>
-          <Link href="/marketing/campaign" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
-            pathname === '/marketing/campaign' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
+          <Link href="/marketing/new-campaign" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
+            pathname.startsWith('/marketing/new-campaign') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
           }`}>Campaign</Link>
           <Link href="/marketing/tracking" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
             pathname.startsWith('/marketing/tracking') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
@@ -119,8 +119,8 @@ export default function Header() {
             <Link href="/marketing/lists" className={`py-2 text-lg font-semibold w-full text-center transition-colors ${
               pathname.startsWith('/marketing/lists') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
             }`} onClick={() => setMobileOpen(false)}>Lists</Link>
-            <Link href="/marketing/campaign" className={`py-2 text-lg font-semibold w-full text-center transition-colors ${
-              pathname === '/marketing/campaign' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
+            <Link href="/marketing/campaign-sending" className={`py-2 text-lg font-semibold w-full text-center transition-colors ${
+              pathname.startsWith('/marketing/campaign') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
             }`} onClick={() => setMobileOpen(false)}>Campaign</Link>
             <Link href="/marketing/tracking" className={`py-2 text-lg font-semibold w-full text-center transition-colors ${
               pathname.startsWith('/marketing/tracking') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
