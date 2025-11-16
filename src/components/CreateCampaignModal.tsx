@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
+import { useCampaignStore } from '@/store/campaignStore';
 
 interface MarketingList {
   id: number;
@@ -34,8 +35,14 @@ export default function CreateCampaignModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Temporary: Email template options 1-10 (integers)
-  const emailTemplateOptions = Array.from({ length: 10 }, (_, i) => i + 1);
+  const { emailTemplates, emailTemplatesLoading, fetchEmailTemplates } = useCampaignStore();
+
+  // Fetch email templates when modal opens and token is available
+  useEffect(() => {
+    if (open && token) {
+      fetchEmailTemplates(token);
+    }
+  }, [open, token, fetchEmailTemplates]);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -127,12 +134,6 @@ export default function CreateCampaignModal({
         <DialogHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4 border-b">
           <DialogTitle className="text-2xl font-bold">Create New Campaign</DialogTitle>
           <DialogClose asChild>
-            <button
-              className="cursor-pointer text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
-              onClick={onClose}
-            >
-              <X className="w-5 h-5" />
-            </button>
           </DialogClose>
         </DialogHeader>
 
@@ -191,19 +192,26 @@ export default function CreateCampaignModal({
                   value={selectedTemplateId}
                   onChange={(e) => setSelectedTemplateId(e.target.value)}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm transition-all duration-200 appearance-none cursor-pointer"
+                  disabled={emailTemplatesLoading}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm transition-all duration-200 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value="">Select an email template</option>
-                  {emailTemplateOptions.map((templateId) => (
-                    <option key={`template-${templateId}`} value={templateId}>
-                      {templateId}
+                  <option value="">
+                    {emailTemplatesLoading ? 'Loading templates...' : 'Select an email template'}
+                  </option>
+                  {emailTemplates.map((template) => (
+                    <option key={`template-${template.id}`} value={template.id}>
+                      {template.name || template.subject || `Template ${template.id}`}
                     </option>
                   ))}
                 </select>
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  {emailTemplatesLoading ? (
+                    <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  )}
                 </div>
               </div>
             </div>

@@ -81,8 +81,8 @@ export default function Header() {
           <Link href="/marketing/contacts" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
             pathname === '/marketing/contacts' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
           }`}>Contact</Link>
-          <Link href="/marketing/lists" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
-            pathname.startsWith('/marketing/lists') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
+          <Link href="/marketing/marketing-lists" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
+            pathname.startsWith('/marketing/marketing-lists') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
           }`}>Lists</Link>
           <Link href="/marketing/new-campaign" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
             pathname.startsWith('/marketing/new-campaign') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'

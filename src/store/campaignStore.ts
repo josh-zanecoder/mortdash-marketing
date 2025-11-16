@@ -35,10 +35,19 @@ interface PaginationMeta {
   hasPrevPage: boolean;
 }
 
+export interface EmailTemplate {
+  id: string | number;
+  name?: string;
+  subject?: string;
+  [key: string]: any;
+}
+
 interface CampaignStore {
   campaigns: MarketingCampaign[];
   loading: boolean;
   pagination: PaginationMeta | null;
+  emailTemplates: EmailTemplate[];
+  emailTemplatesLoading: boolean;
   setCampaigns: (campaigns: MarketingCampaign[]) => void;
   setLoading: (loading: boolean) => void;
   setPagination: (pagination: PaginationMeta | null) => void;
@@ -46,15 +55,22 @@ interface CampaignStore {
   updateCampaign: (id: string | number, campaign: Partial<MarketingCampaign>) => void;
   removeCampaign: (id: string | number) => void;
   fetchCampaigns: (token: string, page?: number, limit?: number) => Promise<void>;
+  fetchEmailTemplates: (token: string) => Promise<void>;
+  setEmailTemplates: (templates: EmailTemplate[]) => void;
+  setEmailTemplatesLoading: (loading: boolean) => void;
 }
 
 export const useCampaignStore = create<CampaignStore>((set, get) => ({
   campaigns: [],
   loading: false,
   pagination: null,
+  emailTemplates: [],
+  emailTemplatesLoading: false,
   setCampaigns: (campaigns) => set({ campaigns }),
   setLoading: (loading) => set({ loading }),
   setPagination: (pagination) => set({ pagination }),
+  setEmailTemplates: (templates) => set({ emailTemplates: templates }),
+  setEmailTemplatesLoading: (loading) => set({ emailTemplatesLoading: loading }),
   addCampaign: (campaign) => set((state) => ({ campaigns: [...state.campaigns, campaign] })),
   updateCampaign: (id, updates) =>
     set((state) => ({
@@ -180,6 +196,40 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       set({ campaigns: [], pagination: null });
     } finally {
       set({ loading: false });
+    }
+  },
+  fetchEmailTemplates: async (token: string) => {
+    set({ emailTemplatesLoading: true });
+    try {
+      const axios = (await import('axios')).default;
+      const res = await axios.get(`/api/email-templates`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'x-client-origin': typeof window !== 'undefined' ? window.location.origin : '',
+        },
+      });
+
+      // Handle various response formats
+      let templates: EmailTemplate[] = [];
+      
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        templates = res.data.data;
+      } else if (res.data?.data && Array.isArray(res.data.data)) {
+        templates = res.data.data;
+      } else if (Array.isArray(res.data)) {
+        templates = res.data;
+      } else if (res.data && typeof res.data === 'object') {
+        // Try to find templates in nested structure
+        templates = res.data.templates || res.data.emailTemplates || [];
+      }
+
+      set({ emailTemplates: templates });
+    } catch (error) {
+      console.error('Failed to fetch email templates:', error);
+      set({ emailTemplates: [] });
+    } finally {
+      set({ emailTemplatesLoading: false });
     }
   },
 }));
