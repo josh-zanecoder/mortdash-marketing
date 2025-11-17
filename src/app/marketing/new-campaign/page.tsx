@@ -3,8 +3,11 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CreateCampaignModal from '@/components/CreateCampaignModal';
 import ViewCampaignModal from '@/components/ViewCampaignModal';
+import CampaignPreviewModal from '@/components/CampaignPreviewModal';
+import CampaignRecipientsModal from '@/components/CampaignRecipientsModal';
+import CampaignActionsModal from '@/components/CampaignActionsModal';
 import { useCampaignStore } from '@/store/campaignStore';
-import { Plus, Send, Calendar, Eye, Copy, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Send, Calendar, Copy, ChevronLeft, ChevronRight, Search, Users, Settings, Pause, Play, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 
 function CampaignSendingPageContent() {
@@ -15,11 +18,28 @@ function CampaignSendingPageContent() {
   const [loadingLists, setLoadingLists] = useState(true);
   const [createCampaignModalOpen, setCreateCampaignModalOpen] = useState(false);
   const [viewCampaignModalOpen, setViewCampaignModalOpen] = useState(false);
+  const [previewCampaignModalOpen, setPreviewCampaignModalOpen] = useState(false);
+  const [recipientsModalOpen, setRecipientsModalOpen] = useState(false);
+  const [actionsModalOpen, setActionsModalOpen] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | number | null>(null);
+  const [previewCampaignId, setPreviewCampaignId] = useState<string | number | null>(null);
+  const [recipientsCampaignId, setRecipientsCampaignId] = useState<string | number | null>(null);
+  const [actionsCampaignId, setActionsCampaignId] = useState<string | number | null>(null);
   const [duplicatingCampaignId, setDuplicatingCampaignId] = useState<string | number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
-  const { campaigns, loading: campaignsLoading, pagination, fetchCampaigns } = useCampaignStore();
+  const [queueStats, setQueueStats] = useState<any>(null);
+  const [queueStatsLoading, setQueueStatsLoading] = useState(false);
+  const [queueActionLoading, setQueueActionLoading] = useState(false);
+  const {
+    campaigns,
+    loading: campaignsLoading,
+    pagination,
+    fetchCampaigns,
+    pauseCampaignQueue,
+    resumeCampaignQueue,
+    fetchQueueStats,
+  } = useCampaignStore();
 
   // Load marketing lists when component mounts
   useEffect(() => {
@@ -62,8 +82,52 @@ function CampaignSendingPageContent() {
   useEffect(() => {
     if (token) {
       fetchCampaigns(token, currentPage, limit);
+      loadQueueStats();
     }
   }, [token, fetchCampaigns, currentPage, limit]);
+
+  // Load queue stats
+  const loadQueueStats = async () => {
+    if (!token) return;
+    try {
+      setQueueStatsLoading(true);
+      const stats = await fetchQueueStats(token);
+      setQueueStats(stats);
+    } catch (error) {
+      console.error('Failed to load queue stats:', error);
+    } finally {
+      setQueueStatsLoading(false);
+    }
+  };
+
+  // Handle queue pause/resume
+  const handleQueuePause = async () => {
+    if (!token) return;
+    try {
+      setQueueActionLoading(true);
+      await pauseCampaignQueue(token);
+      toast.success('Campaign queue paused successfully!');
+      loadQueueStats();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to pause queue');
+    } finally {
+      setQueueActionLoading(false);
+    }
+  };
+
+  const handleQueueResume = async () => {
+    if (!token) return;
+    try {
+      setQueueActionLoading(true);
+      await resumeCampaignQueue(token);
+      toast.success('Campaign queue resumed successfully!');
+      loadQueueStats();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to resume queue');
+    } finally {
+      setQueueActionLoading(false);
+    }
+  };
 
   // Handle duplicate campaign
   const handleDuplicateCampaign = async (campaignId: string | number, campaignName: string) => {
@@ -77,7 +141,7 @@ function CampaignSendingPageContent() {
       const { default: axios } = await import('axios');
 
       const res = await axios.post(
-        `/api/new-campaign/${campaignId}/duplicate`,
+        `/api/campaigns/${campaignId}/duplicate`,
         {},
         {
           headers: {
@@ -142,6 +206,44 @@ function CampaignSendingPageContent() {
         token={token}
       />
 
+      {/* Preview Campaign Modal */}
+      <CampaignPreviewModal
+        open={previewCampaignModalOpen}
+        onClose={() => {
+          setPreviewCampaignModalOpen(false);
+          setPreviewCampaignId(null);
+        }}
+        campaignId={previewCampaignId}
+        token={token}
+      />
+
+      {/* Recipients Modal */}
+      <CampaignRecipientsModal
+        open={recipientsModalOpen}
+        onClose={() => {
+          setRecipientsModalOpen(false);
+          setRecipientsCampaignId(null);
+        }}
+        campaignId={recipientsCampaignId}
+        token={token}
+      />
+
+      {/* Actions Modal */}
+      <CampaignActionsModal
+        open={actionsModalOpen}
+        onClose={() => {
+          setActionsModalOpen(false);
+          setActionsCampaignId(null);
+        }}
+        campaignId={actionsCampaignId}
+        token={token}
+        onSuccess={() => {
+          if (token) {
+            fetchCampaigns(token, currentPage, limit);
+          }
+        }}
+      />
+
       {/* Main Content */}
       <main className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -153,13 +255,41 @@ function CampaignSendingPageContent() {
                 <p className="text-slate-600 mt-1">Create and manage your email marketing campaigns</p>
               </div>
             </div>
-            <button
-              onClick={() => setCreateCampaignModalOpen(true)}
-              className="cursor-pointer bg-[#ff6600] text-white rounded-lg px-5 py-2.5 font-medium hover:bg-[#ff7a2f] transition-colors inline-flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Create Campaign
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Queue Stats */}
+              {queueStats && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                  <BarChart3 className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm text-blue-700 font-medium">
+                    Queue: {queueStats.pending || 0} pending, {queueStats.processing || 0} processing
+                  </span>
+                </div>
+              )}
+              {/* Queue Controls */}
+              <button
+                onClick={handleQueuePause}
+                disabled={queueActionLoading}
+                className="cursor-pointer bg-yellow-500 text-white rounded-lg px-4 py-2.5 font-medium hover:bg-yellow-600 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+              >
+                <Pause className="w-4 h-4" />
+                Pause Queue
+              </button>
+              <button
+                onClick={handleQueueResume}
+                disabled={queueActionLoading}
+                className="cursor-pointer bg-green-500 text-white rounded-lg px-4 py-2.5 font-medium hover:bg-green-600 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+              >
+                <Play className="w-4 h-4" />
+                Resume Queue
+              </button>
+              <button
+                onClick={() => setCreateCampaignModalOpen(true)}
+                className="cursor-pointer bg-[#ff6600] text-white rounded-lg px-5 py-2.5 font-medium hover:bg-[#ff7a2f] transition-colors inline-flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Create Campaign
+              </button>
+            </div>
           </div>
 
           {/* Campaigns Table */}
@@ -205,17 +335,35 @@ function CampaignSendingPageContent() {
                     <tbody>
                       {campaigns.map((campaign) => {
                         const campaignName = campaign.name || 'Unnamed Campaign';
-                        const listName = campaign.listName || campaign.list_name || 'N/A';
+                        const marketingListName =
+                          campaign.marketingList?.listName ||
+                          campaign.listName ||
+                          campaign.list_name ||
+                          'N/A';
                         const status = campaign.status || campaign.campaignStatus || campaign.campaign_status || 'Pending';
-                        const recipientCount = campaign.recipientCount || campaign.recipient_count || 0;
+                        const recipientCount =
+                          campaign.marketingList?.count ??
+                          campaign.recipientCount ??
+                          campaign.recipient_count ??
+                          null;
                         const createdAt = campaign.createdAt || campaign.created_at;
                         const isScheduled = campaign.isScheduled || campaign.is_scheduled || false;
                         const scheduledAt = campaign.scheduledAt || campaign.scheduled_at;
 
                         return (
                           <tr key={campaign.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                            <td className="py-3 px-4 text-sm text-slate-900 font-medium">{campaignName}</td>
-                            <td className="py-3 px-4 text-sm text-slate-600">{listName}</td>
+                            <td className="py-3 px-4 text-sm text-slate-900 font-medium">
+                              <button
+                                onClick={() => {
+                                  setSelectedCampaignId(campaign.id);
+                                  setViewCampaignModalOpen(true);
+                                }}
+                                className="cursor-pointer text-[#ff6600] hover:text-[#ff7a2f] hover:underline font-medium transition-colors text-left"
+                              >
+                                {campaignName}
+                              </button>
+                            </td>
+                            <td className="py-3 px-4 text-sm text-slate-600">{marketingListName}</td>
                             <td className="py-3 px-4">
                               <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                                 status.toLowerCase() === 'sent' || status.toLowerCase() === 'completed'
@@ -227,7 +375,20 @@ function CampaignSendingPageContent() {
                                 {status}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-sm text-slate-600">{recipientCount}</td>
+                            <td className="py-3 px-4 text-sm text-slate-600">
+                              <button
+                                onClick={() => {
+                                  setRecipientsCampaignId(campaign.id);
+                                  setRecipientsModalOpen(true);
+                                }}
+                                className="cursor-pointer inline-flex items-center gap-2 text-[#ff6600] hover:text-[#ff7a2f] hover:underline font-medium transition-colors"
+                              >
+                                <Users className="w-4 h-4" />
+                                {typeof recipientCount === 'number'
+                                  ? recipientCount.toLocaleString()
+                                  : 'N/A'}
+                              </button>
+                            </td>
                             <td className="py-3 px-4 text-sm text-slate-600">
                               {createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A'}
                             </td>
@@ -245,13 +406,23 @@ function CampaignSendingPageContent() {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => {
-                                    setSelectedCampaignId(campaign.id);
-                                    setViewCampaignModalOpen(true);
+                                    setActionsCampaignId(campaign.id);
+                                    setActionsModalOpen(true);
                                   }}
                                   className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#ff6600] bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
                                 >
-                                  <Eye className="w-4 h-4" />
-                                  View
+                                  <Settings className="w-4 h-4" />
+                                  Actions
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setPreviewCampaignId(campaign.id);
+                                    setPreviewCampaignModalOpen(true);
+                                  }}
+                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                                >
+                                  <Search className="w-4 h-4" />
+                                  Preview
                                 </button>
                                 <button
                                   onClick={() => handleDuplicateCampaign(campaign.id, campaignName)}

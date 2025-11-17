@@ -48,10 +48,10 @@ function MarketingListsPageContent() {
           }
           setCreateModalOpen(false);
         setEditingListId(null);
-      }}
-      token={token}
+        }}
+        token={token}
       listId={editingListId}
-    />
+      />
     <DeleteMarketingListDialog
       open={showDeleteDialog}
       onClose={() => {
@@ -76,7 +76,7 @@ function MarketingListsPageContent() {
       list={deletingList}
     />
     <Toaster />
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-50">
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Page Header */}
           <div className="mb-8 flex items-center justify-between">

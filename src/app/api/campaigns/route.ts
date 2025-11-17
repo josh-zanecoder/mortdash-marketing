@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-import { getMortdashUrlFromRequest } from '@/utils/mortdash';
+import { getMortdashUrlFromRequest, getMarketingApiBaseUrl } from '@/utils/mortdash';
 
 export async function GET(request: NextRequest) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
   
   try {
-    // Temporarily use localhost:3000 for marketing-api
-    const marketingApiUrl = 'http://localhost:3000';
+    const marketingApiUrl = getMarketingApiBaseUrl();
     const clientOrigin = request.headers.get('x-client-origin') || request.nextUrl.origin;
     
     // Get pagination query parameters
@@ -45,8 +44,7 @@ export async function POST(request: NextRequest) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
 
   try {
-    // Temporarily use localhost:3000 for marketing-api
-    const marketingApiUrl = 'http://localhost:3000';
+    const marketingApiUrl = getMarketingApiBaseUrl();
     const clientOrigin = request.headers.get('x-client-origin') || request.nextUrl.origin;
     
     const body = await request.json();

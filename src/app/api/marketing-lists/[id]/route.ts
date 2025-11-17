@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import { getMarketingApiBaseUrl } from '@/utils/mortdash';
 
 export async function GET(
   request: NextRequest,
@@ -9,7 +10,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const marketingApiUrl = 'http://localhost:3000';
+    const marketingApiUrl = getMarketingApiBaseUrl();
     const clientOrigin = request.headers.get('x-client-origin') || request.nextUrl.origin;
 
     const res = await axios.get(
@@ -46,7 +47,7 @@ export async function PUT(
   const { id } = await params;
 
   try {
-    const marketingApiUrl = 'http://localhost:3000';
+    const marketingApiUrl = getMarketingApiBaseUrl();
     const clientOrigin = request.headers.get('x-client-origin') || request.nextUrl.origin;
     
     const body = await request.json();
@@ -86,7 +87,7 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const marketingApiUrl = 'http://localhost:3000';
+    const marketingApiUrl = getMarketingApiBaseUrl();
     const clientOrigin = request.headers.get('x-client-origin') || request.nextUrl.origin;
 
     const res = await axios.delete(

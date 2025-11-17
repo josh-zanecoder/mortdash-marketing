@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import { getMarketingApiBaseUrl } from '@/utils/mortdash';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  const campaignId = params.id;
+  const { id } = await params;
 
   try {
-    // Temporarily use localhost:3000 for marketing-api
-    const marketingApiUrl = 'http://localhost:3000';
+    const marketingApiUrl = getMarketingApiBaseUrl();
     const clientOrigin = request.headers.get('x-client-origin') || request.nextUrl.origin;
 
     const res = await axios.post(
-      `${marketingApiUrl}/api/v1/marketing-campaigns/${campaignId}/duplicate`,
+      `${marketingApiUrl}/api/v1/campaigns/${id}/re-prepare`,
       {},
       {
         headers: {
@@ -39,3 +39,4 @@ export async function POST(
     );
   }
 }
+

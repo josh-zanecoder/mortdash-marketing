@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
-import { X, Calendar, Mail, Users, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { X, Calendar, Mail, Users, Clock, CheckCircle, XCircle, BarChart3 } from 'lucide-react';
+import { useCampaignStore } from '@/store/campaignStore';
 
 interface MarketingCampaign {
   id: string | number;
@@ -60,17 +61,37 @@ export default function ViewCampaignModal({
   const [campaign, setCampaign] = useState<MarketingCampaign | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<any>(null);
+  const [progressLoading, setProgressLoading] = useState(false);
+  const { fetchCampaignProgress } = useCampaignStore();
 
   useEffect(() => {
     if (open && campaignId && token) {
       fetchCampaignDetails();
+      fetchProgress();
     } else if (!open) {
       // Reset state when modal closes
       setCampaign(null);
       setError(null);
+      setProgress(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, campaignId, token]);
+
+  const fetchProgress = async () => {
+    if (!campaignId || !token) return;
+
+    try {
+      setProgressLoading(true);
+      const progressData = await fetchCampaignProgress(token, campaignId);
+      setProgress(progressData);
+    } catch (err: any) {
+      console.error('Failed to fetch campaign progress:', err);
+      // Don't show error to user, progress is optional
+    } finally {
+      setProgressLoading(false);
+    }
+  };
 
   const fetchCampaignDetails = async () => {
     if (!campaignId || !token) return;
@@ -79,7 +100,7 @@ export default function ViewCampaignModal({
       setLoading(true);
       setError(null);
 
-      const res = await axios.get(`/api/new-campaign/${campaignId}`, {
+      const res = await axios.get(`/api/campaigns/${campaignId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -224,6 +245,63 @@ export default function ViewCampaignModal({
                   )}
                 </div>
               </div>
+
+              {/* Campaign Progress */}
+              {progress && (
+                <div className="border-t border-gray-200 pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BarChart3 className="w-5 h-5 text-gray-500" />
+                    <h4 className="text-sm font-semibold text-gray-700">Campaign Progress</h4>
+                  </div>
+                  <div className="space-y-4">
+                    {/* Progress Stats */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                        <div className="text-xs text-green-600 mb-1">Sent</div>
+                        <div className="text-lg font-semibold text-green-700">
+                          {progress.sent || progress.sentCount || 0}
+                        </div>
+                      </div>
+                      <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                        <div className="text-xs text-yellow-600 mb-1">Pending</div>
+                        <div className="text-lg font-semibold text-yellow-700">
+                          {progress.pending || progress.pendingCount || 0}
+                        </div>
+                      </div>
+                      <div className="bg-red-50 rounded-lg p-3 border border-red-200">
+                        <div className="text-xs text-red-600 mb-1">Failed</div>
+                        <div className="text-lg font-semibold text-red-700">
+                          {progress.failed || progress.failedCount || 0}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Progress Bar */}
+                    {progress.total && (
+                      <div>
+                        <div className="flex justify-between text-xs text-gray-600 mb-1">
+                          <span>Progress</span>
+                          <span>
+                            {Math.round(
+                              (((progress.sent || progress.sentCount || 0) / progress.total) * 100) || 0
+                            )}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div
+                            className="bg-[#ff6600] h-2.5 rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(
+                                (((progress.sent || progress.sentCount || 0) / progress.total) * 100) || 0,
+                                100
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Date Information */}
               <div className="border-t border-gray-200 pt-6">

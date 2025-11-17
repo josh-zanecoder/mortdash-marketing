@@ -90,7 +90,7 @@ export default function CreateCampaignModal({
         ...(scheduledAt && { scheduledAt: new Date(scheduledAt).toISOString() }),
       };
 
-      const res = await axios.post(`/api/new-campaign`, campaignData, {
+      const res = await axios.post(`/api/campaigns`, campaignData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

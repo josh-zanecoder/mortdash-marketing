@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const clientOrigin = request.headers.get('x-client-origin') || request.nextUrl.origin;
 
     const res = await axios.get(
-      `${marketingApiUrl}/api/v1/bank-channels`,
+      `${marketingApiUrl}/api/v1/campaigns/queue/stats`,
       {
         headers: {
           'accept': 'application/json',
