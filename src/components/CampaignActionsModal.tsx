@@ -33,7 +33,11 @@ export default function CampaignActionsModal({
     cancel: false,
   });
 
-  const { prepareCampaign, rePrepareCampaign, startCampaign, cancelCampaign } = useCampaignStore();
+  const { prepareCampaign, rePrepareCampaign, startCampaign, cancelCampaign, campaigns } = useCampaignStore();
+  const campaign = campaigns.find((item) => String(item.id) === String(campaignId));
+  const normalizedStatus = (campaign?.campaignStatus || campaign?.campaign_status || campaign?.status || '').toLowerCase();
+  const isDraft = normalizedStatus === 'draft';
+  const isSending = normalizedStatus === 'sending';
 
   const handleAction = async (action: 'prepare' | 're-prepare' | 'start' | 'cancel') => {
     if (!campaignId || !token) {
@@ -89,84 +93,84 @@ export default function CampaignActionsModal({
         </DialogHeader>
 
         <div className="px-6 py-6 space-y-4">
-          {/* Prepare Action */}
-          <Button
-            onClick={() => handleAction('prepare')}
-            disabled={loading.prepare || loading.rePrepare || loading.start || loading.cancel}
-            className="w-full justify-start gap-3 h-12 text-left bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
-          >
-            {loading.prepare ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Play className="w-5 h-5" />
-            )}
-            <div className="flex-1">
-              <div className="font-semibold">Prepare Campaign</div>
-              <div className="text-xs text-blue-600">Initialize the campaign for sending</div>
-            </div>
-          </Button>
+          {!isDraft && !isSending && (
+            <>
+              {/* Prepare Action */}
+              <Button
+                onClick={() => handleAction('prepare')}
+                disabled={loading.prepare || loading.rePrepare || loading.start || loading.cancel}
+                className="w-full justify-start gap-3 h-12 text-left bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
+              >
+                {loading.prepare ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Play className="w-5 h-5" />
+                )}
+                <div className="flex-1">
+                  <div className="font-semibold">Prepare Campaign</div>
+                  <div className="text-xs text-blue-600">Initialize the campaign for sending</div>
+                </div>
+              </Button>
 
-          {/* Re-prepare Action */}
-          <Button
-            onClick={() => handleAction('re-prepare')}
-            disabled={loading.prepare || loading.rePrepare || loading.start || loading.cancel}
-            className="w-full justify-start gap-3 h-12 text-left bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200"
-          >
-            {loading.rePrepare ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <RotateCcw className="w-5 h-5" />
-            )}
-            <div className="flex-1">
-              <div className="font-semibold">Re-prepare Campaign</div>
-              <div className="text-xs text-purple-600">Refresh campaign preparation</div>
-            </div>
-          </Button>
+            </>
+          )}
+
+          {/* Re-prepare Action (Draft only) */}
+          {isDraft && (
+            <Button
+              onClick={() => handleAction('re-prepare')}
+              disabled={loading.prepare || loading.rePrepare || loading.start || loading.cancel}
+              className="w-full justify-start gap-3 h-12 text-left bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200"
+            >
+              {loading.rePrepare ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <RotateCcw className="w-5 h-5" />
+              )}
+              <div className="flex-1">
+                <div className="font-semibold">Re-prepare Campaign</div>
+                <div className="text-xs text-purple-600">Refresh campaign preparation</div>
+              </div>
+            </Button>
+          )}
 
           {/* Start Action */}
-          <Button
-            onClick={() => handleAction('start')}
-            disabled={loading.prepare || loading.rePrepare || loading.start || loading.cancel}
-            className="w-full justify-start gap-3 h-12 text-left bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
-          >
-            {loading.start ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-            <div className="flex-1">
-              <div className="font-semibold">Start Campaign</div>
-              <div className="text-xs text-green-600">Begin sending emails to recipients</div>
-            </div>
-          </Button>
+          {isDraft && (
+            <Button
+              onClick={() => handleAction('start')}
+              disabled={loading.prepare || loading.rePrepare || loading.start || loading.cancel}
+              className="w-full justify-start gap-3 h-12 text-left bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
+            >
+              {loading.start ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+              <div className="flex-1">
+                <div className="font-semibold">Start Campaign</div>
+                <div className="text-xs text-green-600">Begin sending emails to recipients</div>
+              </div>
+            </Button>
+          )}
 
           {/* Cancel Action */}
-          <Button
-            onClick={() => handleAction('cancel')}
-            disabled={loading.prepare || loading.rePrepare || loading.start || loading.cancel}
-            className="w-full justify-start gap-3 h-12 text-left bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
-          >
-            {loading.cancel ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <X className="w-5 h-5" />
-            )}
-            <div className="flex-1">
-              <div className="font-semibold">Cancel Campaign</div>
-              <div className="text-xs text-red-600">Stop and cancel the campaign</div>
-            </div>
-          </Button>
-        </div>
-
-        <div className="px-6 pb-6">
-          <Button
-            onClick={onClose}
-            variant="outline"
-            className="w-full"
-            disabled={loading.prepare || loading.rePrepare || loading.start || loading.cancel}
-          >
-            Close
-          </Button>
+          {isSending && (
+            <Button
+              onClick={() => handleAction('cancel')}
+              disabled={loading.prepare || loading.rePrepare || loading.start || loading.cancel}
+              className="w-full justify-start gap-3 h-12 text-left bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
+            >
+              {loading.cancel ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <X className="w-5 h-5" />
+              )}
+              <div className="flex-1">
+                <div className="font-semibold">Cancel Campaign</div>
+                <div className="text-xs text-red-600">Stop and cancel the campaign</div>
+              </div>
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

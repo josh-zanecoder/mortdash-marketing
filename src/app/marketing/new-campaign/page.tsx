@@ -10,6 +10,19 @@ import { useCampaignStore } from '@/store/campaignStore';
 import { Plus, Send, Calendar, Copy, ChevronLeft, ChevronRight, Search, Users, Settings, Pause, Play, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const statusBadgeStyles: Record<string, string> = {
+  sending: 'bg-orange-50 text-orange-700 border border-orange-100',
+  scheduled: 'bg-blue-50 text-blue-700 border border-blue-100',
+  prepared: 'bg-indigo-50 text-indigo-700 border border-indigo-100',
+  draft: 'bg-slate-50 text-slate-700 border border-slate-100',
+  completed: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+  sent: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+  canceled: 'bg-rose-50 text-rose-700 border border-rose-100',
+};
+
+const getStatusBadgeClass = (status: string) =>
+  statusBadgeStyles[status.toLowerCase()] || 'bg-slate-50 text-slate-700 border border-slate-100';
+
 function CampaignSendingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -24,6 +37,7 @@ function CampaignSendingPageContent() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | number | null>(null);
   const [previewCampaignId, setPreviewCampaignId] = useState<string | number | null>(null);
   const [recipientsCampaignId, setRecipientsCampaignId] = useState<string | number | null>(null);
+  const [recipientsCampaignStatus, setRecipientsCampaignStatus] = useState<string | null>(null);
   const [actionsCampaignId, setActionsCampaignId] = useState<string | number | null>(null);
   const [duplicatingCampaignId, setDuplicatingCampaignId] = useState<string | number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,6 +45,7 @@ function CampaignSendingPageContent() {
   const [queueStats, setQueueStats] = useState<any>(null);
   const [queueStatsLoading, setQueueStatsLoading] = useState(false);
   const [queueActionLoading, setQueueActionLoading] = useState(false);
+  const [campaignTab, setCampaignTab] = useState<'all' | 'ongoing'>('all');
   const {
     campaigns,
     loading: campaignsLoading,
@@ -223,9 +238,11 @@ function CampaignSendingPageContent() {
         onClose={() => {
           setRecipientsModalOpen(false);
           setRecipientsCampaignId(null);
+          setRecipientsCampaignStatus(null);
         }}
         campaignId={recipientsCampaignId}
         token={token}
+        campaignStatus={recipientsCampaignStatus}
       />
 
       {/* Actions Modal */}
@@ -256,47 +273,71 @@ function CampaignSendingPageContent() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {/* Queue Stats */}
-              {queueStats && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
-                  <BarChart3 className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm text-blue-700 font-medium">
-                    Queue: {queueStats.pending || 0} pending, {queueStats.processing || 0} processing
-                  </span>
-                </div>
+              {campaignTab === 'ongoing' && (
+                <>
+                  {/* Queue Stats */}
+                  {queueStats && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                      <BarChart3 className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm text-blue-700 font-medium">
+                        Queue: {queueStats.pending || 0} pending, {queueStats.processing || 0} processing
+                      </span>
+                    </div>
+                  )}
+                  {/* Queue Controls */}
+                  <button
+                    onClick={handleQueuePause}
+                    disabled={queueActionLoading}
+                    className="cursor-pointer bg-yellow-500 text-white rounded-lg px-4 py-2.5 font-medium hover:bg-yellow-600 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Pause className="w-4 h-4" />
+                    Pause Queue
+                  </button>
+                  <button
+                    onClick={handleQueueResume}
+                    disabled={queueActionLoading}
+                    className="cursor-pointer bg-green-500 text-white rounded-lg px-4 py-2.5 font-medium hover:bg-green-600 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Play className="w-4 h-4" />
+                    Resume Queue
+                  </button>
+                </>
               )}
-              {/* Queue Controls */}
-              <button
-                onClick={handleQueuePause}
-                disabled={queueActionLoading}
-                className="cursor-pointer bg-yellow-500 text-white rounded-lg px-4 py-2.5 font-medium hover:bg-yellow-600 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
-              >
-                <Pause className="w-4 h-4" />
-                Pause Queue
-              </button>
-              <button
-                onClick={handleQueueResume}
-                disabled={queueActionLoading}
-                className="cursor-pointer bg-green-500 text-white rounded-lg px-4 py-2.5 font-medium hover:bg-green-600 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
-              >
-                <Play className="w-4 h-4" />
-                Resume Queue
-              </button>
-              <button
-                onClick={() => setCreateCampaignModalOpen(true)}
-                className="cursor-pointer bg-[#ff6600] text-white rounded-lg px-5 py-2.5 font-medium hover:bg-[#ff7a2f] transition-colors inline-flex items-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Create Campaign
-              </button>
+            <button
+              onClick={() => setCreateCampaignModalOpen(true)}
+              className="cursor-pointer bg-[#ff6600] text-white rounded-lg px-5 py-2.5 font-medium hover:bg-[#ff7a2f] transition-colors inline-flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Create Campaign
+            </button>
             </div>
           </div>
 
           {/* Campaigns Table */}
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200">
-            <div className="p-6 border-b border-slate-200">
+            <div className="p-6 border-b border-slate-200 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
               <h2 className="text-xl font-semibold text-slate-800">All Campaigns</h2>
               <p className="text-sm text-slate-600 mt-1">View and manage all your marketing campaigns</p>
+              </div>
+              <div className="flex items-center justify-start md:justify-end gap-2 bg-slate-100 rounded-full p-1 w-max">
+                {[
+                  { key: 'all', label: 'All Campaigns' },
+                  { key: 'ongoing', label: 'Ongoing Campaigns' },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setCampaignTab(tab.key as 'all' | 'ongoing')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                      campaignTab === tab.key
+                        ? 'bg-white text-[#ff6600] shadow-sm'
+                        : 'text-slate-600 hover:text-[#ff6600]'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="p-6">
               {campaignsLoading ? (
@@ -320,27 +361,33 @@ function CampaignSendingPageContent() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[900px]">
                     <thead>
-                      <tr className="border-b border-slate-200">
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Campaign Name</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Marketing List</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Status</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Recipients</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Created At</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Scheduled</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Actions</th>
+                      <tr className="text-xs text-slate-500 uppercase tracking-wide border-b border-slate-100">
+                        <th className="py-3 px-4 font-semibold text-left">Campaign</th>
+                        <th className="py-3 px-4 font-semibold text-left">Marketing List</th>
+                        <th className="py-3 px-4 font-semibold text-left">Status</th>
+                        <th className="py-3 px-4 font-semibold text-left">Recipients</th>
+                        <th className="py-3 px-4 font-semibold text-left">Created</th>
+                        <th className="py-3 px-4 font-semibold text-left">Schedule</th>
+                        <th className="py-3 px-4 font-semibold text-left">Actions</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {campaigns.map((campaign) => {
+                    <tbody className="text-sm text-slate-700">
+                      {campaigns
+                        .filter((campaign) => {
+                          if (campaignTab === 'all') return true;
+                          const status = (campaign.campaignStatus || campaign.campaign_status || campaign.status || '').toLowerCase();
+                          return status === 'sending';
+                        })
+                        .map((campaign) => {
                         const campaignName = campaign.name || 'Unnamed Campaign';
                         const marketingListName =
                           campaign.marketingList?.listName ||
                           campaign.listName ||
                           campaign.list_name ||
                           'N/A';
-                        const status = campaign.status || campaign.campaignStatus || campaign.campaign_status || 'Pending';
+                        const statusValue = campaign.campaignStatus || campaign.campaign_status || campaign.status || 'Pending';
                         const recipientCount =
                           campaign.marketingList?.count ??
                           campaign.recipientCount ??
@@ -349,67 +396,81 @@ function CampaignSendingPageContent() {
                         const createdAt = campaign.createdAt || campaign.created_at;
                         const isScheduled = campaign.isScheduled || campaign.is_scheduled || false;
                         const scheduledAt = campaign.scheduledAt || campaign.scheduled_at;
+                          const formattedCreated = createdAt ? new Date(createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+                          const formattedScheduled = scheduledAt ? new Date(scheduledAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : null;
 
                         return (
-                          <tr key={campaign.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                            <td className="py-3 px-4 text-sm text-slate-900 font-medium">
+                          <tr key={campaign.id} className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+                            <td className="py-4 px-4 text-slate-900">
                               <button
                                 onClick={() => {
                                   setSelectedCampaignId(campaign.id);
                                   setViewCampaignModalOpen(true);
                                 }}
-                                className="cursor-pointer text-[#ff6600] hover:text-[#ff7a2f] hover:underline font-medium transition-colors text-left"
+                                className="cursor-pointer text-[#ff6600] hover:text-[#ff7a2f] hover:underline font-semibold transition-colors text-left"
                               >
                                 {campaignName}
                               </button>
+                              <p className="text-xs text-slate-500 mt-1">
+                                Campaign #{campaign.id}
+                              </p>
                             </td>
-                            <td className="py-3 px-4 text-sm text-slate-600">{marketingListName}</td>
-                            <td className="py-3 px-4">
-                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                status.toLowerCase() === 'sent' || status.toLowerCase() === 'completed'
-                                  ? 'bg-green-100 text-green-700'
-                                  : status.toLowerCase() === 'scheduled'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-gray-100 text-gray-700'
-                              }`}>
-                                {status}
+                            <td className="py-4 px-4 text-slate-600">
+                              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700">
+                                <Users className="w-3 h-3 text-slate-400" />
+                                {marketingListName}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-sm text-slate-600">
+                            <td className="py-4 px-4">
+                              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold capitalize ${getStatusBadgeClass(statusValue)}`}>
+                                {statusValue}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-slate-600">
                               <button
                                 onClick={() => {
                                   setRecipientsCampaignId(campaign.id);
+                                  setRecipientsCampaignStatus(statusValue);
                                   setRecipientsModalOpen(true);
                                 }}
-                                className="cursor-pointer inline-flex items-center gap-2 text-[#ff6600] hover:text-[#ff7a2f] hover:underline font-medium transition-colors"
+                                className="cursor-pointer inline-flex items-center gap-2 text-[#ff6600] hover:text-[#ff7a2f] font-medium transition-colors"
                               >
-                                <Users className="w-4 h-4" />
-                                {typeof recipientCount === 'number'
-                                  ? recipientCount.toLocaleString()
-                                  : 'N/A'}
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-orange-50 text-orange-700 border border-orange-100">
+                                  <Users className="w-3 h-3" />
+                                  {typeof recipientCount === 'number'
+                                    ? recipientCount.toLocaleString()
+                                    : 'N/A'}
+                                </span>
                               </button>
                             </td>
-                            <td className="py-3 px-4 text-sm text-slate-600">
-                              {createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A'}
-                            </td>
-                            <td className="py-3 px-4 text-sm text-slate-600">
-                              {isScheduled && scheduledAt ? (
-                                <span className="inline-flex items-center gap-1 text-blue-600">
-                                  <Calendar className="w-4 h-4" />
-                                  {new Date(scheduledAt).toLocaleDateString()}
-                                </span>
+                            <td className="py-4 px-4 text-slate-600">
+                              {formattedCreated ? (
+                                <div>
+                                  <p className="font-medium text-slate-800">{formattedCreated}</p>
+    
+                                </div>
                               ) : (
-                                <span className="text-slate-400">Immediate</span>
+                                'N/A'
                               )}
                             </td>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center gap-2">
+                            <td className="py-4 px-4 text-slate-600">
+                              {isScheduled && formattedScheduled ? (
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-xs font-medium">
+                                  <Calendar className="w-3 h-3" />
+                                  {formattedScheduled}
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 text-xs uppercase tracking-wide">Immediate</span>
+                              )}
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <button
                                   onClick={() => {
                                     setActionsCampaignId(campaign.id);
                                     setActionsModalOpen(true);
                                   }}
-                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#ff6600] bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-[#cc5200] bg-orange-50 hover:bg-orange-100 rounded-full transition-colors"
                                 >
                                   <Settings className="w-4 h-4" />
                                   Actions
@@ -419,7 +480,7 @@ function CampaignSendingPageContent() {
                                     setPreviewCampaignId(campaign.id);
                                     setPreviewCampaignModalOpen(true);
                                   }}
-                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full transition-colors"
                                 >
                                   <Search className="w-4 h-4" />
                                   Preview
@@ -427,7 +488,7 @@ function CampaignSendingPageContent() {
                                 <button
                                   onClick={() => handleDuplicateCampaign(campaign.id, campaignName)}
                                   disabled={duplicatingCampaignId === campaign.id}
-                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {duplicatingCampaignId === campaign.id ? (
                                     <>

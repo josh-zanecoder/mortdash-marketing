@@ -11,19 +11,34 @@ interface CampaignRecipientsModalProps {
   onClose: () => void;
   campaignId: string | number | null;
   token: string | null;
+  campaignStatus?: string | null;
 }
+
+const campaignStatusBadgeStyles: Record<string, string> = {
+  sending: 'bg-orange-50 text-orange-700 border border-orange-100',
+  sent: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+  delivered: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+};
+
+const getCampaignStatusBadgeClass = (status: string) =>
+  campaignStatusBadgeStyles[status.toLowerCase()] || 'bg-slate-100 text-slate-700 border border-slate-200';
 
 export default function CampaignRecipientsModal({
   open,
   onClose,
   campaignId,
-  token
+  token,
+  campaignStatus,
 }: CampaignRecipientsModalProps) {
   const [recipients, setRecipients] = useState<CampaignRecipient[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const { fetchRecipients, cancelCampaignRecipient, retryCampaignRecipient } = useCampaignStore();
+  const normalizedStatus = (campaignStatus || '').toLowerCase();
+  const canManageRecipients = normalizedStatus === 'sending' || normalizedStatus === 'sent';
 
   useEffect(() => {
     if (open && campaignId && token) {
@@ -43,6 +58,7 @@ export default function CampaignRecipientsModal({
       setError(null);
       const recipientsData = await fetchRecipients(token, campaignId);
       setRecipients(recipientsData);
+      setCurrentPage(1);
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch campaign recipients';
       setError(errorMessage);
@@ -93,28 +109,36 @@ export default function CampaignRecipientsModal({
   const getTypeBadgeColor = (type: string) => {
     const typeLower = type.toLowerCase();
     if (typeLower === 'prospect') {
-      return 'bg-blue-100 text-blue-700';
+      return 'bg-blue-50 text-blue-700 border border-blue-100';
     } else if (typeLower === 'client') {
-      return 'bg-green-100 text-green-700';
+      return 'bg-emerald-50 text-emerald-700 border border-emerald-100';
     } else if (typeLower === 'personal contact') {
-      return 'bg-purple-100 text-purple-700';
+      return 'bg-purple-50 text-purple-700 border border-purple-100';
     }
-    return 'bg-gray-100 text-gray-700';
+    return 'bg-slate-50 text-slate-600 border border-slate-100';
   };
 
   if (!open) return null;
 
+  const totalPages = Math.max(1, Math.ceil(recipients.length / pageSize));
+  const paginatedRecipients = recipients.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="!max-w-[90vw] w-[90vw] !sm:max-w-[90vw] h-[85vh] p-0 rounded-2xl mx-auto flex flex-col">
-        <DialogHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200">
-          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-            <Users className="w-6 h-6" />
-            Campaign Recipients
-          </DialogTitle>
+      <DialogContent className="!max-w-[95vw] w-[95vw] !sm:max-w-4xl h-[85vh] p-0 rounded-3xl mx-auto flex flex-col bg-gradient-to-b from-slate-50 to-white">
+        <DialogHeader className="flex flex-col gap-3 px-6 pt-6 pb-5 border-b border-gray-200">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-slate-900">
+                <Users className="w-6 h-6 text-[#ff6600]" />
+                Campaign Recipients
+              </DialogTitle>
+              <p className="text-sm text-slate-500">Track delivery statuses and manage recipient-level actions.</p>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden flex flex-col px-6 pb-6">
           {loading ? (
             <div className="flex items-center justify-center py-12 flex-1">
               <div className="w-8 h-8 border-2 border-[#ff6600]/30 border-t-[#ff6600] rounded-full animate-spin" />
@@ -138,75 +162,133 @@ export default function CampaignRecipientsModal({
               <p className="text-sm text-gray-500">This campaign has no recipients yet.</p>
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              <div className="mb-4 text-sm text-gray-600">
-                Total Recipients: <span className="font-semibold text-gray-900">{recipients.length}</span>
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2 text-sm text-gray-600">
+                <div>
+                  Total Recipients: <span className="font-semibold text-gray-900">{recipients.length}</span>
+                </div>
+                {canManageRecipients && (
+                  <div className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1 inline-flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    Actions enabled
+                  </div>
+                )}
               </div>
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+              <div className="flex-1 overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-inner">
+                <table className="w-full min-w-[640px]">
+                  <thead className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
                     <tr>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Name</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Email</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
+                      <th className="text-left py-3 px-4 font-semibold">Recipient</th>
+                      <th className="text-left py-3 px-4 font-semibold">Email</th>
+                      <th className="text-left py-3 px-4 font-semibold">Type</th>
+                      {canManageRecipients && (
+                        <th className="text-left py-3 px-4 font-semibold">Actions</th>
+                      )}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {recipients.map((recipient) => {
+                  <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
+                    {paginatedRecipients.map((recipient) => {
                       const cancelLoading = actionLoading[`cancel-${recipient.id}`];
                       const retryLoading = actionLoading[`retry-${recipient.id}`];
                       
                       return (
                         <tr key={recipient.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="py-3 px-4 text-sm text-gray-900 font-medium">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-gray-400" />
-                              {recipient.firstName} {recipient.lastName}
+                          <td className="py-3 px-4 text-gray-900 font-semibold">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-medium">
+                                {recipient.firstName?.[0]}
+                                {recipient.lastName?.[0]}
+                              </div>
+                              <div>
+                                <p>{recipient.firstName} {recipient.lastName}</p>
+                                <p className="text-xs text-gray-500">ID: {recipient.id}</p>
+                              </div>
                             </div>
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-4 h-4 text-gray-400" />
-                              {recipient.email}
+                          <td className="py-3 px-4 text-gray-600">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-200">
+                              <Mail className="w-4 h-4 text-slate-400" />
+                              <span className="text-sm">{recipient.email}</span>
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                onClick={() => handleCancelRecipient(recipient.id)}
-                                disabled={cancelLoading || retryLoading}
-                                variant="outline"
-                                size="sm"
-                                className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-                              >
-                                {cancelLoading ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <X className="w-3 h-3" />
-                                )}
-                                Cancel
-                              </Button>
-                              <Button
-                                onClick={() => handleRetryRecipient(recipient.id)}
-                                disabled={cancelLoading || retryLoading}
-                                variant="outline"
-                                size="sm"
-                                className="h-8 px-3 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
-                              >
-                                {retryLoading ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <RotateCcw className="w-3 h-3" />
-                                )}
-                                Retry
-                              </Button>
-                            </div>
+                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+                              getTypeBadgeColor(recipient.type)
+                            }`}>
+                              <User className="w-3 h-3" />
+                              {recipient.type}
+                            </span>
                           </td>
+                          {canManageRecipients && (
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  onClick={() => handleCancelRecipient(recipient.id)}
+                                  disabled={cancelLoading || retryLoading}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                                >
+                                  {cancelLoading ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <X className="w-3 h-3" />
+                                  )}
+                                  Cancel
+                                </Button>
+                                <Button
+                                  onClick={() => handleRetryRecipient(recipient.id)}
+                                  disabled={cancelLoading || retryLoading}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-3 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                                >
+                                  {retryLoading ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <RotateCcw className="w-3 h-3" />
+                                  )}
+                                  Retry
+                                </Button>
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
+                {recipients.length > pageSize && (
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-t border-gray-100 text-sm">
+                    <span className="text-gray-500">
+                      Showing {(currentPage - 1) * pageSize + 1}-
+                      {Math.min(currentPage * pageSize, recipients.length)} of {recipients.length}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      >
+                        Prev
+                      </Button>
+                      <span className="text-gray-600 font-medium">
+                        Page {currentPage} / {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -6,6 +6,8 @@ import {
   CampaignRecipient,
 } from '@/types/campaignType';
 
+export type { CampaignRecipient };
+
 interface CampaignStore {
   campaigns: MarketingCampaign[];
   loading: boolean;
