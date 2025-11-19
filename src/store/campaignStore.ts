@@ -39,6 +39,7 @@ interface CampaignStore {
   setEmailTemplates: (templates: EmailTemplate[]) => void;
   setEmailTemplatesLoading: (loading: boolean) => void;
   setRecipientCount: (campaignId: string | number, count: number) => void;
+  saveCampaignTemplate: (token: string, campaignId: string | number, html: string) => Promise<any>;
 }
 
 export const useCampaignStore = create<CampaignStore>((set, get) => ({
@@ -573,6 +574,32 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     } catch (error: any) {
       console.error('Failed to fetch queue stats:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch queue stats';
+      throw new Error(errorMessage);
+    }
+  },
+  saveCampaignTemplate: async (token: string, campaignId: string | number, html: string) => {
+    try {
+      const axios = (await import('axios')).default;
+      const res = await axios.patch(
+        `/api/campaigns/${campaignId}`,
+        { html },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'x-client-origin': typeof window !== 'undefined' ? window.location.origin : '',
+          },
+        }
+      );
+
+      if (res.data?.success || res.status === 200 || res.status === 204) {
+        return res.data;
+      } else {
+        throw new Error(res.data?.message || 'Failed to save campaign template');
+      }
+    } catch (error: any) {
+      console.error('Failed to save campaign template:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to save campaign template';
       throw new Error(errorMessage);
     }
   },

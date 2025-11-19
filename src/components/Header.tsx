@@ -90,8 +90,8 @@ export default function Header() {
           <Link href="/marketing/tracking" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
             pathname.startsWith('/marketing/tracking') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
           }`}>Tracking</Link>
-          <Link href="/email-builder" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
-            pathname === '/email-builder' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
+          <Link href="/marketing/email-editor" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
+            pathname.startsWith('/marketing/email-editor') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
           }`}>Email Builder</Link>
           <Link href="/marketing/email-template" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
             pathname === '/marketing/email-template' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
@@ -125,8 +125,8 @@ export default function Header() {
             <Link href="/marketing/tracking" className={`py-2 text-lg font-semibold w-full text-center transition-colors ${
               pathname.startsWith('/marketing/tracking') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
             }`} onClick={() => setMobileOpen(false)}>Tracking</Link>
-            <Link href="/email-builder" className={`py-2 text-lg font-semibold w-full text-center transition-colors ${
-              pathname === '/email-builder' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
+            <Link href="/marketing/email-editor" className={`py-2 text-lg font-semibold w-full text-center transition-colors ${
+              pathname.startsWith('/marketing/email-editor') ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
             }`} onClick={() => setMobileOpen(false)}>Email Builder</Link>
             <Link href="/marketing/email-template" className={`py-2 text-lg font-semibold w-full text-center transition-colors ${
               pathname === '/marketing/email-template' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'

@@ -6,6 +6,7 @@ import ViewCampaignModal from '@/components/ViewCampaignModal';
 import CampaignPreviewModal from '@/components/CampaignPreviewModal';
 import CampaignRecipientsModal from '@/components/CampaignRecipientsModal';
 import CampaignActionsModal from '@/components/CampaignActionsModal';
+import CampaignBuilderModal from '@/components/CampaignBuilderModal';
 import { useCampaignStore } from '@/store/campaignStore';
 import { Plus, Send, Calendar, Copy, ChevronLeft, ChevronRight, Search, Users, Settings, Pause, Play, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,11 +35,13 @@ function CampaignSendingPageContent() {
   const [previewCampaignModalOpen, setPreviewCampaignModalOpen] = useState(false);
   const [recipientsModalOpen, setRecipientsModalOpen] = useState(false);
   const [actionsModalOpen, setActionsModalOpen] = useState(false);
+  const [builderModalOpen, setBuilderModalOpen] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | number | null>(null);
   const [previewCampaignId, setPreviewCampaignId] = useState<string | number | null>(null);
   const [recipientsCampaignId, setRecipientsCampaignId] = useState<string | number | null>(null);
   const [recipientsCampaignStatus, setRecipientsCampaignStatus] = useState<string | null>(null);
   const [actionsCampaignId, setActionsCampaignId] = useState<string | number | null>(null);
+  const [builderCampaignId, setBuilderCampaignId] = useState<string | number | null>(null);
   const [duplicatingCampaignId, setDuplicatingCampaignId] = useState<string | number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
@@ -259,6 +262,16 @@ function CampaignSendingPageContent() {
             fetchCampaigns(token, currentPage, limit);
           }
         }}
+      />
+
+      {/* Builder Modal */}
+      <CampaignBuilderModal
+        open={builderModalOpen}
+        onClose={() => {
+          setBuilderModalOpen(false);
+          setBuilderCampaignId(null);
+        }}
+        campaignId={builderCampaignId}
       />
 
       {/* Main Content */}

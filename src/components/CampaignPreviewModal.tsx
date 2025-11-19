@@ -1,10 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { XCircle, FileText, Mail, User, Eye, EyeOff } from 'lucide-react';
+import { XCircle, FileText, Mail, User, Eye, EyeOff, LayoutTemplate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useCampaignStore } from '@/store/campaignStore';
+import { toast } from 'sonner';
 
 // Fix for scrollbar causing layout shift when modal opens
 const preventScrollbarShift = () => {
@@ -46,10 +48,12 @@ export default function CampaignPreviewModal({
   campaignId,
   token
 }: CampaignPreviewModalProps) {
+  const router = useRouter();
   const [preview, setPreview] = useState<CampaignPreview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
+  const [openingBuilder, setOpeningBuilder] = useState(false);
   const { fetchPreview } = useCampaignStore();
 
   useEffect(() => {
@@ -86,6 +90,44 @@ export default function CampaignPreviewModal({
       console.error('Failed to fetch campaign preview:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditInBuilder = async () => {
+    if (!campaignId || !token) {
+      toast.error('Missing required information');
+      return;
+    }
+
+    try {
+      setOpeningBuilder(true);
+      const htmlContent = preview?.html;
+
+      if (!htmlContent) {
+        toast.error('No HTML content found for this campaign');
+        return;
+      }
+
+      const storageKey = `grapesjs-builder-html-${campaignId}-${Date.now()}`;
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem(storageKey, htmlContent);
+        window.sessionStorage.setItem(`${storageKey}-campaignId`, String(campaignId));
+      }
+
+      const params = new URLSearchParams();
+      if (token) params.set('token', token);
+      params.set('builderId', storageKey);
+      params.set('campaignId', String(campaignId));
+
+      // Close the preview modal
+      onClose();
+      
+      // Navigate to builder
+      router.push(`/marketing/email-editor?${params.toString()}`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to open builder');
+    } finally {
+      setOpeningBuilder(false);
     }
   };
 
@@ -179,13 +221,21 @@ export default function CampaignPreviewModal({
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/50">
                   <Label className="text-xl font-medium">Email Preview</Label>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPreview(!showPreview)}
-                    className="h-10 px-4"
+                    onClick={handleEditInBuilder}
+                    disabled={openingBuilder}
+                    className="h-10 px-4 bg-[#ff6600] text-white hover:bg-[#ff7a2f] cursor-pointer"
                   >
-                    {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    {showPreview ? 'Hide' : 'Show'} Preview
+                    {openingBuilder ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        Opening...
+                      </>
+                    ) : (
+                      <>
+                        <LayoutTemplate className="w-4 h-4 mr-2" />
+                        Edit in Builder
+                      </>
+                    )}
                   </Button>
                 </div>
 
