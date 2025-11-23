@@ -41,6 +41,13 @@ interface CampaignStore {
   setRecipientCount: (campaignId: string | number, count: number) => void;
   saveCampaignTemplate: (token: string, campaignId: string | number, html: string) => Promise<any>;
   deleteCampaign: (token: string, campaignId: string | number) => Promise<any>;
+  updateCampaignDetails: (token: string, campaignId: string | number, data: {
+    name?: string;
+    marketingListId?: number;
+    emailTemplateId?: string;
+    isScheduled?: boolean;
+    scheduledAt?: string;
+  }) => Promise<any>;
 }
 
 export const useCampaignStore = create<CampaignStore>((set, get) => ({
@@ -626,6 +633,54 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     } catch (error: any) {
       console.error('Failed to delete campaign:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to delete campaign';
+      throw new Error(errorMessage);
+    }
+  },
+  updateCampaignDetails: async (
+    token: string,
+    campaignId: string | number,
+    data: {
+      name?: string;
+      marketingListId?: number;
+      emailTemplateId?: string;
+      isScheduled?: boolean;
+      scheduledAt?: string;
+    }
+  ) => {
+    try {
+      const axios = (await import('axios')).default;
+      
+      // Build the payload with only the provided fields
+      const payload: any = {};
+      if (data.name !== undefined) payload.name = data.name;
+      if (data.marketingListId !== undefined) payload.marketingListId = data.marketingListId;
+      if (data.emailTemplateId !== undefined) payload.emailTemplateId = data.emailTemplateId;
+      if (data.isScheduled !== undefined) payload.isScheduled = data.isScheduled;
+      if (data.scheduledAt !== undefined) payload.scheduledAt = data.scheduledAt;
+
+      const res = await axios.put(
+        `/api/campaigns/${campaignId}`,
+        payload,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'x-client-origin': typeof window !== 'undefined' ? window.location.origin : '',
+          },
+          validateStatus: () => true,
+        }
+      );
+
+      if (res.data?.success || res.status === 200 || res.status === 204) {
+        // Update the campaign in the store
+        get().updateCampaign(campaignId, payload);
+        return res.data;
+      } else {
+        throw new Error(res.data?.message || 'Failed to update campaign');
+      }
+    } catch (error: any) {
+      console.error('Failed to update campaign details:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to update campaign details';
       throw new Error(errorMessage);
     }
   },

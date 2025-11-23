@@ -123,7 +123,7 @@ export default function CampaignPreviewModal({
       onClose();
       
       // Navigate to builder
-      router.push(`/marketing/email-editor?${params.toString()}`);
+      router.push(`/marketing/email-builder?${params.toString()}`);
     } catch (error: any) {
       toast.error(error.message || 'Failed to open builder');
     } finally {

@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Save, Loader2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCampaignStore } from '@/store/campaignStore';
+import { useEmailBuilderStore } from '@/store/useEmailBuilder';
+import { useEmailTemplateStore } from '@/store/useEmailTemplateStore';
+import SaveEmailTemplateModal from '@/components/SaveEmailTemplateModal';
+import { Loader2, CheckCircle2 } from 'lucide-react';
+import { Toaster } from '@/components/ui/sonner';
 
 function GrapesJSPageContent() {
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
@@ -13,14 +16,16 @@ function GrapesJSPageContent() {
   const [isMounted, setIsMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const searchParams = useSearchParams();
-  const router = useRouter();
   const htmlFromUrl = searchParams.get('html');
   const builderId = searchParams.get('builderId');
   const campaignId = searchParams.get('campaignId');
+  const templateId = searchParams.get('templateId');
   const token = searchParams.get('token');
   const [initialHtml, setInitialHtml] = useState<string | null>(null);
   const [htmlReady, setHtmlReady] = useState(false);
   const { saveCampaignTemplate } = useCampaignStore();
+  const { saveTemplateHtml } = useEmailTemplateStore();
+  const { openSaveModal } = useEmailBuilderStore();
 
   useEffect(() => {
     setIsMounted(true);
@@ -101,12 +106,22 @@ function GrapesJSPageContent() {
         ],
       });
 
-      // Add save to campaign command
+      // Add save to campaign command (if campaignId exists)
       if (campaignId && token) {
-        editor.Commands.add('save-template', {
+        editor.Commands.add('save-to-campaign', {
           run: async () => {
+            const panels = editor.Panels;
+            const saveButton = panels.getButton('options', 'save-to-campaign');
+            const originalLabel = saveButton?.get('label') || '';
+            
             try {
               setIsSaving(true);
+              
+              // Update button to show loading state
+              if (saveButton) {
+                saveButton.set('label', '<svg style="display: block; max-width: 22px" viewBox="0 0 24 24"><path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"><animateTransform attributeName="transform" type="rotate" dur="1s" repeatCount="indefinite" from="0 12 12" to="360 12 12"/></path></svg>');
+                saveButton.set('attributes', { title: 'Saving...', disabled: true });
+              }
               
               // Get HTML from GrapesJS editor
               const html = editor.getHtml();
@@ -118,8 +133,25 @@ function GrapesJSPageContent() {
               // Save to campaign
               await saveCampaignTemplate(token, campaignId, fullHtml);
               
-              toast.success('Template saved successfully!');
+              // Update button to show success state briefly
+              if (saveButton) {
+                saveButton.set('label', '<svg style="display: block; max-width: 22px" viewBox="0 0 24 24"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg>');
+                setTimeout(() => {
+                  saveButton.set('label', originalLabel);
+                  saveButton.set('attributes', { title: 'Save to Campaign', disabled: false });
+                }, 2000);
+              }
+              
+              toast.success('Template saved to campaign successfully!', {
+                icon: <CheckCircle2 className="text-green-600" />,
+                duration: 3000,
+              });
             } catch (error: any) {
+              // Restore button
+              if (saveButton) {
+                saveButton.set('label', originalLabel);
+                saveButton.set('attributes', { title: 'Save to Campaign', disabled: false });
+              }
               toast.error(error.message || 'Failed to save template');
             } finally {
               setIsSaving(false);
@@ -127,6 +159,84 @@ function GrapesJSPageContent() {
           }
         });
       }
+
+      // Add save to email template command (if templateId exists)
+      if (templateId && token) {
+        editor.Commands.add('save-to-template', {
+          run: async () => {
+            const panels = editor.Panels;
+            const saveButton = panels.getButton('options', 'save-to-template');
+            const originalLabel = saveButton?.get('label') || '';
+            
+            try {
+              setIsSaving(true);
+              
+              // Update button to show loading state
+              if (saveButton) {
+                saveButton.set('label', '<svg style="display: block; max-width: 22px" viewBox="0 0 24 24"><path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"><animateTransform attributeName="transform" type="rotate" dur="1s" repeatCount="indefinite" from="0 12 12" to="360 12 12"/></path></svg>');
+                saveButton.set('attributes', { title: 'Saving...', disabled: true });
+              }
+              
+              // Get HTML from GrapesJS editor
+              const html = editor.getHtml();
+              const css = editor.getCss();
+              
+              // Combine HTML and CSS into final template
+              const fullHtml = `<style>${css}</style>${html}`;
+              
+              // Replace the HTML template file and regenerate thumbnail - preserves all other template fields (name, subject, etc.)
+              await saveTemplateHtml(token, templateId, fullHtml);
+              
+              // Update button to show success state briefly
+              if (saveButton) {
+                saveButton.set('label', '<svg style="display: block; max-width: 22px" viewBox="0 0 24 24"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg>');
+                setTimeout(() => {
+                  saveButton.set('label', originalLabel);
+                  saveButton.set('attributes', { title: 'Save to Template', disabled: false });
+                }, 2000);
+              }
+              
+              toast.success('Template HTML file and thumbnail updated successfully!', {
+                icon: <CheckCircle2 className="text-green-600" />,
+                duration: 3000,
+              });
+            } catch (error: any) {
+              // Restore button
+              if (saveButton) {
+                saveButton.set('label', originalLabel);
+                saveButton.set('attributes', { title: 'Save to Template', disabled: false });
+              }
+              toast.error(error.message || 'Failed to replace template file');
+            } finally {
+              setIsSaving(false);
+            }
+          }
+        });
+      }
+
+      // Add save as email template command (always available)
+      editor.Commands.add('save-as-template', {
+        run: () => {
+          try {
+            // Get HTML from GrapesJS editor
+            const html = editor.getHtml();
+            const css = editor.getCss();
+            
+            // Combine HTML and CSS
+            const fullHtml = `<style>${css}</style>${html}`;
+            
+            // Open save modal with HTML content
+            if (token) {
+              openSaveModal(fullHtml, token);
+            } else {
+              toast.error('Authentication token missing');
+            }
+          } catch (error: any) {
+            toast.error('Failed to prepare template for saving');
+            console.error('Error preparing template:', error);
+          }
+        }
+      });
 
       // Add save to device command (always available)
       editor.Commands.add('save-to-device', {
@@ -161,7 +271,10 @@ ${html}
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
             
-            toast.success('Template downloaded successfully!');
+            toast.success('Template downloaded successfully!', {
+              icon: <CheckCircle2 className="text-green-600" />,
+              duration: 3000,
+            });
           } catch (error: any) {
             toast.error('Failed to download template');
             console.error('Download error:', error);
@@ -172,28 +285,51 @@ ${html}
       // After editor is ready, either import HTML or add default content
       editor.onReady(() => {
         const panels = editor.Panels;
-        const optionsPanel = panels.getPanel('options');
         
-        if (optionsPanel) {
-          // Add save to device button (always available)
-          panels.addButton('options', {
-            id: 'save-to-device',
-            label: '<svg style="display: block; max-width: 22px" viewBox="0 0 24 24"><path fill="currentColor" d="M5,20H19V18H5M19,11H15V17H9V11H5L12,4L19,11Z" /></svg>',
-
-            command: 'save-to-device',
-            attributes: { title: 'Save to Device' },
+        // Ensure the options panel exists, create it if it doesn't
+        let optionsPanel = panels.getPanel('options');
+        if (!optionsPanel) {
+          optionsPanel = panels.addPanel({
+            id: 'options',
+            visible: true,
           });
-
-          // Add save to campaign button (only if campaignId exists)
-          if (campaignId && token) {
-            panels.addButton('options', {
-              id: 'save-template',
-              label: '<svg style="display: block; max-width: 22px" viewBox="0 0 24 24"><path fill="currentColor" d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" /></svg>',
-              command: 'save-template',
-              attributes: { title: 'Save to Campaign' },
-            });
-          }
         }
+        
+        // Add save to device button (always available)
+        panels.addButton('options', {
+          id: 'save-to-device',
+          label: '<svg style="display: block; max-width: 22px" viewBox="0 0 24 24"><path fill="currentColor" d="M5,20H19V18H5M19,11H15V17H9V11H5L12,4L19,11Z" /></svg>',
+          command: 'save-to-device',
+          attributes: { title: 'Save to Device' },
+        });
+
+        // Add save to campaign button (only if campaignId exists)
+        if (campaignId && token) {
+          panels.addButton('options', {
+            id: 'save-to-campaign',
+            label: '<svg style="display: block; max-width: 22px" viewBox="0 0 24 24"><path fill="currentColor" d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" /></svg>',
+            command: 'save-to-campaign',
+            attributes: { title: 'Save to Campaign' },
+          });
+        }
+
+        // Add save to email template button (only if templateId exists)
+        if (templateId && token) {
+          panels.addButton('options', {
+            id: 'save-to-template',
+            label: '<svg style="display: block; max-width: 22px" viewBox="0 0 24 24"><path fill="currentColor" d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" /></svg>',
+            command: 'save-to-template',
+            attributes: { title: 'Save to Template' },
+          });
+        }
+
+        // Add save as email template button (always available)
+        panels.addButton('options', {
+          id: 'save-as-template',
+          label: '<svg style="display: block; max-width: 22px" viewBox="0 0 24 24"><path fill="currentColor" d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" /></svg>',
+          command: 'save-as-template',
+          attributes: { title: 'Save as Email Template' },
+        });
         if (initialHtml) {
           try {
             // Clear canvas first
@@ -558,12 +694,22 @@ ${html}
         editorRef.current = null;
       }
     };
-  }, [isMounted, htmlReady, initialHtml]);
+  }, [isMounted, htmlReady, initialHtml, campaignId, templateId, token, saveCampaignTemplate, saveTemplateHtml, openSaveModal]);
 
   if (!isMounted) {
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="w-8 h-8 border-2 border-[#ff6600]/30 border-t-[#ff6600] rounded-full animate-spin" />
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+        <Loader2 className="w-8 h-8 text-[#ff6600] animate-spin" />
+        <p className="text-gray-600 text-sm">Loading email builder...</p>
+      </div>
+    );
+  }
+
+  if (!htmlReady) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+        <Loader2 className="w-8 h-8 text-[#ff6600] animate-spin" />
+        <p className="text-gray-600 text-sm">Loading template content...</p>
       </div>
     );
   }
@@ -599,20 +745,45 @@ ${html}
   };
 
   return (
-    <div style={{ height: '100vh', margin: 0, overflow: 'hidden' }}>
-      <div
-        ref={editorContainerRef}
-        style={{ height: '100vh', overflow: 'hidden' }}
-      />
-    </div>
+    <>
+      <Toaster />
+      <div style={{ height: '100vh', margin: 0, overflow: 'hidden', position: 'relative' }}>
+        {/* Loading overlay */}
+        {isSaving && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            gap: '16px'
+          }}>
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
+            <p className="text-white font-medium">Saving template...</p>
+          </div>
+        )}
+        <div
+          ref={editorContainerRef}
+          style={{ height: '100vh', overflow: 'hidden' }}
+        />
+      </div>
+      <SaveEmailTemplateModal />
+    </>
   );
 }
 
 export default function GrapesJSPage() {
   return (
     <Suspense fallback={
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="w-8 h-8 border-2 border-[#ff6600]/30 border-t-[#ff6600] rounded-full animate-spin" />
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+        <Loader2 className="w-8 h-8 text-[#ff6600] animate-spin" />
+        <p className="text-gray-600 text-sm">Loading email builder...</p>
       </div>
     }>
       <GrapesJSPageContent />

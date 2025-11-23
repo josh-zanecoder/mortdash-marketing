@@ -1,551 +1,473 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useEmailTemplateStore } from '@/store/useEmailTemplateStore';
+import UploadEmailTemplateModal from '@/components/UploadEmailTemplateModal';
+import EditEmailTemplateModal from '@/components/EditEmailTemplateModal';
+import DeleteEmailTemplateDialog from '@/components/DeleteEmailTemplateDialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { Plus, FileText, Trash2, Search, Loader2, ChevronLeft, ChevronRight, Pencil, LayoutTemplate } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner';
-import { Upload, FileText, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
-interface AudienceType {
-  id: number;
-  name: string;
-  created_at: string | null;
-  updated_at: string | null;
-  value?: string; // Optional, will be derived from name
+interface EmailTemplate {
+  id: string | number;
+  name?: string | null;
+  subject?: string | null;
+  thumbnail?: string | null;
+  path?: string | null;
+  type?: string | null;
+  isVisible?: boolean | null;
+  isArchived?: boolean | null;
+  audienceTypeId?: string | number | null;
+  emailTemplateCategoryId?: string | number | null;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
 }
 
-interface EmailCategory {
-  id: number;
-  slug: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface EmailTemplateField {
-  parameter: string;
-  type: string;
-  db_name: string;
-  is_required: boolean;
-}
-
-const BASE_FIELD_TYPES = [
-  { value: 'audience', label: 'Audience' },
-  { value: 'account-executive-avatar', label: 'Account Executive Avatar' },
-  { value: 'account-executive-phone', label: 'Account Executive Phone' },
-  { value: 'account-executive', label: 'Account Executive' },
-  { value: 'bank', label: 'Bank' },
-  { value: 'date', label: 'Date' },
-  { value: 'register-link', label: 'Register Link' },
-];
-
-export default function EmailTemplatePage() {
+function EmailTemplatePageContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const { 
-    templateName, 
-    setTemplateName,
-    subject, 
-    setSubject,
-    selectedTemplateTypes,
-    setSelectedTemplateTypes,
-    selectedCategoryId,
-    setSelectedCategoryId,
-    uploadTemplate,
-    isUploading,
-    resetForm
-  } = useEmailTemplateStore();
+  const token = searchParams.get('token');
+  
+  const { templates, templatesLoading, pagination, fetchPaginatedTemplates, deleteTemplate } = useEmailTemplateStore();
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editTemplateId, setEditTemplateId] = useState<string | number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | number | null>(null);
+  const [deletingTemplateName, setDeletingTemplateName] = useState<string>('');
+  const [deleting, setDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit] = useState(10);
 
-  const [file, setFile] = useState<File | null>(null);
-  const [htmlContent, setHtmlContent] = useState<string>('');
-  const [fields, setFields] = useState<EmailTemplateField[]>([]);
-  const [showPreview, setShowPreview] = useState(true);
-  const [audienceTypes, setAudienceTypes] = useState<AudienceType[]>([]);
-  const [audienceTypesLoading, setAudienceTypesLoading] = useState(false);
-  const [categories, setCategories] = useState<EmailCategory[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(false);
-
-  // Only include member field type when 'client' or 'prospect' template type is selected
-  const displayedFieldTypes = useMemo(() => {
-    const hasClientOrProspect = selectedTemplateTypes.includes('client') || selectedTemplateTypes.includes('prospect');
-    return hasClientOrProspect
-      ? [...BASE_FIELD_TYPES, { value: 'related', label: 'Member' }]
-      : BASE_FIELD_TYPES;
-  }, [selectedTemplateTypes]);
-
-  // Helper function to create a normalized value from name
-  const createValueFromName = (name: string): string => {
-    return name.toLowerCase().replace(/\s+/g, '_');
-  };
-
-  // Fetch audience types and categories when component mounts
   useEffect(() => {
-    fetchAudienceTypes();
-    fetchCategories();
-  }, []);
+    if (token) {
+      fetchPaginatedTemplates(token, currentPage, limit);
+    }
+  }, [token, currentPage, limit, fetchPaginatedTemplates]);
 
+  // Filter templates client-side if search query is provided
+  const filteredTemplates = templates.filter((template) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      template.name?.toLowerCase().includes(query) ||
+      template.subject?.toLowerCase().includes(query) ||
+      template.type?.toLowerCase().includes(query)
+    );
+  });
 
-  const fetchAudienceTypes = async () => {
-    setAudienceTypesLoading(true);
+  // If search query is provided, show filtered results; otherwise show paginated results
+  const displayTemplates = searchQuery.trim() ? filteredTemplates : templates;
+
+  const handleUploadSuccess = () => {
+    if (token) {
+      fetchPaginatedTemplates(token, currentPage, limit);
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    // Scroll to top when page changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleEdit = (template: EmailTemplate) => {
+    setEditTemplateId(template.id);
+    setEditModalOpen(true);
+  };
+
+  const handleEditInBuilder = async (template: EmailTemplate) => {
+    if (!token || !template.id || !template.path) {
+      toast.error('Missing required information to open builder');
+      return;
+    }
+
     try {
-      const response = await fetch('/api/audience_types');
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch audience types: ${response.status}`);
+      // Fetch HTML content from template (with cache-busting to ensure fresh content)
+      const htmlResponse = await fetch(`/api/email-builder/${template.id}/html?t=${Date.now()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'x-client-origin': typeof window !== 'undefined' ? window.location.origin : '',
+          'Cache-Control': 'no-cache',
+        },
+        cache: 'no-store', // Don't cache the request
+      });
+
+      if (!htmlResponse.ok) {
+        throw new Error('Failed to fetch template HTML');
       }
-      
-      const data = await response.json();
-      
-      if (data.success && Array.isArray(data.data)) {
-        // Add value field to each audience type based on name
-        const audienceTypesWithValues = data.data.map((at: AudienceType) => ({
-          ...at,
-          value: createValueFromName(at.name)
-        }));
-        setAudienceTypes(audienceTypesWithValues);
-        // Set the first audience type as default
-        if (audienceTypesWithValues.length > 0) {
-          setSelectedTemplateTypes([audienceTypesWithValues[0].value || '']);
-        }
-      } else if (Array.isArray(data)) {
-        // Add value field to each audience type based on name
-        const audienceTypesWithValues = data.map((at: AudienceType) => ({
-          ...at,
-          value: createValueFromName(at.name)
-        }));
-        setAudienceTypes(audienceTypesWithValues);
-        if (audienceTypesWithValues.length > 0) {
-          setSelectedTemplateTypes([audienceTypesWithValues[0].value || '']);
-        }
-      } else if (data.data && Array.isArray(data.data)) {
-        // Add value field to each audience type based on name
-        const audienceTypesWithValues = data.data.map((at: AudienceType) => ({
-          ...at,
-          value: createValueFromName(at.name)
-        }));
-        setAudienceTypes(audienceTypesWithValues);
-        if (audienceTypesWithValues.length > 0) {
-          setSelectedTemplateTypes([audienceTypesWithValues[0].value || '']);
-        }
-      } else {
-        setAudienceTypes([]);
-        setSelectedTemplateTypes([]);
+
+      const htmlContent = await htmlResponse.text();
+
+      // Store HTML in sessionStorage
+      const storageKey = `grapesjs-builder-html-${template.id}-${Date.now()}`;
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem(storageKey, htmlContent);
       }
-    } catch (error) {
-      console.error('Error fetching audience types:', error);
-      setAudienceTypes([]);
-      setSelectedTemplateTypes([]);
+
+      // Navigate to builder with HTML and template ID
+      const params = new URLSearchParams();
+      if (token) params.set('token', token);
+      params.set('builderId', storageKey);
+      params.set('templateId', String(template.id));
+      
+      router.push(`/marketing/email-builder?${params.toString()}`);
+    } catch (error: any) {
+      console.error('Failed to open builder:', error);
+      toast.error(error.message || 'Failed to open template in builder');
+    }
+  };
+
+  const handleDeleteClick = (template: EmailTemplate) => {
+    setDeletingTemplateId(template.id);
+    setDeletingTemplateName(template.name || 'Unnamed Template');
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!token || !deletingTemplateId) {
+      toast.error('Missing required information');
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      await deleteTemplate(token, deletingTemplateId);
+      toast.success('Email template deleted successfully!');
+      setDeleteDialogOpen(false);
+      setDeletingTemplateId(null);
+      setDeletingTemplateName('');
+      
+      // Refresh templates list
+      if (token) {
+        fetchPaginatedTemplates(token, currentPage, limit);
+      }
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      toast.error(error.message || 'Failed to delete email template');
     } finally {
-      setAudienceTypesLoading(false);
+      setDeleting(false);
     }
   };
 
-  const fetchCategories = async () => {
-    setCategoriesLoading(true);
-    try {
-      const response = await fetch('/api/campaign/get-email-categories');
-      if (!response.ok) throw new Error('Failed to fetch categories');
-      const data = await response.json();
-      if (data.success && Array.isArray(data.data)) {
-        setCategories(data.data);
-        const defaultCategoryId = data.data[0]?.id ?? null;
-        setSelectedCategoryId(defaultCategoryId);
-      } else {
-        setCategories([]);
-        setSelectedCategoryId(null);
-      }
-    } catch (e) {
-      setCategories([]);
-      setSelectedCategoryId(null);
-    } finally {
-      setCategoriesLoading(false);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      if (selectedFile.type === 'text/html' || selectedFile.name.endsWith('.html')) {
-        // Set file first
-        setFile(selectedFile);
-        
-        // Read file content asynchronously
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          try {
-            const content = event.target?.result as string;
-            if (content) {
-              setHtmlContent(content);
-            }
-          } catch (error) {
-            console.error('Error reading file:', error);
-            toast.error('Error reading HTML file', {
-              icon: <XCircle className="text-red-600" />,
-            });
-          }
-        };
-        
-        reader.onerror = () => {
-          console.error('FileReader error');
-          toast.error('Error reading HTML file', {
-            icon: <XCircle className="text-red-600" />,
-          });
-        };
-        
-        reader.readAsText(selectedFile);
-      } else {
-        toast.error('Please select an HTML file', {
-          icon: <XCircle className="text-red-600" />,
-        });
-      }
-    }
-  };
-
-  const handleSave = async () => {
-    if (!templateName.trim()) {
-      toast.error('Please enter a template name', {
-        icon: <XCircle className="text-red-600" />,
-      });
-      return;
-    }
-    if (!subject.trim()) {
-      toast.error('Please enter a subject', {
-        icon: <XCircle className="text-red-600" />,
-      });
-      return;
-    }
-    if (selectedTemplateTypes.length === 0) {
-      toast.error('Please select at least one template type', {
-        icon: <XCircle className="text-red-600" />,
-      });
-      return;
-    }
-    if (!selectedCategoryId) {
-      toast.error('Please select a category', {
-        icon: <XCircle className="text-red-600" />,
-      });
-      return;
-    }
-    if (!htmlContent) {
-      toast.error('Please upload an HTML file', {
-        icon: <XCircle className="text-red-600" />,
-      });
-      return;
-    }
-
-    try {
-      // Filter out empty fields
-      const validFields = fields.filter(field => 
-        field.parameter.trim() && field.type.trim() && field.db_name.trim()
-      );
-
-      await uploadTemplate({
-        name: templateName.trim(),
-        file: htmlContent,
-        templateTypes: selectedTemplateTypes,
-        subject: subject.trim(),
-        html: htmlContent,
-        email_template_category_id: selectedCategoryId,
-        fields: validFields,
-      });
-      
-      toast.success('Email template uploaded successfully!', {
-        icon: <CheckCircle2 className="text-green-600" />,
-      });
-      
-      resetForm();
-      setFile(null);
-      setHtmlContent('');
-      router.push('/marketing/campaign');
-    } catch (error) {
-      console.error('Upload error:', error);
-      
-      // Check if it's a thumbnail generation error
-      if (error instanceof Error && error.message.includes('thumbnail')) {
-        toast.error('Template uploaded but thumbnail generation failed. The template was saved successfully.', {
-          icon: <XCircle className="text-yellow-600" />,
-        });
-      } else {
-        toast.error('Failed to upload email template', {
-          icon: <XCircle className="text-red-600" />,
-        });
-      }
-    }
-  };
-
-  const addField = () => {
-    setFields([...fields, { parameter: '', type: 'audience', db_name: '', is_required: false }]);
-  };
-
-  const removeField = (index: number) => {
-    setFields(fields.filter((_, i) => i !== index));
-  };
-
-  const updateField = (index: number, field: Partial<EmailTemplateField>) => {
-    const newFields = [...fields];
-    newFields[index] = { ...newFields[index], ...field };
-    setFields(newFields);
-  };
-
-  const handleClose = () => {
-    if (!isUploading) {
-      resetForm();
-      setFile(null);
-      setHtmlContent('');
-    }
+  const getTypeLabel = (type: string | null | undefined) => {
+    if (!type) return 'N/A';
+    if (type === 'ae_use') return 'AE Use';
+    if (type === 'bank_use') return 'Bank Use';
+    return type;
   };
 
   return (
-    <main className="min-h-screen bg-[#fdf6f1] flex flex-col items-center justify-center py-12 px-4">
+    <main className="min-h-screen bg-[#fdf6f1]">
       <Toaster />
-      <div key="email-template-upload" className="relative bg-white rounded-3xl shadow-2xl w-[90vw] h-[90vh] max-w-[1200px] max-h-[800px] flex flex-col overflow-hidden border border-gray-100 ring-1 ring-black/10">
-        {/* Header */}
-        <div className="flex items-center justify-between p-8 border-b border-gray-100 bg-gray-50/80 backdrop-blur-sm">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Upload Email Template</h1>
-          
+      
+      {/* Header */}
+      <div className="bg-[#fdf6f1]">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Email Templates</h1>
+              <p className="text-gray-600 mt-1">Manage your email templates</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => router.push(`/marketing/email-builder${token ? `?token=${token}` : ''}`)}
+                variant="outline"
+                size="lg"
+                className="border-gray-300 hover:bg-gray-50"
+              >
+                <LayoutTemplate className="w-5 h-5 mr-2" />
+                Builder
+              </Button>
+              <Button
+                onClick={() => setUploadModalOpen(true)}
+                className="bg-[#ff6600] hover:bg-[#ff7a2f] text-white"
+                size="lg"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Upload Template
+              </Button>
+            </div>
+          </div>
         </div>
-        
-        {/* Content */}
-        <div className="flex flex-1 overflow-hidden bg-white/80 backdrop-blur-sm">
-          {/* Left side - Form */}
-          <div className="flex-1 p-10 overflow-y-auto">
-            <div className="space-y-10 max-w-2xl">
-              <div className="space-y-3">
-                <Label htmlFor="name" className="text-lg font-medium">
-                  Template Name <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="name"
-                  value={templateName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTemplateName(e.target.value)}
-                  placeholder="Enter template name"
-                  disabled={isUploading}
-                  className="text-lg h-12"
-                />
-              </div>
+      </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="subject" className="text-lg font-medium">
-                  Subject <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="subject"
-                  value={subject}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubject(e.target.value)}
-                  placeholder="Enter email subject"
-                  disabled={isUploading}
-                  className="text-lg h-12"
-                />
-              </div>
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search templates by name, subject, or type..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent"
+            />
+          </div>
+        </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="file" className="text-lg font-medium">
-                  HTML Template File <span className="text-red-500">*</span>
-                </Label>
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <Input
-                      id="file"
-                      type="file"
-                      accept=".html,text/html"
-                      onChange={handleFileChange}
-                      className="text-lg h-12 cursor-pointer file:cursor-pointer"
-                      disabled={isUploading}
-                    />
-                  </div>
-                  {file && (
-                    <div className="flex items-center gap-2 text-green-600">
-                      <FileText className="w-4 h-4" />
-                      <span className="text-sm">{file.name}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+        {/* Templates Table */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {templatesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-[#ff6600]" />
+            </div>
+          ) : filteredTemplates.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {searchQuery ? 'No templates found' : 'No templates yet'}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {searchQuery
+                  ? 'Try adjusting your search query'
+                  : 'Get started by uploading your first email template'}
+              </p>
+              {!searchQuery && (
+                <Button
+                  onClick={() => setUploadModalOpen(true)}
+                  className="bg-[#ff6600] hover:bg-[#ff7a2f] text-white"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Upload Template
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Template
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Subject
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Created
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {displayTemplates.map((template) => (
+                    <tr key={template.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {template.thumbnail ? (
+                            <img
+                              src={template.thumbnail}
+                              alt={template.name || 'Template'}
+                              className="w-10 h-10 rounded object-cover mr-3"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center mr-3">
+                              <FileText className="w-5 h-5 text-gray-400" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {template.name || 'Unnamed Template'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900">
+                          {template.subject || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-600">
+                          {getTypeLabel(template.type)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            template.isArchived
+                              ? 'bg-gray-100 text-gray-700'
+                              : template.isVisible
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {template.isArchived ? 'Archived' : template.isVisible ? 'Visible' : 'Hidden'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {template.createdAt
+                          ? new Date(template.createdAt).toLocaleDateString()
+                          : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(template)}
+                            className="h-8"
+                          >
+                            <Pencil className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                          {template.path && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditInBuilder(template)}
+                              className="h-8"
+                            >
+                              <LayoutTemplate className="w-4 h-4 mr-1" />
+                              Edit Template
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteClick(template)}
+                            className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="templateType" className="text-lg font-medium">
-                  Template Types <span className="text-red-500">*</span> <span className="text-sm text-gray-500">(Select multiple)</span>
-                </Label>
-                <div className="flex flex-col gap-2">
-                  {audienceTypes.map((audienceType) => {
-                    const isSelected = selectedTemplateTypes.includes(audienceType.value || '');
+        {/* Pagination Controls */}
+        {!searchQuery.trim() && pagination && pagination.totalPages > 1 && (
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-600">
+                Showing <span className="font-semibold text-gray-900">{((currentPage - 1) * limit) + 1}</span> to <span className="font-semibold text-gray-900">{Math.min(currentPage * limit, pagination.total)}</span> of <span className="font-semibold text-gray-900">{pagination.total}</span> template{pagination.total !== 1 ? 's' : ''}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                  disabled={!pagination.hasPrevPage || templatesLoading}
+                  className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (pagination.totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= pagination.totalPages - 2) {
+                      pageNum = pagination.totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
                     return (
-                      <label key={audienceType.id} className="flex items-center gap-3 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          value={audienceType.value}
-                          checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedTemplateTypes([...selectedTemplateTypes, audienceType.value || '']);
-                            } else {
-                              setSelectedTemplateTypes(selectedTemplateTypes.filter(type => type !== audienceType.value));
-                            }
-                          }}
-                          disabled={isUploading || audienceTypesLoading}
-                          className="accent-[#ff6600] w-5 h-5 rounded focus:ring-[#ff6600]"
-                        />
-                        <span className="text-base font-medium text-gray-800">{audienceType.name}</span>
-                      </label>
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        disabled={templatesLoading}
+                        className={`cursor-pointer min-w-[2.5rem] px-3 py-2 text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                          currentPage === pageNum
+                            ? 'bg-[#ff6600] text-white shadow-sm'
+                            : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
                     );
                   })}
                 </div>
-                {audienceTypesLoading && <div className="text-sm text-gray-500">Loading template types...</div>}
-              </div>
-
-              <div className="space-y-3">
-                <Label htmlFor="category" className="text-lg font-medium">
-                  Category <span className="text-red-500">*</span>
-                </Label>
-                <select
-                  id="category"
-                  value={selectedCategoryId ?? ''}
-                  onChange={e => setSelectedCategoryId(Number(e.target.value))}
-                  disabled={categoriesLoading || isUploading}
-                  className="w-full text-lg h-12 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  required
+                <button
+                  onClick={() => handlePageChange(Math.min(pagination.totalPages, currentPage + 1))}
+                  disabled={!pagination.hasNextPage || templatesLoading}
+                  className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {categoriesLoading && <option value="">Loading...</option>}
-                  {!categoriesLoading && categories.length === 0 && <option value="">No categories</option>}
-                  {!categoriesLoading && categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Temporarily hidden Fields section */}
-               <div className="space-y-3">
-                <Label className="text-lg font-medium">Fields</Label>
-                <div className="space-y-3">
-                  {fields.map((field, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <Input
-                        placeholder="Key"
-                        value={field.parameter}
-                        onChange={(e) => updateField(index, { parameter: e.target.value })}
-                        disabled={isUploading}
-                        className="flex-1"
-                      />
-                      <select
-                        value={field.type}
-                        onChange={(e) => updateField(index, { type: e.target.value })}
-                        disabled={isUploading}
-                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6600] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {displayedFieldTypes.map(type => (
-                          <option key={type.value} value={type.value}>{type.label}</option>
-                        ))}
-                      </select>
-                      <Input
-                        placeholder="Value"
-                        value={field.db_name}
-                        onChange={(e) => updateField(index, { db_name: e.target.value })}
-                        disabled={isUploading}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeField(index)}
-                        disabled={isUploading}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        REMOVE
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addField}
-                    disabled={isUploading}
-                    className="w-full"
-                  >
-                    ADD FIELD
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-lg font-medium">Template Info</Label>
-                <div className="text-sm text-gray-600 space-y-2 bg-gray-50 p-4 rounded-lg">
-                  <div>HTML Size: {htmlContent ? (htmlContent.length / 1024).toFixed(1) + ' KB' : 'No file uploaded'}</div>
-                  <div>Template Types: {selectedTemplateTypes.map(type => 
-                    audienceTypes.find(at => at.value === type)?.name
-                  ).join(', ') || 'None'}</div>
-                </div>
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Right side - Preview */}
-          <div className="flex-1 border-l border-gray-100 p-10 overflow-y-auto bg-white/60 backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-8">
-              <Label className="text-2xl font-medium">Email Preview</Label>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowPreview(!showPreview)}
-                disabled={isUploading}
-                className="h-10 px-4"
-              >
-                {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                {showPreview ? 'Hide' : 'Show'} Preview
-              </Button>
-            </div>
-
-            {showPreview && htmlContent ? (
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-gray-600" />
-                    <div className="text-base font-medium text-gray-700">Email Template Preview</div>
-                  </div>
-                </div>
-                <div className="p-4 max-h-[600px] overflow-hidden bg-white">
-                  <iframe
-                    srcDoc={htmlContent}
-                    className="w-full h-[500px] border-0"
-                    sandbox="allow-same-origin"
-                    title="Email Template Preview"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="border border-gray-200 rounded-lg p-16 text-center text-gray-500">
-                <FileText className="w-16 h-16 mx-auto mb-6 text-gray-400" />
-                <p className="text-xl mb-2">Upload an HTML file to see preview</p>
-                <p className="text-base">The preview will show exactly how your email will look</p>
-              </div>
-            )}
+        {/* Results count for search */}
+        {searchQuery.trim() && !templatesLoading && filteredTemplates.length > 0 && (
+          <div className="mt-4 text-sm text-gray-600">
+            Found {filteredTemplates.length} template{filteredTemplates.length !== 1 ? 's' : ''} matching "{searchQuery}"
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-4 p-8 border-t border-gray-100 bg-gray-50/80 backdrop-blur-sm">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={isUploading}
-            size="lg"
-            className="h-12 px-8"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isUploading || !templateName.trim() || !subject.trim() || selectedTemplateTypes.length === 0 || audienceTypesLoading || !selectedCategoryId || !htmlContent}
-            className="bg-[#ff6600] hover:bg-[#ff7a2f] text-white h-12 px-8 shadow-lg shadow-orange-100/40"
-            size="lg"
-          >
-            {isUploading ? 'Uploading...' : 'Upload Template'}
-          </Button>
-        </div>
+        )}
       </div>
+
+      {/* Upload Modal */}
+      <UploadEmailTemplateModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onSuccess={handleUploadSuccess}
+      />
+
+      {/* Edit Modal */}
+      <EditEmailTemplateModal
+        open={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setEditTemplateId(null);
+        }}
+        onSuccess={() => {
+          if (token) {
+            fetchPaginatedTemplates(token, currentPage, limit);
+          }
+        }}
+        templateId={editTemplateId}
+        token={token}
+      />
+
+      {/* Delete Dialog */}
+      <DeleteEmailTemplateDialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setDeletingTemplateId(null);
+          setDeletingTemplateName('');
+        }}
+        onConfirm={handleDeleteConfirm}
+        templateName={deletingTemplateName}
+      />
     </main>
+  );
+}
+
+export default function EmailTemplatePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#fdf6f1] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#ff6600]" />
+      </div>
+    }>
+      <EmailTemplatePageContent />
+    </Suspense>
   );
 }
