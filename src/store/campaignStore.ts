@@ -40,6 +40,7 @@ interface CampaignStore {
   setEmailTemplatesLoading: (loading: boolean) => void;
   setRecipientCount: (campaignId: string | number, count: number) => void;
   saveCampaignTemplate: (token: string, campaignId: string | number, html: string) => Promise<any>;
+  deleteCampaign: (token: string, campaignId: string | number) => Promise<any>;
 }
 
 export const useCampaignStore = create<CampaignStore>((set, get) => ({
@@ -600,6 +601,31 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     } catch (error: any) {
       console.error('Failed to save campaign template:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to save campaign template';
+      throw new Error(errorMessage);
+    }
+  },
+  deleteCampaign: async (token: string, campaignId: string | number) => {
+    try {
+      const axios = (await import('axios')).default;
+      const res = await axios.delete(
+        `/api/campaigns/${campaignId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'x-client-origin': typeof window !== 'undefined' ? window.location.origin : '',
+          },
+        }
+      );
+
+      if (res.data?.success || res.status === 200 || res.status === 204) {
+        return res.data;
+      } else {
+        throw new Error(res.data?.message || 'Failed to delete campaign');
+      }
+    } catch (error: any) {
+      console.error('Failed to delete campaign:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete campaign';
       throw new Error(errorMessage);
     }
   },

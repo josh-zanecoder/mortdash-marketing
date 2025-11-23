@@ -16,12 +16,13 @@ function formatUSPhoneNumber(value: string) {
   return `(${limitedDigits.slice(0, 3)}) ${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6, 10)}`;
 }
 
-export default function EditContactModal({ open, onClose, onSubmit, channels, contact }: {
+export default function EditContactModal({ open, onClose, onSubmit, channels, contact, token }: {
   open: boolean;
   onClose: () => void;
   onSubmit?: (form: any) => void;
   channels: { value: string; label: string }[];
   contact: any;
+  token?: string;
 }) {
   const [form, setForm] = useState({
     channel: '',
@@ -38,13 +39,19 @@ export default function EditContactModal({ open, onClose, onSubmit, channels, co
 
   useEffect(() => {
     if (contact) {
+      // Handle both camelCase and snake_case field names
+      const firstName = contact.firstName || contact.first_name || '';
+      const lastName = contact.lastName || contact.last_name || '';
+      const email = contact.emailAddress || contact.email_address || contact.email || '';
+      const phone = contact.phoneNumber || contact.phone_number || contact.phone || '';
+      
       setForm({
         channel: channels.find(c => c.label === contact.branch)?.value || channels[0]?.value || '',
         company: contact.company || '',
-        firstName: contact.first_name || '',
-        lastName: contact.last_name || '',
-        email: contact.email_address || contact.email || '',
-        phone: contact.phone_number || contact.phone || '',
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        phone: phone,
         title: contact.title || '',
       });
     }
@@ -118,17 +125,36 @@ export default function EditContactModal({ open, onClose, onSubmit, channels, co
     
     setSubmitting(true);
     const selectedChannel = channels.find(c => c.value === form.channel) || channels[0];
-    const payload = {
+    // Use camelCase to match API structure
+    // Only include fields with valid values (omit null/undefined/empty strings)
+    const payload: any = {
       id: contact.id,
       branch: selectedChannel.label,
       company: form.company,
-      first_name: form.firstName,
-      last_name: form.lastName,
-      email_address: form.email,
+      firstName: form.firstName,
+      lastName: form.lastName,
+      emailAddress: form.email,
       title: form.title,
-      phone_number: form.phone,
+      phoneNumber: form.phone,
+      bankId: contact.bankId || contact.bank_id || 0,
+      rateSheet: contact.rateSheet ?? contact.rate_sheet ?? false,
+      hasAccountExecutive: contact.hasAccountExecutive ?? contact.has_account_executive ?? false,
+      mktgUnsubscribe: contact.mktgUnsubscribe ?? contact.mktg_unsubscribe ?? false,
     };
-    const success = await updateContact(payload);
+    
+    // Only include registrationType if it's a valid non-empty string
+    const registrationType = contact.registrationType || contact.registration_type;
+    if (registrationType && typeof registrationType === 'string' && registrationType.trim().length > 0) {
+      payload.registrationType = registrationType;
+    }
+    
+    // Only include branchId if it's a valid non-negative integer
+    const branchId = contact.branchId || contact.branch_id;
+    if (branchId !== null && branchId !== undefined && !isNaN(Number(branchId)) && Number(branchId) >= 0) {
+      payload.branchId = Number(branchId);
+    }
+    
+    const success = await updateContact(payload, token);
     setSubmitting(false);
     if (success) {
       onClose();
@@ -159,8 +185,8 @@ export default function EditContactModal({ open, onClose, onSubmit, channels, co
               className="cursor-pointer w-full border rounded-md px-4 py-3 text-base bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ff6600]/30"
               required
             >
-              {channels.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+              {channels.filter(c => c.value && c.label).map((c, index) => (
+                <option key={`${c.value}-${index}`} value={c.value}>{c.label}</option>
               ))}
             </select>
           </div>

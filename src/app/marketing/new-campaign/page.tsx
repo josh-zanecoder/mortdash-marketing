@@ -7,8 +7,16 @@ import CampaignPreviewModal from '@/components/CampaignPreviewModal';
 import CampaignRecipientsModal from '@/components/CampaignRecipientsModal';
 import CampaignActionsModal from '@/components/CampaignActionsModal';
 import CampaignBuilderModal from '@/components/CampaignBuilderModal';
+import DeleteCampaignDialog from '@/components/DeleteCampaignDialog';
 import { useCampaignStore } from '@/store/campaignStore';
-import { Plus, Send, Calendar, Copy, ChevronLeft, ChevronRight, Search, Users, Settings, Pause, Play, BarChart3 } from 'lucide-react';
+import { Plus, Send, Calendar, Copy, ChevronLeft, ChevronRight, Search, Users, Settings, Pause, Play, BarChart3, Edit2, Trash2, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
 const statusBadgeStyles: Record<string, string> = {
@@ -43,6 +51,10 @@ function CampaignSendingPageContent() {
   const [actionsCampaignId, setActionsCampaignId] = useState<string | number | null>(null);
   const [builderCampaignId, setBuilderCampaignId] = useState<string | number | null>(null);
   const [duplicatingCampaignId, setDuplicatingCampaignId] = useState<string | number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteCampaignId, setDeleteCampaignId] = useState<string | number | null>(null);
+  const [deleteCampaignName, setDeleteCampaignName] = useState<string>('');
+  const [deletingCampaignId, setDeletingCampaignId] = useState<string | number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
   const [queueStats, setQueueStats] = useState<any>(null);
@@ -57,6 +69,8 @@ function CampaignSendingPageContent() {
     pauseCampaignQueue,
     resumeCampaignQueue,
     fetchQueueStats,
+    deleteCampaign,
+    removeCampaign,
   } = useCampaignStore();
 
   // Load marketing lists when component mounts
@@ -144,6 +158,40 @@ function CampaignSendingPageContent() {
       toast.error(error.message || 'Failed to resume queue');
     } finally {
       setQueueActionLoading(false);
+    }
+  };
+
+  // Handle delete campaign
+  const handleDeleteCampaign = (campaignId: string | number, campaignName: string) => {
+    setDeleteCampaignId(campaignId);
+    setDeleteCampaignName(campaignName);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteCampaign = async () => {
+    if (!deleteCampaignId || !token) {
+      toast.error('Missing campaign ID or token');
+      return;
+    }
+
+    try {
+      setDeletingCampaignId(deleteCampaignId);
+      await deleteCampaign(token, deleteCampaignId);
+      removeCampaign(deleteCampaignId);
+      toast.success(`Campaign "${deleteCampaignName}" deleted successfully!`);
+      setDeleteDialogOpen(false);
+      setDeleteCampaignId(null);
+      setDeleteCampaignName('');
+      // Refetch campaigns after successful deletion
+      if (token) {
+        fetchCampaigns(token, currentPage, limit);
+      }
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to delete campaign';
+      toast.error(errorMessage);
+      console.error('Failed to delete campaign:', error);
+    } finally {
+      setDeletingCampaignId(null);
     }
   };
 
@@ -272,6 +320,18 @@ function CampaignSendingPageContent() {
           setBuilderCampaignId(null);
         }}
         campaignId={builderCampaignId}
+      />
+
+      {/* Delete Campaign Dialog */}
+      <DeleteCampaignDialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setDeleteCampaignId(null);
+          setDeleteCampaignName('');
+        }}
+        onConfirm={confirmDeleteCampaign}
+        campaignName={deleteCampaignName}
       />
 
       {/* Main Content */}
@@ -477,44 +537,93 @@ function CampaignSendingPageContent() {
                               )}
                             </td>
                             <td className="py-4 px-4">
-                              <div className="flex items-center gap-2 flex-wrap">
+                              <div className="flex items-center gap-2">
+                                {/* Edit Button - Primary Action */}
                                 <button
                                   onClick={() => {
-                                    setActionsCampaignId(campaign.id);
-                                    setActionsModalOpen(true);
+                                    setSelectedCampaignId(campaign.id);
+                                    setViewCampaignModalOpen(true);
                                   }}
-                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-[#cc5200] bg-orange-50 hover:bg-orange-100 rounded-full transition-colors"
+                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-[#ff6600] bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+                                  title="Edit Campaign"
                                 >
-                                  <Settings className="w-4 h-4" />
-                                  Actions
+                                  <Edit2 className="w-4 h-4" />
+                                  Edit
                                 </button>
+                                {/* Preview Button - Primary Action */}
                                 <button
                                   onClick={() => {
                                     setPreviewCampaignId(campaign.id);
                                     setPreviewCampaignModalOpen(true);
                                   }}
-                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full transition-colors"
+                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                                  title="Preview Campaign"
                                 >
                                   <Search className="w-4 h-4" />
                                   Preview
                                 </button>
-                                <button
-                                  onClick={() => handleDuplicateCampaign(campaign.id, campaignName)}
-                                  disabled={duplicatingCampaignId === campaign.id}
-                                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {duplicatingCampaignId === campaign.id ? (
-                                    <>
-                                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                      Duplicating...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Copy className="w-4 h-4" />
-                                      Duplicate
-                                    </>
-                                  )}
-                                </button>
+                                {/* More Actions Dropdown */}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      className="cursor-pointer inline-flex items-center justify-center w-8 h-8 text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
+                                      title="More Actions"
+                                    >
+                                      <MoreVertical className="w-4 h-4" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    {/* Actions - Status Actions */}
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setActionsCampaignId(campaign.id);
+                                        setActionsModalOpen(true);
+                                      }}
+                                      className="cursor-pointer flex items-center gap-2"
+                                    >
+                                      <Settings className="w-4 h-4" />
+                                      <span>Campaign Actions</span>
+                                    </DropdownMenuItem>
+                                    {/* Duplicate */}
+                                    <DropdownMenuItem
+                                      onClick={() => handleDuplicateCampaign(campaign.id, campaignName)}
+                                      disabled={duplicatingCampaignId === campaign.id}
+                                      className="cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {duplicatingCampaignId === campaign.id ? (
+                                        <>
+                                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                          <span>Duplicating...</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="w-4 h-4" />
+                                          <span>Duplicate</span>
+                                        </>
+                                      )}
+                                    </DropdownMenuItem>
+                                    {/* Separator before destructive action */}
+                                    <DropdownMenuSeparator />
+                                    {/* Delete - Destructive Action */}
+                                    <DropdownMenuItem
+                                      onClick={() => handleDeleteCampaign(campaign.id, campaignName)}
+                                      disabled={deletingCampaignId === campaign.id}
+                                      className="cursor-pointer flex items-center gap-2 text-red-600 focus:text-red-600 focus:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {deletingCampaignId === campaign.id ? (
+                                        <>
+                                          <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                                          <span>Deleting...</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Trash2 className="w-4 h-4" />
+                                          <span>Delete</span>
+                                        </>
+                                      )}
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </td>
                           </tr>

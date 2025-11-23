@@ -2,14 +2,27 @@ import { create } from 'zustand';
 
 interface Contact {
   id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
+  bankId?: number | null;
+  firstName: string;
+  lastName: string;
+  emailAddress: string;
+  phoneNumber?: string | null;
+  registrationType?: string | null;
+  title?: string | null;
+  company?: string | null;
+  branch?: string | null;
+  rateSheet?: boolean | null;
+  hasAccountExecutive?: boolean | null;
+  branchId?: number | null;
+  mktgUnsubscribe?: boolean | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  // Legacy fields for backward compatibility
+  first_name?: string;
+  last_name?: string;
+  email?: string;
   email_address?: string;
   phone_number?: string;
-  title: string;
-  company: string;
-  branch?: string;
 }
 
 interface Channel {
@@ -29,6 +42,7 @@ interface ContactStore {
   setPage: (page: number) => void;
   setSearch: (search: string) => void;
   fetchContacts: (opts?: { token?: string; page?: number; limit?: number; search?: string }) => Promise<void>;
+  fetchContactById: (id: number, token?: string) => Promise<Contact | null>;
   fetchChannels: (token?: string) => Promise<void>;
   addContact: (contact: any, token?: string) => Promise<boolean>;
   updateContact: (contact: any, token?: string) => Promise<boolean>;
@@ -58,67 +72,144 @@ export const useContactStore = create<ContactStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { token, page, limit, search } = opts;
+      const headers: Record<string, string> = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      if (typeof window !== 'undefined') {
+        headers['x-client-origin'] = window.location.origin;
+      }
+      
       const params = new URLSearchParams();
-      if (token) params.set('token', token);
       if (page) params.set('page', String(page));
       if (limit) params.set('limit', String(limit));
       if (search) params.set('search', search);
-      const url = `/api/contacts${params.size ? '?' + params.toString() : ''}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch contacts');
-      const data = await res.json();
+      
+      const url = `/api/marketing-contact${params.size ? '?' + params.toString() : ''}`;
+      const res = await fetch(url, { headers });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || 'Failed to fetch contacts');
+      }
+      
+      const response = await res.json();
       let contacts: Contact[] = [];
       let total = 0;
-      if (Array.isArray(data)) {
-        contacts = data;
-        total = data.length;
-      } else if (data && typeof data === 'object') {
-        // Prefer data.data or data.results for the array
-        if (Array.isArray(data.data)) {
-          contacts = data.data;
-        } else if (Array.isArray(data.results)) {
-          contacts = data.results;
+      
+      // Handle the API response structure: { success: true, message: "...", data: [...] }
+      if (response.success && Array.isArray(response.data)) {
+        contacts = response.data;
+        // Check for pagination meta
+        if (response.meta && typeof response.meta.total === 'number') {
+          total = response.meta.total;
+        } else if (typeof response.total === 'number') {
+          total = response.total;
         } else {
-          // Try to find the first array property
-          const arrProp = Object.values(data).find((v) => Array.isArray(v));
-          if (arrProp) contacts = arrProp as Contact[];
+          total = contacts.length;
         }
-        if (typeof data.total === 'number') total = data.total;
-        else if (typeof data.count === 'number') total = data.count;
-        else total = contacts.length;
+      } else if (Array.isArray(response.data)) {
+        contacts = response.data;
+        total = response.meta?.total || response.total || contacts.length;
+      } else if (Array.isArray(response)) {
+        contacts = response;
+        total = contacts.length;
       }
-      // --- TEMPORARY FRONTEND SEARCH & PAGINATION PATCH ---
-      const _page = page ?? 1;
-      const _limit = limit ?? 5;
+      
+      // Apply frontend search filter if needed (when API doesn't support search)
       const _search = search ?? get().search;
-      if (contacts.length > 0 && total === contacts.length) {
-        let filtered = contacts;
-        if (_search && _search.trim() !== '') {
-          const q = _search.trim().toLowerCase();
-          filtered = contacts.filter(c =>
-            c.first_name?.toLowerCase().includes(q) ||
-            c.last_name?.toLowerCase().includes(q) ||
-            c.email?.toLowerCase().includes(q) ||
-            c.title?.toLowerCase().includes(q) ||
-            c.company?.toLowerCase().includes(q)
-          );
+      if (_search && _search.trim() !== '' && contacts.length > 0) {
+        const q = _search.trim().toLowerCase();
+        contacts = contacts.filter(c => {
+          const firstName = c.firstName || c.first_name || '';
+          const lastName = c.lastName || c.last_name || '';
+          const email = c.emailAddress || c.email_address || c.email || '';
+          const title = c.title || '';
+          const company = c.company || '';
+          
+          return firstName.toLowerCase().includes(q) ||
+            lastName.toLowerCase().includes(q) ||
+            email.toLowerCase().includes(q) ||
+            title.toLowerCase().includes(q) ||
+            company.toLowerCase().includes(q);
+        });
+        // If we filtered, update total to match filtered results
+        if (contacts.length !== response.data?.length) {
+          total = contacts.length;
         }
-        total = filtered.length;
-        const start = (_page - 1) * _limit;
-        const end = start + _limit;
-        contacts = filtered.slice(start, end);
       }
+      
       set({ marketingContacts: contacts, total, loading: false });
     } catch (err: any) {
       set({ error: err.message || 'Unknown error', loading: false });
     }
   },
+  fetchContactById: async (id: number, token?: string) => {
+    try {
+      const headers: Record<string, string> = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      if (typeof window !== 'undefined') {
+        headers['x-client-origin'] = window.location.origin;
+      }
+      
+      const res = await fetch(`/api/marketing-contact/${id}`, { headers });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || 'Failed to fetch contact');
+      }
+      
+      const response = await res.json();
+      
+      // Handle the API response structure: { success: true, message: "...", data: {...} }
+      let contact: Contact | null = null;
+      if (response.success && response.data) {
+        contact = response.data as Contact;
+      } else if (response.data && typeof response.data === 'object') {
+        contact = response.data as Contact;
+      } else if (typeof response === 'object' && response.id) {
+        contact = response as Contact;
+      }
+      
+      return contact;
+    } catch (err: any) {
+      console.error('Failed to fetch contact:', err);
+      return null;
+    }
+  },
   fetchChannels: async (token?: string) => {
     set({ loading: true, error: null });
     try {
-      const url = token ? `/api/channels?token=${encodeURIComponent(token)}` : '/api/channels';
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch channels');
+      const headers: Record<string, string> = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      if (typeof window !== 'undefined') {
+        headers['x-client-origin'] = window.location.origin;
+      }
+      
+      const res = await fetch('/api/bank-channels', { headers });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || 'Failed to fetch channels');
+      }
       const data = await res.json();
      
       let channels: Channel[] = [];
@@ -133,13 +224,30 @@ export const useContactStore = create<ContactStore>((set, get) => ({
   addContact: async (contact: any, token?: string) => {
     set({ loading: true, error: null });
     try {
-      const url = token ? `/api/contacts?token=${encodeURIComponent(token)}` : '/api/contacts';
-      const res = await fetch(url, {
+      const headers: Record<string, string> = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      if (typeof window !== 'undefined') {
+        headers['x-client-origin'] = window.location.origin;
+      }
+      
+      const res = await fetch('/api/marketing-contact', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(contact),
       });
-      if (!res.ok) throw new Error('Failed to add contact');
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || 'Failed to add contact');
+      }
+      
       await get().fetchContacts({ token, page: get().page, limit: get().limit });
       set({ loading: false });
       return true;
@@ -151,13 +259,30 @@ export const useContactStore = create<ContactStore>((set, get) => ({
   updateContact: async (contact: any, token?: string) => {
     set({ loading: true, error: null });
     try {
-      const url = token ? `/api/contacts/${contact.id}?token=${encodeURIComponent(token)}` : `/api/contacts/${contact.id}`;
-      const res = await fetch(url, {
+      const headers: Record<string, string> = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      if (typeof window !== 'undefined') {
+        headers['x-client-origin'] = window.location.origin;
+      }
+      
+      const res = await fetch(`/api/marketing-contact/${contact.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(contact),
       });
-      if (!res.ok) throw new Error('Failed to update contact');
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || 'Failed to update contact');
+      }
+      
       await get().fetchContacts({ token, page: get().page, limit: get().limit });
       set({ loading: false });
       return true;
@@ -169,9 +294,29 @@ export const useContactStore = create<ContactStore>((set, get) => ({
   deleteContact: async (id: number, token?: string) => {
     set({ loading: true, error: null });
     try {
-      const url = token ? `/api/contacts/${id}?token=${encodeURIComponent(token)}` : `/api/contacts/${id}`;
-      const res = await fetch(url, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete contact');
+      const headers: Record<string, string> = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      if (typeof window !== 'undefined') {
+        headers['x-client-origin'] = window.location.origin;
+      }
+      
+      const res = await fetch(`/api/marketing-contact/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || 'Failed to delete contact');
+      }
+      
       await get().fetchContacts({ token, page: get().page, limit: get().limit });
       set({ loading: false });
       return true;
