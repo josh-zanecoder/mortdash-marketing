@@ -53,6 +53,7 @@ function CampaignSendingPageContent() {
   const [recipientsCampaignStatus, setRecipientsCampaignStatus] = useState<string | null>(null);
   const [actionsCampaignId, setActionsCampaignId] = useState<string | number | null>(null);
   const [builderCampaignId, setBuilderCampaignId] = useState<string | number | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState<Record<string, boolean>>({});
   const [duplicatingCampaignId, setDuplicatingCampaignId] = useState<string | number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteCampaignId, setDeleteCampaignId] = useState<string | number | null>(null);
@@ -582,7 +583,12 @@ function CampaignSendingPageContent() {
                                   <Search className="w-4 h-4" />
                                 </button>
                                 {/* More Actions Dropdown */}
-                                <DropdownMenu>
+                                <DropdownMenu 
+                                  open={dropdownOpen[`campaign-${campaign.id}`] || false}
+                                  onOpenChange={(open) => {
+                                    setDropdownOpen(prev => ({ ...prev, [`campaign-${campaign.id}`]: open }));
+                                  }}
+                                >
                                   <DropdownMenuTrigger asChild>
                                     <button
                                       className="cursor-pointer inline-flex items-center justify-center w-8 h-8 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
@@ -591,12 +597,17 @@ function CampaignSendingPageContent() {
                                       <MoreVertical className="w-4 h-4" />
                                     </button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuContent align="end" className="w-48" onCloseAutoFocus={(e) => e.preventDefault()}>
                                     {/* Actions - Status Actions */}
                                     <DropdownMenuItem
-                                      onClick={() => {
-                                        setActionsCampaignId(campaign.id);
-                                        setActionsModalOpen(true);
+                                      onSelect={(e) => {
+                                        e.preventDefault();
+                                        setDropdownOpen(prev => ({ ...prev, [`campaign-${campaign.id}`]: false }));
+                                        // Use setTimeout to ensure dropdown closes before opening modal
+                                        setTimeout(() => {
+                                          setActionsCampaignId(campaign.id);
+                                          setActionsModalOpen(true);
+                                        }, 100);
                                       }}
                                       className="cursor-pointer flex items-center gap-2"
                                     >
@@ -605,7 +616,7 @@ function CampaignSendingPageContent() {
                                     </DropdownMenuItem>
                                     {/* Duplicate */}
                                     <DropdownMenuItem
-                                      onClick={() => handleDuplicateCampaign(campaign.id, campaignName)}
+                                      onSelect={() => handleDuplicateCampaign(campaign.id, campaignName)}
                                       disabled={duplicatingCampaignId === campaign.id}
                                       className="cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
@@ -625,7 +636,7 @@ function CampaignSendingPageContent() {
                                     <DropdownMenuSeparator />
                                     {/* Delete - Destructive Action */}
                                     <DropdownMenuItem
-                                      onClick={() => handleDeleteCampaign(campaign.id, campaignName)}
+                                      onSelect={() => handleDeleteCampaign(campaign.id, campaignName)}
                                       disabled={deletingCampaignId === campaign.id}
                                       className="cursor-pointer flex items-center gap-2 text-red-600 focus:text-red-600 focus:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >

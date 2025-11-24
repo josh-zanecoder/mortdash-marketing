@@ -83,11 +83,18 @@ export default function CampaignActionsModal({
     }
   };
 
-  if (!open) return null;
-
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md w-[95vw] p-0 rounded-2xl mx-auto">
+    <Dialog open={open} onOpenChange={(v) => {
+      if (!v) {
+        onClose();
+      }
+    }} modal={true}>
+      <DialogContent 
+        className="max-w-md w-[95vw] p-0 rounded-2xl mx-auto"
+        onInteractOutside={(e) => {
+          // Allow closing on outside click
+        }}
+      >
         <DialogHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200">
           <DialogTitle className="text-2xl font-bold">Campaign Actions</DialogTitle>
         </DialogHeader>
