@@ -15,11 +15,12 @@ function formatUSPhoneNumber(value: string) {
   return `(${limitedDigits.slice(0, 3)}) ${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6, 10)}`;
 }
 
-export default function AddContactModal({ open, onClose, onSubmit, channels }: {
+export default function AddContactModal({ open, onClose, onSubmit, channels, token }: {
   open: boolean;
   onClose: () => void;
   onSubmit?: (form: any) => void;
   channels: { value: string; label: string }[];
+  token?: string;
 }) {
   const [form, setForm] = useState({
     channel: channels[0]?.value || '',  // Initialize with first channel's value
@@ -74,16 +75,37 @@ export default function AddContactModal({ open, onClose, onSubmit, channels }: {
     setSubmitting(true);
     // Find the label for the selected channel value
     const selectedChannel = channels.find(c => c.value === form.channel) || channels[0]; // Fallback to first channel
-    const payload = {
-      branch: selectedChannel.label, // Will always have a value now
-      company: form.company,
-      first_name: form.firstName,
-      last_name: form.lastName,
-      email_address: form.email,
-      title: form.title,
-      phone_number: form.phone,
+    // Use camelCase to match API structure
+    // Only include fields with valid non-empty values
+    const payload: any = {
+      emailAddress: form.email.trim(),
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      company: form.company.trim(),
+      title: form.title.trim(),
+      phoneNumber: form.phone,
+      branch: selectedChannel?.label || null,
+      rateSheet: false,
+      hasAccountExecutive: false,
+      mktgUnsubscribe: false,
     };
-    const success = await addContact(payload);
+    
+    // Clean up the payload - remove empty strings and null values (but keep boolean fields)
+    // Always keep emailAddress and boolean fields
+    const keysToKeep = ['emailAddress', 'rateSheet', 'hasAccountExecutive', 'mktgUnsubscribe'];
+    
+    Object.keys(payload).forEach((key) => {
+      if (keysToKeep.includes(key)) {
+        return; // Always keep these fields
+      }
+      
+      // Remove empty strings, null, or undefined
+      if (payload[key] === null || payload[key] === undefined || (typeof payload[key] === 'string' && payload[key].trim() === '')) {
+        delete payload[key];
+      }
+    });
+    
+    const success = await addContact(payload, token);
     setSubmitting(false);
     if (success) {
       setForm({
@@ -151,8 +173,8 @@ export default function AddContactModal({ open, onClose, onSubmit, channels }: {
               className="w-full border rounded-md px-4 py-3 text-base bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ff6600]/30"
               required
             >
-              {channels.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+              {channels.filter(c => c.value && c.label).map((c, index) => (
+                <option key={`${c.value}-${index}`} value={c.value}>{c.label}</option>
               ))}
             </select>
           </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMortdashUrlFromRequest } from '@/utils/mortdash';
+import { getMortdashUrlFromRequest, getMarketingApiBaseUrl } from '@/utils/mortdash';
+import axios from 'axios';
 
 export async function POST(req: NextRequest) {
   try {
@@ -95,38 +96,35 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
+  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
+
   try {
-    const currentUrl = req.nextUrl;
-    const token = currentUrl.searchParams.get('token') || req.cookies.get('auth_token')?.value;
-    
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    const marketingApiUrl = getMarketingApiBaseUrl();
+    const clientOrigin = request.headers.get('x-client-origin') || request.nextUrl.origin;
 
-    // Proxy the request to your backend
-    const mortdash_url = getMortdashUrlFromRequest(req);
-    const backendRes = await fetch(`${mortdash_url}/api/bank/v1/marketing/email-templates`, {
-      method: 'GET',
-      headers,
-    });
+    const res = await axios.get(
+      `${marketingApiUrl}/api/v1/email-templates`,
+      {
+        headers: {
+          'accept': 'application/json',
+          'x-client-origin': clientOrigin,
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+        },
+        validateStatus: () => true,
+      }
+    );
 
-    if (!backendRes.ok) {
-      const errorData = await backendRes.text();
-      return NextResponse.json(
-        { error: 'Failed to fetch email templates', details: errorData },
-        { status: backendRes.status }
-      );
-    }
-
-    const data = await backendRes.json();
-    return NextResponse.json(data);
+    return NextResponse.json(res.data, { status: res.status });
   } catch (error: any) {
-    console.error('Error fetching email templates:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
+      {
+        error: error.message,
+        details: error.response?.data || null,
+        status: error.response?.status || 500,
+      },
+      { status: error.response?.status || 500 }
     );
   }
 } 

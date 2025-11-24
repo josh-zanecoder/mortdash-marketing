@@ -53,3 +53,13 @@ export function getMortdashAEUrlFromRequest(req: any): string {
   const token = req.nextUrl.searchParams.get('token') || req.cookies.get('auth_token')?.value;
   return getDynamicMortdashAEUrl(token || null);
 }
+
+const DEFAULT_MARKETING_API_URL = 'http://localhost:3000';
+
+export function getMarketingApiBaseUrl(): string {
+  const envValue = process.env.MORTDASH_MARKETING_API_URL || process.env.MARKETING_API_URL;
+  if (envValue && typeof envValue === 'string') {
+    return envValue.replace(/\/$/, '');
+  }
+  return DEFAULT_MARKETING_API_URL;
+}

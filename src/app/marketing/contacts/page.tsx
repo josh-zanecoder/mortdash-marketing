@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus, MoreVertical, User, Search, Download, Upload, UserCheck, UserX, Building, Users, X, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import AddContactModal from '@/components/AddContactModal';
 import UploadContactsModal from '@/components/UploadContactsModal';
 import { useContactStore } from '@/store/useContactStore';
@@ -15,16 +16,21 @@ import DeleteContactDialog from '@/components/DeleteContactDialog';
 type ContactType = 'marketing' | 'prospects' | 'clients';
 
 export default function ContactsPage() {
+  const searchParams = useSearchParams();
+  const tokenParam = searchParams.get('token') || (typeof window !== 'undefined' ? document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1] : null);
+  
   const [activeTab, setActiveTab] = useState<ContactType>('marketing');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [editingContact, setEditingContact] = useState<any | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [loadingContact, setLoadingContact] = useState(false);
   const [deletingContact, setDeletingContact] = useState<any | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [branchFilter, setBranchFilter] = useState('');
   const updateContact = useContactStore((s) => s.updateContact);
   const deleteContact = useContactStore((s) => s.deleteContact);
+  const fetchContactById = useContactStore((s) => s.fetchContactById);
 
   // Skeleton loader component
   const TableSkeleton = () => (
@@ -100,11 +106,15 @@ export default function ContactsPage() {
 
   // Filter contacts based on search and branch filter
   const filteredContacts = marketingContacts.filter(contact => {
+    const firstName = contact.firstName || contact.first_name || '';
+    const lastName = contact.lastName || contact.last_name || '';
+    const email = contact.emailAddress || contact.email_address || contact.email || '';
+    
     const matchesSearch = !search || 
-      contact.first_name?.toLowerCase().includes(search.toLowerCase()) ||
-      contact.last_name?.toLowerCase().includes(search.toLowerCase()) ||
-      (contact.email_address || contact.email)?.toLowerCase().includes(search.toLowerCase()) ||
-      contact.company?.toLowerCase().includes(search.toLowerCase());
+      firstName.toLowerCase().includes(search.toLowerCase()) ||
+      lastName.toLowerCase().includes(search.toLowerCase()) ||
+      email.toLowerCase().includes(search.toLowerCase()) ||
+      (contact.company || '').toLowerCase().includes(search.toLowerCase());
     
     const matchesBranch = !branchFilter || contact.branch === branchFilter;
     
@@ -112,11 +122,16 @@ export default function ContactsPage() {
   });
 
   useEffect(() => {
-    fetchContacts({ page, limit, search });
-    fetchChannels();
+    if (tokenParam) {
+      fetchContacts({ token: tokenParam, page, limit, search });
+      fetchChannels(tokenParam);
+    } else {
+      fetchContacts({ page, limit, search });
+      fetchChannels();
+    }
     fetchProspects();
     fetchClients();
-  }, [fetchContacts, fetchChannels, fetchProspects, fetchClients, page, limit, search]);
+  }, [tokenParam, fetchContacts, fetchChannels, fetchProspects, fetchClients, page, limit, search]);
 
   const pageCount = Math.ceil(total / limit) || 1;
 
@@ -125,7 +140,11 @@ export default function ContactsPage() {
     // Reset to page 1 to show newly uploaded contacts
     setPage(1);
     // Fetch fresh data with current search and limit
-    fetchContacts({ page: 1, limit, search });
+    if (tokenParam) {
+      fetchContacts({ token: tokenParam, page: 1, limit, search });
+    } else {
+      fetchContacts({ page: 1, limit, search });
+    }
     toast.success('Contacts uploaded successfully!', {
       icon: <CheckCircle2 className="text-green-600" />,
     });
@@ -172,11 +191,15 @@ export default function ContactsPage() {
         setShowAddModal(false);
       }} onSubmit={() => {
         // Refresh contacts after adding
-        fetchContacts({ page, limit, search });
+        if (tokenParam) {
+          fetchContacts({ token: tokenParam, page, limit, search });
+        } else {
+          fetchContacts({ page, limit, search });
+        }
         toast.success('Contact added successfully!', {
           icon: <CheckCircle2 className="text-green-600" />,
         });
-      }} channels={channels} />
+      }} channels={channels} token={tokenParam || undefined} />
       <EditContactModal
         open={showEditModal}
         onClose={() => {
@@ -185,12 +208,17 @@ export default function ContactsPage() {
         }}
         onSubmit={async (form) => {
           // Refresh contacts after editing
-          fetchContacts({ page, limit, search });
+          if (tokenParam) {
+            fetchContacts({ token: tokenParam, page, limit, search });
+          } else {
+            fetchContacts({ page, limit, search });
+          }
           setShowEditModal(false);
           setEditingContact(null);
         }}
         channels={channels}
         contact={editingContact}
+        token={tokenParam || undefined}
       />
       <DeleteContactDialog
         open={showDeleteDialog}
@@ -200,10 +228,14 @@ export default function ContactsPage() {
         }}
         onConfirm={async () => {
           if (deletingContact) {
-            const success = await deleteContact(deletingContact.id);
+            const success = await deleteContact(deletingContact.id, tokenParam || undefined);
             if (success) {
               // Refresh contacts after deleting
-              fetchContacts({ page, limit, search });
+              if (tokenParam) {
+                fetchContacts({ token: tokenParam, page, limit, search });
+              } else {
+                fetchContacts({ page, limit, search });
+              }
               toast.success('Contact deleted successfully!', {
                 icon: <CheckCircle2 className="text-green-600" />,
               });
@@ -289,8 +321,8 @@ export default function ContactsPage() {
                   onChange={(e) => setBranchFilter(e.target.value)}
                 >
                   <option value="">All Branches</option>
-                  {channels.map(channel => (
-                    <option key={channel.value} value={channel.label}>{channel.label}</option>
+                  {channels.filter(channel => channel.value && channel.label).map((channel, index) => (
+                    <option key={`${channel.value}-${index}`} value={channel.label}>{channel.label}</option>
                   ))}
                 </select>
               </div>
@@ -333,23 +365,43 @@ export default function ContactsPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-900">
-                      {filteredContacts.map((contact) => (
+                      {filteredContacts.map((contact) => {
+                        const firstName = contact.firstName || contact.first_name || '';
+                        const lastName = contact.lastName || contact.last_name || '';
+                        const email = contact.emailAddress || contact.email_address || contact.email || '';
+                        const phone = contact.phoneNumber || contact.phone_number || 'N/A';
+                        
+                        return (
                         <tr key={contact.id}>
                           <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-800 dark:text-white font-medium">
-                            {contact.first_name} {contact.last_name}
+                            {firstName} {lastName}
                           </td>
-                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">{contact.email_address || contact.email}</td>
-                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">{contact.phone_number || 'N/A'}</td>
-                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">{contact.company}</td>
+                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">{email || 'N/A'}</td>
+                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">{phone}</td>
+                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">{contact.company || 'N/A'}</td>
                           <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-300">{contact.branch || 'N/A'}</td>
                           <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm flex flex-col sm:flex-row gap-1 sm:gap-2">
                             <Button
                               size="sm"
                               variant="outline"
                               className="cursor-pointer text-blue-600 border-blue-200 hover:bg-blue-50 text-xs sm:text-sm"
-                              onClick={() => {
-                                setEditingContact(contact);
-                                setShowEditModal(true);
+                              disabled={loadingContact}
+                              onClick={async () => {
+                                setLoadingContact(true);
+                                try {
+                                  // Fetch full contact data by ID
+                                  const fullContact = await fetchContactById(contact.id, tokenParam || undefined);
+                                  if (fullContact) {
+                                    setEditingContact(fullContact);
+                                    setShowEditModal(true);
+                                  } else {
+                                    toast.error('Failed to load contact details');
+                                  }
+                                } catch (error: any) {
+                                  toast.error(error.message || 'Failed to load contact details');
+                                } finally {
+                                  setLoadingContact(false);
+                                }
                               }}
                             >
                               <span className="sr-only">Update</span>
@@ -376,7 +428,8 @@ export default function ContactsPage() {
                             </Button>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
