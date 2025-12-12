@@ -62,9 +62,9 @@ export default function EditContactModal({ open, onClose, onSubmit, channels, co
     if (errors[name]) {
       let isValid = true;
       
-      if (name === 'phone') {
-        const phoneDigits = value.replace(/\D/g, '');
-        isValid = phoneDigits.length === 10;
+      // Skip validation for optional fields (phone and title)
+      if (name === 'phone' || name === 'title') {
+        isValid = true; // Always clear errors for optional fields
       } else {
         isValid = value.trim().length > 0;
       }
@@ -99,15 +99,6 @@ export default function EditContactModal({ open, onClose, onSubmit, channels, co
     }
     if (!form.email.trim()) {
       newErrors.email = 'Email cannot be empty or contain only spaces';
-    }
-    if (!form.title.trim()) {
-      newErrors.title = 'Title cannot be empty or contain only spaces';
-    }
-    
-    // Validate phone number has exactly 10 digits
-    const phoneDigits = form.phone.replace(/\D/g, '');
-    if (phoneDigits.length !== 10) {
-      newErrors.phone = 'Phone number must be exactly 10 digits';
     }
     
     // If there are errors, display them and stop submission
@@ -251,7 +242,6 @@ export default function EditContactModal({ open, onClose, onSubmit, channels, co
               value={form.title}
               onChange={handleChange}
               placeholder="Enter Title"
-              required
               className={errors.title ? "border-red-500 focus:ring-red-500" : ""}
             />
             {errors.title && (
