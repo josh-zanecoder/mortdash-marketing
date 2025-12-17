@@ -851,7 +851,7 @@ function ListsPageContent() {
                     <th className="py-4 px-6 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">#</th>
                     <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">List Name</th>
                     <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">Audience</th>
-                    <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">Count</th>
+                
                     <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -872,9 +872,6 @@ function ListsPageContent() {
                           </div>
                           <div className="w-48 h-5 bg-slate-200 rounded animate-pulse"></div>
                         </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="w-12 h-6 bg-slate-200 rounded-full animate-pulse"></div>
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-2">
@@ -1202,14 +1199,13 @@ function ListsPageContent() {
                           <th className="py-4 px-6 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">#</th>
                           <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">List Name</th>
                           <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">Audience</th>
-                          <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">Count</th>
                           <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white/80 divide-y divide-slate-200/60 dark:divide-slate-700 dark:bg-slate-900">
                         {paginatedLists.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="px-6 py-12 text-center">
+                            <td colSpan={4} className="px-6 py-12 text-center">
                               <div className="text-slate-500 text-lg">No lists found</div>
                               <div className="text-slate-400 text-sm mt-1">
                                 Try adjusting your search or filters
@@ -1269,11 +1265,7 @@ function ListsPageContent() {
                                 )}
                               </div>
                             </td>
-                            <td className="px-6 py-5">
-                              <div className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-slate-100 text-slate-700">
-                                {list.count}
-                              </div>
-                            </td>
+                           
                             <td className="px-6 py-5">
                               <div className="flex items-center gap-2">
                                 <button 
@@ -1421,7 +1413,6 @@ export default function ListsPage() {
                           <th className="py-4 px-6 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">#</th>
                           <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">List Name</th>
                           <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">Audience</th>
-                          <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">Count</th>
                           <th className="px-6 py-4 text-sm font-semibold text-left text-slate-700 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
@@ -1442,9 +1433,6 @@ export default function ListsPage() {
                                 </div>
                                 <div className="w-48 h-5 bg-slate-200 rounded animate-pulse"></div>
                               </div>
-                            </td>
-                            <td className="px-6 py-5">
-                              <div className="w-12 h-6 bg-slate-200 rounded-full animate-pulse"></div>
                             </td>
                             <td className="px-6 py-5">
                               <div className="flex items-center gap-2">
