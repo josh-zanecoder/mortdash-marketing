@@ -60,7 +60,14 @@ function AddMarketingListPageContent() {
         ]);
 
         setAudienceTypes(typeRes.data.data);
-        setAudienceTypeFilters(Array.isArray(filterRes.data.data) ? filterRes.data.data : []);
+        const rawFilters = Array.isArray(filterRes.data.data) ? filterRes.data.data : [];
+        setAudienceTypeFilters(
+          rawFilters.map((ft: Record<string, unknown>) => ({
+            ...ft,
+            audience_type_id: Number(ft.audience_type_id ?? (ft as Record<string, unknown>).audienceTypeId ?? 0),
+            value: Number(ft.value ?? (ft as Record<string, unknown>).id ?? 0),
+          }))
+        );
         setBankChannels(bankRes.data.data);
       } catch (err) {
         setToast({
@@ -407,33 +414,32 @@ function AddMarketingListPageContent() {
                       >
                         <option value="">Select filter</option>
                         {audienceTypeFilters
-                          .filter(ft => ft.audience_type_id === audienceTypeId && ft.type === 'all')
+                          .filter(ft => Number(ft.audience_type_id) === Number(audienceTypeId) && (ft.type === 'all' || ft.type === 'All'))
                           .filter(ft => {
+                            const ftNameLower = ft.name?.toLowerCase();
+                            const filterTypeLower = f.filter_type_name?.toLowerCase();
                             // Always show the current filter's type, even if all values are used
-                            if (f.filter_type_name === ft.name) {
+                            if (filterTypeLower && filterTypeLower === ftNameLower) {
                               return true;
                             }
-                            
                             // For Channel filters, check if all channel values are already selected
-                            if (ft.name === 'Channel') {
+                            if (ftNameLower === 'channel') {
                               const selectedChannelValues = filters
-                                .filter(filter => filter.filter_type_name === 'Channel')
+                                .filter(filter => filter.filter_type_name?.toLowerCase() === 'channel')
                                 .map(filter => filter.filter_value)
                                 .filter(Boolean);
                               const allChannelValues = bankChannels.map(channel => String(channel.value));
                               return selectedChannelValues.length < allChannelValues.length;
                             }
-                            
                             // For State filters, check if all state values are already selected
-                            if (ft.name === 'State') {
+                            if (ftNameLower === 'state') {
                               const selectedStateValues = filters
-                                .filter(filter => filter.filter_type_name === 'State')
+                                .filter(filter => filter.filter_type_name?.toLowerCase() === 'state')
                                 .map(filter => filter.filter_value)
                                 .filter(Boolean);
                               const allStateValues = Object.keys(State);
                               return selectedStateValues.length < allStateValues.length;
                             }
-                            
                             return true;
                           })
                           .map(ft => (
@@ -457,79 +463,107 @@ function AddMarketingListPageContent() {
 
                     {/* Filter Value Dropdown */}
                     <div className="relative col-span-5">
-                      {f.filter_type_name === 'Channel' && (
-                        <select
-                          value={f.filter_value || ''}
-                          onChange={(e) => {
-                            const selectedChannel = bankChannels.find(channel => channel.value === Number(e.target.value));
-                            if (selectedChannel) {
+                      {f.filter_type_name && (() => {
+                        const typeLower = f.filter_type_name.toLowerCase();
+                        const isChannel = typeLower === 'channel';
+                        const isState = typeLower === 'state';
+
+                        if (isChannel) {
+                          return (
+                            <select
+                              value={f.filter_value || ''}
+                              onChange={(e) => {
+                                const selectedChannel = bankChannels.find(channel => channel.value === Number(e.target.value));
+                                if (selectedChannel) {
+                                  const newFilters = [...filters];
+                                  newFilters[idx] = {
+                                    ...newFilters[idx],
+                                    filter_value: String(selectedChannel.value),
+                                    filter_value_id: String(selectedChannel.value),
+                                    filter_value_name: selectedChannel.name
+                                  };
+                                  setFilters(newFilters);
+                                }
+                              }}
+                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
+                            >
+                              <option value="">Select channel</option>
+                              {bankChannels
+                                .filter(channel => {
+                                  const existingChannelValues = filters
+                                    .map((filter, filterIdx) =>
+                                      filterIdx !== idx && filter.filter_type_name?.toLowerCase() === 'channel' ? filter.filter_value : null
+                                    )
+                                    .filter(Boolean);
+                                  return !existingChannelValues.includes(String(channel.value));
+                                })
+                                .map((channel) => (
+                                  <option key={`channel-${channel.value}-${channel.name}`} value={channel.value}>
+                                    {channel.name}
+                                  </option>
+                                ))}
+                            </select>
+                          );
+                        }
+
+                        if (isState) {
+                          return (
+                            <select
+                              value={f.filter_value || ''}
+                              onChange={(e) => {
+                                const stateValue = e.target.value;
+                                const newFilters = [...filters];
+                                newFilters[idx] = {
+                                  ...newFilters[idx],
+                                  filter_value: stateValue,
+                                  filter_value_id: stateValue,
+                                  filter_value_name: stateValue
+                                };
+                                setFilters(newFilters);
+                              }}
+                              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
+                            >
+                              <option value="">Select state</option>
+                              {Object.entries(State)
+                                .filter(([abbr]) => {
+                                  const existingStateValues = filters
+                                    .map((filter, filterIdx) =>
+                                      filterIdx !== idx && filter.filter_type_name?.toLowerCase() === 'state' ? filter.filter_value : null
+                                    )
+                                    .filter(Boolean);
+                                  return !existingStateValues.includes(abbr);
+                                })
+                                .map(([abbr, name]) => (
+                                  <option key={`state-${abbr}`} value={abbr}>
+                                    {name} ({abbr})
+                                  </option>
+                                ))}
+                            </select>
+                          );
+                        }
+
+                        // Fallback: any other filter type (e.g. Marketing Contact) — show text input
+                        return (
+                          <input
+                            type="text"
+                            value={f.filter_value || ''}
+                            onChange={(e) => {
+                              const v = e.target.value;
                               const newFilters = [...filters];
                               newFilters[idx] = {
                                 ...newFilters[idx],
-                                filter_value: String(selectedChannel.value),
-                                filter_value_id: String(selectedChannel.value),
-                                filter_value_name: selectedChannel.name
+                                filter_value: v,
+                                filter_value_id: v,
+                                filter_value_name: v
                               };
                               setFilters(newFilters);
-                            }
-                          }}
-                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
-                        >
-                          <option value="">Select channel</option>
-                          {bankChannels
-                            .filter(channel => {
-                              // Don't show channels that are already selected in other Channel filters
-                              const existingChannelValues = filters
-                                .map((filter, filterIdx) => 
-                                  filterIdx !== idx && filter.filter_type_name === 'Channel' ? filter.filter_value : null
-                                )
-                                .filter(Boolean);
-                              return !existingChannelValues.includes(String(channel.value));
-                            })
-                            .map((channel) => (
-                              <option key={`channel-${channel.value}-${channel.name}`} value={channel.value}>
-                                {channel.name}
-                              </option>
-                            ))}
-                        </select>
-                      )}
-
-                      {f.filter_type_name === 'State' && (
-                        <select
-                          value={f.filter_value || ''}
-                          onChange={(e) => {
-                            const stateValue = e.target.value;
-                            const newFilters = [...filters];
-                            newFilters[idx] = {
-                              ...newFilters[idx],
-                              filter_value: stateValue,
-                              filter_value_id: stateValue,
-                              filter_value_name: stateValue
-                            };
-                            setFilters(newFilters);
-                          }}
-                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium appearance-none cursor-pointer hover:border-slate-400 transition-all duration-200"
-                        >
-                          <option value="">Select state</option>
-                          {Object.entries(State)
-                            .filter(([abbr, name]) => {
-                              // Don't show states that are already selected in other State filters
-                              const existingStateValues = filters
-                                .map((filter, filterIdx) => 
-                                  filterIdx !== idx && filter.filter_type_name === 'State' ? filter.filter_value : null
-                                )
-                                .filter(Boolean);
-                              return !existingStateValues.includes(abbr);
-                            })
-                            .map(([abbr, name]) => (
-                              <option key={`state-${abbr}`} value={abbr}>
-                                {name} ({abbr})
-                              </option>
-                            ))}
-                        </select>
-                      )}
-
-                      {f.filter_type_name && (
+                            }}
+                            placeholder={`Enter ${f.filter_type_name} value`}
+                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/90 backdrop-blur-sm text-sm font-medium hover:border-slate-400 transition-all duration-200"
+                          />
+                        );
+                      })()}
+                      {f.filter_type_name && (f.filter_type_name.toLowerCase() === 'channel' || f.filter_type_name.toLowerCase() === 'state') && (
                         <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
                           <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

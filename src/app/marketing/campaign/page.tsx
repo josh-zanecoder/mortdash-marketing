@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
+import ConfirmModal from '@/components/ui/confirm-modal';
 import { Archive, Eye, X, Plus, Search, ChevronDown } from 'lucide-react';
 import { useListsStore } from '@/store/listsStore';
 import { useCampaignStore } from '@/store/useCampaignStore';
@@ -133,6 +134,10 @@ function CampaignPageContent() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
+
+  // Set to true to show the Schedule button in the preview header
+  const SHOW_SCHEDULE_BUTTON = false;
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const router = useRouter();
@@ -309,7 +314,6 @@ function CampaignPageContent() {
     }
   };
 
-  // Schedule handler
   const handleSchedule = () => {
     setScheduleModalOpen(true);
   };
@@ -391,13 +395,13 @@ function CampaignPageContent() {
       {previewOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8">
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setPreviewOpen(false)} />
-          <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+          <div className="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
             {/* Header Row */}
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-6 md:px-8 py-4 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
               <div className="text-lg sm:text-xl font-semibold text-gray-900">Template Preview</div>
               <div className="flex items-center gap-2">
                 <button 
-                  onClick={() => handleSend(false)}
+                  onClick={() => setSendConfirmOpen(true)}
                   className="cursor-pointer bg-[#ff6600] hover:bg-[#ff7a2f] text-white px-3 sm:px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all text-sm sm:text-base font-medium flex items-center gap-2"
                 >
                   <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -405,15 +409,17 @@ function CampaignPageContent() {
                   </svg>
                   Send
                 </button>
-                <button 
-                  onClick={handleSchedule}
-                  className="cursor-pointer bg-white hover:bg-gray-50 text-[#ff6600] border border-[#ff6600] px-3 sm:px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all text-sm sm:text-base font-medium flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Schedule
-                </button>
+                {SHOW_SCHEDULE_BUTTON && (
+                  <button 
+                    onClick={handleSchedule}
+                    className="cursor-pointer bg-white hover:bg-gray-50 text-[#ff6600] border border-[#ff6600] px-3 sm:px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all text-sm sm:text-base font-medium flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Schedule
+                  </button>
+                )}
                 <button 
                   onClick={() => setPreviewOpen(false)}
                   className="cursor-pointer text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
@@ -440,26 +446,43 @@ function CampaignPageContent() {
               </div>
             </div>
 
-            {/* HTML Preview */}
-            <div className="relative overflow-auto bg-[#fcf7f2]" style={{ height: 'calc(100vh - 16rem)' }}>
+            {/* HTML Preview (iframe isolates template styles from page) */}
+            <div className="relative w-full bg-[#fcf7f2]" style={{ height: 'calc(100vh - 16rem)' }}>
               {previewLoading ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+                <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-8 h-8 border-4 border-[#ff6600]/30 border-t-[#ff6600] rounded-full animate-spin" />
                     <span className="text-sm text-gray-500 font-medium">Loading preview...</span>
                   </div>
                 </div>
               ) : (
-                <div
-                  className="p-4 sm:p-6 md:p-8"
-                  style={{ fontFamily: 'Montserrat, Arial, sans-serif' }}
-                  dangerouslySetInnerHTML={{ __html: previewData?.html || '' }}
+                <iframe
+                  title="Email campaign preview"
+                  srcDoc={previewData?.html || ''}
+                  className="w-full h-full border-0 bg-white"
+                  style={{ minHeight: 'calc(100vh - 16rem)' }}
+                  sandbox="allow-same-origin"
                 />
               )}
             </div>
           </div>
         </div>
       )}
+
+      {/* Send campaign confirmation */}
+      <ConfirmModal
+        isOpen={sendConfirmOpen}
+        onClose={() => setSendConfirmOpen(false)}
+        onConfirm={() => {
+          setSendConfirmOpen(false);
+          handleSend(false);
+        }}
+        title="Send campaign"
+        message={`Are you sure you want to send this campaign to ${lists.find(l => String(l.id) === String(selectedList))?.list_name ?? 'the selected list'}?`}
+        confirmText="Send campaign"
+        cancelText="Cancel"
+        type="warning"
+      />
 
       {/* Schedule Modal */}
       {scheduleModalOpen && (
