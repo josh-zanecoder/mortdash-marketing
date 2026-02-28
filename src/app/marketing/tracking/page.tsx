@@ -53,6 +53,37 @@ function emailsToArray(emails: any) {
   return [];
 }
 
+/** Merge two API tracking data objects (for delivered, clicks, etc.) into one */
+function mergeTrackingData(acc: any, next: any): any {
+  if (!next) return acc;
+  if (!acc) return { ...next };
+  const merged: any = {};
+  const keys = ['delivered', 'clicks', 'softBounces', 'hardBounces', 'blocked', 'opened', 'requests'] as const;
+  keys.forEach((k) => {
+    merged[k] = { emails: {}, count: 0, percentage: 0 };
+    if (acc[k]?.emails && typeof acc[k].emails === 'object') {
+      merged[k].emails = { ...acc[k].emails };
+    }
+    if (k === 'softBounces' && acc.softBounce?.emails && typeof acc.softBounce.emails === 'object') {
+      merged[k].emails = { ...merged[k].emails, ...acc.softBounce.emails };
+    }
+    if (k === 'hardBounces' && acc.hardBounce?.emails && typeof acc.hardBounce.emails === 'object') {
+      merged[k].emails = { ...merged[k].emails, ...acc.hardBounce.emails };
+    }
+    if (next[k]?.emails && typeof next[k].emails === 'object') {
+      merged[k].emails = { ...merged[k].emails, ...next[k].emails };
+    }
+    // Support singular keys from API (softBounce, hardBounce)
+    if (k === 'softBounces' && next.softBounce?.emails && typeof next.softBounce.emails === 'object') {
+      merged[k].emails = { ...merged[k].emails, ...next.softBounce.emails };
+    }
+    if (k === 'hardBounces' && next.hardBounce?.emails && typeof next.hardBounce.emails === 'object') {
+      merged[k].emails = { ...merged[k].emails, ...next.hardBounce.emails };
+    }
+  });
+  return merged;
+}
+
 export default function TrackingPage() {
   const { 
     data, 
@@ -66,6 +97,9 @@ export default function TrackingPage() {
   const [dateRange, setDateRange] = useState("Today");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [allPagesData, setAllPagesData] = useState<any>(null);
+  const [loadingAllPages, setLoadingAllPages] = useState(false);
 
   // Calculate date range based on selection
   const getDateRange = (range: string) => {
@@ -100,11 +134,48 @@ export default function TrackingPage() {
     };
   };
 
-  // Fetch data when component mounts or when date range changes
+  // Fetch page 1 for chart and stats (store.data)
   useEffect(() => {
     const { startDate, endDate } = getDateRange(dateRange);
-    fetchTrackingData(startDate, endDate, pagination.currentPage);
-  }, [dateRange, pagination.currentPage, fetchTrackingData]);
+    fetchTrackingData(startDate, endDate, 1);
+  }, [dateRange, fetchTrackingData]);
+
+  // Always fetch all pages for the table so we can paginate and filter correctly (all events + filtered)
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoadingAllPages(true);
+      setAllPagesData(null);
+      const { startDate, endDate } = getDateRange(dateRange);
+      let page = 1;
+      let merged: any = null;
+      try {
+        while (true) {
+          const params = new URLSearchParams({
+            start_date: startDate,
+            end_date: endDate,
+            page: String(page),
+            limit: "10",
+          });
+          const res = await fetch(`/api/tracking/by-range?${params.toString()}`);
+          if (!res.ok || cancelled) break;
+          const json = await res.json();
+          const nextData = json.data || {};
+          merged = mergeTrackingData(merged, nextData);
+          const totalPages = json.pagination?.total_pages ?? 1;
+          if (page >= totalPages) break;
+          page += 1;
+        }
+        if (!cancelled) setAllPagesData(merged);
+      } finally {
+        if (!cancelled) setLoadingAllPages(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange]);
 
   // Transform the nested data structure into a flat array for display
   const transformData = (data: any) => {
@@ -130,15 +201,18 @@ export default function TrackingPage() {
     return flattenedData;
   };
 
-  // Flatten all emails from all event types for the table
+  // Flatten all emails from all event types for the table (always use merged data when loaded)
+  const tableData = allPagesData ?? data;
+  const withEvent = (arr: any[], event: string) =>
+    (arr || []).map((item: any) => ({ ...item, event: item.event || event }));
   const allEmails = [
-    ...emailsToArray(data.delivered?.emails),
-    ...emailsToArray(data.clicks?.emails),
-    ...emailsToArray(data.softBounce?.emails),
-    ...emailsToArray(data.hardBounce?.emails),
-    ...emailsToArray(data.blocked?.emails),
-    ...emailsToArray(data.opened?.emails),
-    ...emailsToArray(data.requests?.emails),
+    ...withEvent(emailsToArray(tableData?.delivered?.emails), "delivered"),
+    ...withEvent(emailsToArray(tableData?.clicks?.emails), "clicks"),
+    ...withEvent(emailsToArray(tableData?.softBounces?.emails ?? tableData?.softBounce?.emails), "softBounces"),
+    ...withEvent(emailsToArray(tableData?.hardBounces?.emails ?? tableData?.hardBounce?.emails), "hardBounces"),
+    ...withEvent(emailsToArray(tableData?.blocked?.emails), "blocked"),
+    ...withEvent(emailsToArray(tableData?.opened?.emails), "opened"),
+    ...withEvent(emailsToArray(tableData?.requests?.emails), "requests"),
   ];
 
   // Transform and filter data
@@ -157,13 +231,12 @@ export default function TrackingPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Calculate pagination
+  // Calculate pagination (always client-side over full filtered list)
   const ITEMS_PER_PAGE = 10;
   const totalFilteredRecords = filteredData.length;
-  const totalFilteredPages = Math.ceil(totalFilteredRecords / ITEMS_PER_PAGE);
-  const [currentPage, setCurrentPage] = useState(1);
+  const totalFilteredPages = Math.max(1, Math.ceil(filteredData.length / ITEMS_PER_PAGE));
 
-  // Get current page's data
+  // Get current page's data (always slice the filtered list)
   const getCurrentPageData = () => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -209,12 +282,12 @@ export default function TrackingPage() {
     const eventCounts: { [key: string]: { [key: string]: number } } = {};
     dates.forEach(date => {
       eventCounts[date] = {
-        sent: 0,
+        requests: 0,
         delivered: 0,
         opened: 0,
-        clicked: 0,
-        soft_bounced: 0,
-        hard_bounced: 0,
+        clicks: 0,
+        softBounces: 0,
+        hardBounces: 0,
         blocked: 0
       };
     });
@@ -229,12 +302,12 @@ export default function TrackingPage() {
       });
     }
 
-    processEmails('requests', data.requests?.emails, 'sent');
+    processEmails('requests', data.requests?.emails, 'requests');
     processEmails('delivered', data.delivered?.emails, 'delivered');
     processEmails('opened', data.opened?.emails, 'opened');
-    processEmails('clicks', data.clicks?.emails, 'clicked');
-    processEmails('softBounce', data.softBounce?.emails, 'soft_bounced');
-    processEmails('hardBounce', data.hardBounce?.emails, 'hard_bounced');
+    processEmails('clicks', data.clicks?.emails, 'clicks');
+    processEmails('softBounces', data.softBounces?.emails ?? data.softBounce?.emails, 'softBounces');
+    processEmails('hardBounces', data.hardBounces?.emails ?? data.hardBounce?.emails, 'hardBounces');
     processEmails('blocked', data.blocked?.emails, 'blocked');
 
     return {
@@ -242,7 +315,7 @@ export default function TrackingPage() {
       datasets: [
         {
           label: 'Sent',
-          data: dates.map(date => eventCounts[date].sent),
+          data: dates.map(date => eventCounts[date].requests),
           borderColor: '#ff8ba7',
           backgroundColor: '#ff8ba7',
           fill: true,
@@ -293,7 +366,7 @@ export default function TrackingPage() {
         },
         {
           label: 'Clicks',
-          data: dates.map(date => eventCounts[date].clicked),
+          data: dates.map(date => eventCounts[date].clicks),
           borderColor: '#ffd60a',
           backgroundColor: '#ffd60a',
           fill: true,
@@ -310,7 +383,7 @@ export default function TrackingPage() {
         },
         {
           label: 'Soft Bounces',
-          data: dates.map(date => eventCounts[date].soft_bounced),
+          data: dates.map(date => eventCounts[date].softBounces),
           borderColor: '#fb8500',
           backgroundColor: '#fb8500',
           fill: true,
@@ -327,7 +400,7 @@ export default function TrackingPage() {
         },
         {
           label: 'Hard Bounces',
-          data: dates.map(date => eventCounts[date].hard_bounced),
+          data: dates.map(date => eventCounts[date].hardBounces),
           borderColor: '#219ebc',
           backgroundColor: '#219ebc',
           fill: true,
@@ -495,7 +568,10 @@ export default function TrackingPage() {
             <Calendar className="w-4 h-4 text-blue-500" />
             <select
               value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
+              onChange={(e) => {
+                setDateRange(e.target.value);
+                setCurrentPage(1);
+              }}
               className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-[120px]"
             >
               <option value="Today">Today</option>
@@ -510,16 +586,19 @@ export default function TrackingPage() {
             <Filter className="w-4 h-4 text-purple-500" />
             <select
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setCurrentPage(1);
+              }}
               className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-[100px]"
             >
               <option value="all">All Status</option>
-              <option value="sent">Sent</option>
+              <option value="requests">Sent</option>
               <option value="delivered">Delivered</option>
               <option value="opened">Opened</option>
-              <option value="clicked">Clicked</option>
-              <option value="soft_bounced">Soft Bounces</option>
-              <option value="hard_bounced">Hard Bounces</option>
+              <option value="clicks">Clicks</option>
+              <option value="softBounces">Soft Bounces</option>
+              <option value="hardBounces">Hard Bounces</option>
               <option value="blocked">Blocked</option>
             </select>
           </div>
@@ -579,9 +658,30 @@ export default function TrackingPage() {
 
         <Card className="bg-white border-0 shadow-sm overflow-hidden">
           <CardHeader className="border-b bg-white">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-lg font-semibold">Campaign Details</CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 bg-gray-50 rounded-lg border border-gray-100 px-3 py-1.5">
+                  <Filter className="w-4 h-4 text-gray-500 shrink-0" />
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => {
+                      setSelectedStatus(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-[120px] font-medium text-gray-700"
+                    aria-label="Filter by event"
+                  >
+                    <option value="all">All events</option>
+                    <option value="requests">Sent</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="opened">Opened</option>
+                    <option value="clicks">Clicks</option>
+                    <option value="softBounces">Soft bounces</option>
+                    <option value="hardBounces">Hard bounces</option>
+                    <option value="blocked">Blocked</option>
+                  </select>
+                </div>
                 <div className="relative">
                   <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input 
@@ -610,12 +710,12 @@ export default function TrackingPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {loading || loadingAllPages ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8">
                         <div className="flex items-center justify-center gap-2 text-gray-500">
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Loading tracking data...</span>
+                          <span>{loadingAllPages ? "Loading all events..." : "Loading tracking data..."}</span>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -631,11 +731,15 @@ export default function TrackingPage() {
                         <TableCell>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             item.event === 'delivered' ? 'bg-green-50 text-green-700' :
-                            item.event === 'clicked' ? 'bg-blue-50 text-blue-700' :
-                            item.event === 'bounced' ? 'bg-red-50 text-red-700' :
+                            item.event === 'clicks' ? 'bg-blue-50 text-blue-700' :
+                            item.event === 'softBounces' ? 'bg-orange-50 text-orange-700' :
+                            item.event === 'hardBounces' ? 'bg-gray-50 text-gray-700' :
+                            item.event === 'blocked' ? 'bg-pink-50 text-pink-700' :
+                            item.event === 'opened' ? 'bg-cyan-50 text-cyan-700' :
+                            item.event === 'requests' ? 'bg-rose-50 text-rose-700' :
                             'bg-gray-50 text-gray-700'
                           }`}>
-                            {item.event ? item.event.charAt(0).toUpperCase() + item.event.slice(1).toLowerCase() : ''}
+                            {item.event ? (item.event === 'clicks' ? 'Clicks' : item.event === 'requests' ? 'Sent' : item.event === 'softBounces' ? 'Soft Bounces' : item.event === 'hardBounces' ? 'Hard Bounces' : item.event.charAt(0).toUpperCase() + item.event.slice(1).replace(/([A-Z])/g, ' $1').trim()) : ''}
                           </span>
                         </TableCell>
                         <TableCell className="text-sm text-gray-600">
@@ -655,12 +759,12 @@ export default function TrackingPage() {
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-between py-4">
-          <p className="text-sm text-gray-500">
-            Showing {filteredData.length > 0 ? ((currentPage - 1) * ITEMS_PER_PAGE) + 1 : 0} to {Math.min(currentPage * ITEMS_PER_PAGE, totalFilteredRecords)} of {totalFilteredRecords} entries
+        <div className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-gray-500 shrink-0">
+            Showing {totalFilteredRecords > 0 ? ((currentPage - 1) * ITEMS_PER_PAGE) + 1 : 0} to {Math.min(currentPage * ITEMS_PER_PAGE, totalFilteredRecords)} of {totalFilteredRecords} entries
           </p>
           <Pagination>
-            <PaginationContent>
+            <PaginationContent className="flex flex-wrap justify-center gap-1 sm:gap-2">
               <PaginationItem>
                 <PaginationPrevious 
                   href="#"
@@ -674,20 +778,43 @@ export default function TrackingPage() {
                   className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
                 />
               </PaginationItem>
-              {[...Array(totalFilteredPages)].map((_, idx) => (
-                <PaginationItem key={idx}>
-                  <PaginationLink
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handlePageChange(idx + 1);
-                    }}
-                    isActive={currentPage === idx + 1}
-                  >
-                    {idx + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
+              {(() => {
+                // Windowed pagination: show first, last, current ± 2, and ellipsis for gaps
+                const delta = 2;
+                const pages: (number | 'ellipsis')[] = [];
+                let last = 0;
+                for (let p = 1; p <= totalFilteredPages; p++) {
+                  if (
+                    p === 1 ||
+                    p === totalFilteredPages ||
+                    (p >= currentPage - delta && p <= currentPage + delta)
+                  ) {
+                    if (p > last + 1) pages.push('ellipsis');
+                    pages.push(p);
+                    last = p;
+                  }
+                }
+                return pages.map((item, i) =>
+                  item === 'ellipsis' ? (
+                    <PaginationItem key={`ellipsis-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(item);
+                        }}
+                        isActive={currentPage === item}
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                );
+              })()}
               <PaginationItem>
                 <PaginationNext
                   href="#"

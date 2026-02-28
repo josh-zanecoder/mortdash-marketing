@@ -115,8 +115,8 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
         stats: {
           delivered: trackingData.delivered?.count || 0,
           unique_clickers: trackingData.clicks?.count || 0,
-          soft_bounces: trackingData.softBounce?.count || 0,
-          hard_bounces: trackingData.hardBounce?.count || 0,
+          soft_bounces: trackingData.softBounces?.count || trackingData.softBounce?.count || 0,
+          hard_bounces: trackingData.hardBounces?.count || trackingData.hardBounce?.count || 0,
           blocked: trackingData.blocked?.count || 0,
           total: trackingData.total || 0,
         },
@@ -173,8 +173,8 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
       const dashboardStats = {
         delivered: trackingData.delivered?.count || 0,
         unique_clickers: trackingData.clicks?.count || 0,
-        soft_bounces: trackingData.softBounce?.count || 0,
-        hard_bounces: trackingData.hardBounce?.count || 0,
+        soft_bounces: trackingData.softBounces?.count || trackingData.softBounce?.count || 0,
+        hard_bounces: trackingData.hardBounces?.count || trackingData.hardBounce?.count || 0,
         blocked: trackingData.blocked?.count || 0,
         total: trackingData.total || 0,
       };
