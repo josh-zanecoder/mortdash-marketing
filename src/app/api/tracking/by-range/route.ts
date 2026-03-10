@@ -17,11 +17,13 @@ export async function GET(req: NextRequest) {
     const endDate = searchParams.get('end_date');
     const page = searchParams.get('page') || '1';
     const limit = searchParams.get('limit') || '10';
+    const campaignCode = searchParams.get('campaign_code');
 
     // Build the query string for the backend
     const queryParams = new URLSearchParams();
     if (startDate) queryParams.append('start_date', startDate);
     if (endDate) queryParams.append('end_date', endDate);
+    if (campaignCode) queryParams.append('campaign_code', campaignCode);
     queryParams.append('page', page);
     queryParams.append('limit', limit);
 

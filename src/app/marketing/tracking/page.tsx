@@ -94,17 +94,29 @@ export default function TrackingPage() {
     fetchTrackingData
   } = useTrackingStore();
 
-  const [dateRange, setDateRange] = useState("Today");
+  const [dateRange, setDateRange] = useState("All Time");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
   const [allPagesData, setAllPagesData] = useState<any>(null);
   const [loadingAllPages, setLoadingAllPages] = useState(false);
+  const [selectedCampaignCode, setSelectedCampaignCode] = useState<string>('all');
+  const [campaigns, setCampaigns] = useState<
+    Array<{ id: number; campaign_code: string; status?: string; template_name?: string }>
+  >([]);
 
   // Calculate date range based on selection
   const getDateRange = (range: string) => {
     const today = new Date();
     const startDate = new Date();
+
+    if (range === "All Time") {
+      return {
+        startDate: "",
+        endDate: today.toISOString().split("T")[0],
+      };
+    }
     
     switch (range) {
       case "Today":
@@ -137,8 +149,38 @@ export default function TrackingPage() {
   // Fetch page 1 for chart and stats (store.data)
   useEffect(() => {
     const { startDate, endDate } = getDateRange(dateRange);
-    fetchTrackingData(startDate, endDate, 1);
-  }, [dateRange, fetchTrackingData]);
+    fetchTrackingData(
+      startDate,
+      endDate,
+      1,
+      undefined,
+      selectedCampaignCode === 'all' ? undefined : selectedCampaignCode
+    );
+  }, [dateRange, fetchTrackingData, selectedCampaignCode]);
+
+  // Fetch marketing campaigns for the current user (created_by)
+  useEffect(() => {
+    const loadCampaigns = async () => {
+      try {
+        const res = await fetch('/api/marketing/campaigns');
+        if (!res.ok) {
+          return;
+        }
+        const json = await res.json();
+        const list = (json.data || []) as Array<{
+          id: number;
+          campaign_code: string;
+          status?: string;
+          template_name?: string;
+        }>;
+        setCampaigns(list);
+      } catch (e) {
+        console.error('Failed to load marketing campaigns', e);
+      }
+    };
+
+    loadCampaigns();
+  }, []);
 
   // Always fetch all pages for the table so we can paginate and filter correctly (all events + filtered)
   useEffect(() => {
@@ -152,11 +194,16 @@ export default function TrackingPage() {
       try {
         while (true) {
           const params = new URLSearchParams({
-            start_date: startDate,
             end_date: endDate,
             page: String(page),
             limit: "10",
           });
+          if (startDate) {
+            params.append('start_date', startDate);
+          }
+          if (selectedCampaignCode && selectedCampaignCode !== 'all') {
+            params.append('campaign_code', selectedCampaignCode);
+          }
           const res = await fetch(`/api/tracking/by-range?${params.toString()}`);
           if (!res.ok || cancelled) break;
           const json = await res.json();
@@ -175,7 +222,7 @@ export default function TrackingPage() {
     return () => {
       cancelled = true;
     };
-  }, [dateRange]);
+  }, [dateRange, selectedCampaignCode]);
 
   // Transform the nested data structure into a flat array for display
   const transformData = (data: any) => {
@@ -199,6 +246,16 @@ export default function TrackingPage() {
     });
     
     return flattenedData;
+  };
+
+  const emailMatchesCampaign = (email: any, campaignCode: string | undefined) => {
+    if (!campaignCode || campaignCode === 'all') return true;
+    const tag = email?.tag;
+    if (!tag) return false;
+    if (Array.isArray(tag)) {
+      return tag.some((t) => String(t).includes(campaignCode));
+    }
+    return String(tag).includes(campaignCode);
   };
 
   // Flatten all emails from all event types for the table (always use merged data when loaded)
@@ -227,8 +284,9 @@ export default function TrackingPage() {
       (item.event?.toLowerCase().includes(searchTerm.toLowerCase()) || '');
     
     const matchesStatus = selectedStatus === 'all' || item.event === selectedStatus;
+    const matchesCampaignFilter = emailMatchesCampaign(item, selectedCampaignCode);
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesCampaignFilter;
   });
 
   // Calculate pagination (always client-side over full filtered list)
@@ -250,12 +308,99 @@ export default function TrackingPage() {
 
   const currentPageData = getCurrentPageData();
 
+  // CSV export helpers
+  const formatDateForExport = (val: any): string => {
+    if (val == null || val === "") return "";
+    if (typeof val === "number") {
+      return new Date(val * (val < 1e12 ? 1000 : 1))
+        .toISOString()
+        .slice(0, 16)
+        .replace("T", " ");
+    }
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return String(val);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const h = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${y}-${m}-${day} ${h}:${min}`;
+  };
+
+  const exportTableToCsv = () => {
+    if (!filteredData.length) return;
+
+    const headers = ["Event", "Date", "Subject", "From", "To", "Message ID", "IP"];
+
+    const escape = (value: any) => {
+      const str = value == null ? "" : String(value);
+      if (/[",\n]/.test(str)) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const rows = filteredData.map((item: any) => {
+      const event = item.event || "";
+      const displayEvent =
+        event === "requests"
+          ? "Sent"
+          : event === "clicks"
+          ? "Clicks"
+          : event === "softBounces"
+          ? "Soft Bounces"
+          : event === "hardBounces"
+          ? "Hard Bounces"
+          : event
+          ? event.charAt(0).toUpperCase() +
+            event
+              .slice(1)
+              .replace(/([A-Z])/g, " $1")
+              .trim()
+          : "";
+
+      const dateStr = formatDateForExport(item.date_time || item.date);
+      const dateForExcel = dateStr ? `="${dateStr}"` : "";
+
+      return [
+        displayEvent,
+        dateForExcel,
+        item.subject ?? "",
+        item.from ?? "",
+        item.email ?? item.to ?? "",
+        item.messageId ?? "",
+        item.ip ?? "",
+      ];
+    });
+
+    const csv =
+      [headers, ...rows]
+        .map((row) => row.map(escape).join(","))
+        .join("\n");
+
+    // Prepend BOM so Excel on Windows opens UTF-8 correctly
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `email-tracking-${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Calculate percentages for stats
   const total = stats.total || 1; // Avoid division by zero
   const getPercentage = (value: number) => Math.round((value / total) * 100);
 
   const statsConfig = [
     { label: "Delivered", value: stats.delivered, color: "bg-green-200", percentage: getPercentage(stats.delivered) },
+    { label: "Opened", value: stats.opened ?? 0, color: "bg-cyan-200", percentage: getPercentage(stats.opened ?? 0) },
     { label: "Unique Clickers", value: stats.unique_clickers, color: "bg-blue-200", percentage: getPercentage(stats.unique_clickers) },
     { label: "Soft Bounces", value: stats.soft_bounces, color: "bg-orange-200", percentage: getPercentage(stats.soft_bounces) },
     { label: "Hard Bounces", value: stats.hard_bounces, color: "bg-gray-400", percentage: getPercentage(stats.hard_bounces) },
@@ -267,20 +412,49 @@ export default function TrackingPage() {
     if (!data) return null;
 
     const { startDate, endDate } = getDateRange(dateRange);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    let dates: string[] = [];
 
-    // Generate all dates in the range
-    const dates = [];
-    const currentDate = new Date(start);
-    while (currentDate <= end) {
-      dates.push(currentDate.toISOString().split('T')[0]);
-      currentDate.setDate(currentDate.getDate() + 1);
+    if (!startDate) {
+      // "All Time" – build the x-axis purely from the dates present in the data
+      const collectDates = (emails: any) => {
+        emailsToArray(emails).forEach((email: any) => {
+          if (!emailMatchesCampaign(email, selectedCampaignCode)) return;
+          const d = email.parse_date || email.date?.split("T")[0] || email.date;
+          if (d) {
+            dates.push(d);
+          }
+        });
+      };
+
+      collectDates(data.requests?.emails);
+      collectDates(data.delivered?.emails);
+      collectDates(data.opened?.emails);
+      collectDates(data.clicks?.emails);
+      collectDates(data.softBounces?.emails ?? data.softBounce?.emails);
+      collectDates(data.hardBounces?.emails ?? data.hardBounce?.emails);
+      collectDates(data.blocked?.emails);
+
+      if (dates.length === 0) {
+        return null;
+      }
+
+      const uniqueSorted = Array.from(new Set(dates)).sort();
+      dates = uniqueSorted;
+    } else {
+      // Bounded ranges (Today, Last 7 Days, etc.) – generate all dates in the range
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      const currentDate = new Date(start);
+      while (currentDate <= end) {
+        dates.push(currentDate.toISOString().split("T")[0]);
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
     }
 
     // Initialize counts for each date
     const eventCounts: { [key: string]: { [key: string]: number } } = {};
-    dates.forEach(date => {
+    dates.forEach((date) => {
       eventCounts[date] = {
         requests: 0,
         delivered: 0,
@@ -288,151 +462,73 @@ export default function TrackingPage() {
         clicks: 0,
         softBounces: 0,
         hardBounces: 0,
-        blocked: 0
+        blocked: 0,
       };
     });
 
     // Helper to process emails for a given event type
     function processEmails(eventKey: string, emails: any, eventName: string) {
       emailsToArray(emails).forEach((email: any) => {
-        const emailDate = email.parse_date || email.date?.split('T')[0] || email.date;
+        if (!emailMatchesCampaign(email, selectedCampaignCode)) return;
+        const emailDate = email.parse_date || email.date?.split("T")[0] || email.date;
         if (emailDate && eventCounts[emailDate]) {
-          eventCounts[emailDate][eventName] = (eventCounts[emailDate][eventName] || 0) + 1;
+          eventCounts[emailDate][eventName] =
+            (eventCounts[emailDate][eventName] || 0) + 1;
         }
       });
     }
 
-    processEmails('requests', data.requests?.emails, 'requests');
-    processEmails('delivered', data.delivered?.emails, 'delivered');
-    processEmails('opened', data.opened?.emails, 'opened');
-    processEmails('clicks', data.clicks?.emails, 'clicks');
-    processEmails('softBounces', data.softBounces?.emails ?? data.softBounce?.emails, 'softBounces');
-    processEmails('hardBounces', data.hardBounces?.emails ?? data.hardBounce?.emails, 'hardBounces');
-    processEmails('blocked', data.blocked?.emails, 'blocked');
+    processEmails("requests", data.requests?.emails, "requests");
+    processEmails("delivered", data.delivered?.emails, "delivered");
+    processEmails("opened", data.opened?.emails, "opened");
+    processEmails("clicks", data.clicks?.emails, "clicks");
+    processEmails(
+      "softBounces",
+      data.softBounces?.emails ?? data.softBounce?.emails,
+      "softBounces"
+    );
+    processEmails(
+      "hardBounces",
+      data.hardBounces?.emails ?? data.hardBounce?.emails,
+      "hardBounces"
+    );
+    processEmails("blocked", data.blocked?.emails, "blocked");
+
+    const datasets: any[] = [];
+
+    const addSeries = (key: string, label: string, color: string) => {
+      // Respect the selectedStatus filter: show all series when 'all',
+      if (selectedStatus !== "all" && selectedStatus !== key) return;
+      datasets.push({
+        label,
+        data: dates.map((date) => eventCounts[date][key] ?? 0),
+        borderColor: color,
+        backgroundColor: color,
+        fill: true,
+        tension: 0.4,
+        borderWidth: 1,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: "#fff",
+        pointHoverBackgroundColor: color,
+        pointBorderColor: color,
+        pointBorderWidth: 2,
+        pointHoverBorderWidth: 2,
+        stack: "stack1",
+      });
+    };
+
+    addSeries("requests", "Sent", "#ff8ba7");
+    addSeries("delivered", "Delivered", "#33a1fd");
+    addSeries("opened", "Opened", "#4cc9f0");
+    addSeries("clicks", "Clicks", "#ffd60a");
+    addSeries("softBounces", "Soft Bounces", "#fb8500");
+    addSeries("hardBounces", "Hard Bounces", "#219ebc");
+    addSeries("blocked", "Blocked", "#8338ec");
 
     return {
       labels: dates,
-      datasets: [
-        {
-          label: 'Sent',
-          data: dates.map(date => eventCounts[date].requests),
-          borderColor: '#ff8ba7',
-          backgroundColor: '#ff8ba7',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#ff8ba7',
-          pointBorderColor: '#ff8ba7',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Delivered',
-          data: dates.map(date => eventCounts[date].delivered),
-          borderColor: '#33a1fd',
-          backgroundColor: '#33a1fd',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#33a1fd',
-          pointBorderColor: '#33a1fd',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Opened',
-          data: dates.map(date => eventCounts[date].opened),
-          borderColor: '#4cc9f0',
-          backgroundColor: '#4cc9f0',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#4cc9f0',
-          pointBorderColor: '#4cc9f0',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Clicks',
-          data: dates.map(date => eventCounts[date].clicks),
-          borderColor: '#ffd60a',
-          backgroundColor: '#ffd60a',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#ffd60a',
-          pointBorderColor: '#ffd60a',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Soft Bounces',
-          data: dates.map(date => eventCounts[date].softBounces),
-          borderColor: '#fb8500',
-          backgroundColor: '#fb8500',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#fb8500',
-          pointBorderColor: '#fb8500',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Hard Bounces',
-          data: dates.map(date => eventCounts[date].hardBounces),
-          borderColor: '#219ebc',
-          backgroundColor: '#219ebc',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#219ebc',
-          pointBorderColor: '#219ebc',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-        {
-          label: 'Blocked',
-          data: dates.map(date => eventCounts[date].blocked),
-          borderColor: '#8338ec',
-          backgroundColor: '#8338ec',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 1,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#fff',
-          pointHoverBackgroundColor: '#8338ec',
-          pointBorderColor: '#8338ec',
-          pointBorderWidth: 2,
-          pointHoverBorderWidth: 2,
-          stack: 'stack1'
-        },
-      ],
+      datasets,
     };
   };
 
@@ -572,8 +668,9 @@ export default function TrackingPage() {
                 setDateRange(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-[120px]"
+              className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-[140px]"
             >
+              <option value="All Time">All Time</option>
               <option value="Today">Today</option>
               <option value="Yesterday">Yesterday</option>
               <option value="Last 7 Days">Last 7 Days</option>
@@ -602,19 +699,44 @@ export default function TrackingPage() {
               <option value="blocked">Blocked</option>
             </select>
           </div>
+          <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-100 shadow-sm px-3 py-2">
+            <Filter className="w-4 h-4 text-emerald-500" />
+            <select
+              value={selectedCampaignCode}
+              onChange={(e) => {
+                setSelectedCampaignCode(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-[180px]"
+            >
+              <option value="all">All Campaigns</option>
+              {campaigns
+                .filter((c) => c.campaign_code)
+                .sort((a, b) => {
+                  const nameA = (a.template_name || a.campaign_code).toLowerCase();
+                  const nameB = (b.template_name || b.campaign_code).toLowerCase();
+                  return nameA.localeCompare(nameB);
+                })
+                .map((campaign) => (
+                  <option key={campaign.id} value={campaign.campaign_code}>
+                    {campaign.template_name || campaign.campaign_code}
+                  </option>
+                ))}
+            </select>
+          </div>
         </div>
 
-        {/* Update the stats cards section */}
-        <div className="grid grid-cols-5 gap-3">
+        {/* Stats cards */}
+        <div className="grid grid-cols-6 gap-2">
           {statsConfig.map((stat) => (
             <div 
               key={stat.label} 
-              className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm"
+              className="bg-white rounded-lg border border-gray-100 px-3 py-3 shadow-sm"
             >
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-gray-500">{stat.label}</span>
+                <span className="text-xs font-medium text-gray-500">{stat.label}</span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-semibold">{stat.value}</span>
+                  <span className="text-lg font-semibold">{stat.value}</span>
                   <span className="text-xs text-gray-500">emails</span>
                 </div>
                 <div className="mt-2 flex items-center gap-1.5">
@@ -631,57 +753,68 @@ export default function TrackingPage() {
           ))}
         </div>
 
-        <Card className="bg-white border-0 shadow-sm">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-base font-medium">Email Campaign Performance</CardTitle>
-            <CardDescription className="text-sm text-gray-500">Tracking metrics over time</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[350px] w-full">
-              {chartData ? (
-                <Line 
-                  options={chartOptions} 
-                  data={chartData}
-                  className="[canvas-important]:!rounded-lg"
-                />
-              ) : (
-                <div className="h-full w-full flex items-center justify-center">
-                  <div className="text-sm text-gray-500 flex flex-col items-center gap-2">
-                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                    <span>Loading chart data...</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* View mode toggle */}
+        <div className="flex items-center justify-between mt-4">
+          <div className="inline-flex rounded-full bg-white border border-gray-200 p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setViewMode("chart")}
+              className={`px-4 py-1.5 text-xs font-medium rounded-full cursor-pointer ${
+                viewMode === "chart"
+                  ? "bg-slate-900 text-white shadow"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              Graph
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("table")}
+              className={`px-4 py-1.5 text-xs font-medium rounded-full cursor-pointer ${
+                viewMode === "table"
+                  ? "bg-slate-900 text-white shadow"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              Table
+            </button>
+          </div>
+        </div>
 
-        <Card className="bg-white border-0 shadow-sm overflow-hidden">
+        {viewMode === "chart" && (
+          <Card className="bg-white border-0 shadow-sm mt-4">
+            <CardHeader className="space-y-1 pb-4">
+              <CardTitle className="text-base font-medium">Email Campaign Performance</CardTitle>
+              <CardDescription className="text-sm text-gray-500">Tracking metrics over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[350px] w-full">
+                {chartData ? (
+                  <Line 
+                    options={chartOptions} 
+                    data={chartData}
+                    className="[canvas-important]:!rounded-lg"
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center">
+                    <div className="text-sm text-gray-500 flex flex-col items-center gap-2">
+                      <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                      <span>Loading chart data...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {viewMode === "table" && (
+        <>
+        <Card className="bg-white border-0 shadow-sm overflow-hidden mt-4">
           <CardHeader className="border-b bg-white">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-lg font-semibold">Campaign Details</CardTitle>
               <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2 bg-gray-50 rounded-lg border border-gray-100 px-3 py-1.5">
-                  <Filter className="w-4 h-4 text-gray-500 shrink-0" />
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => {
-                      setSelectedStatus(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-[120px] font-medium text-gray-700"
-                    aria-label="Filter by event"
-                  >
-                    <option value="all">All events</option>
-                    <option value="requests">Sent</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="opened">Opened</option>
-                    <option value="clicks">Clicks</option>
-                    <option value="softBounces">Soft bounces</option>
-                    <option value="hardBounces">Hard bounces</option>
-                    <option value="blocked">Blocked</option>
-                  </select>
-                </div>
                 <div className="relative">
                   <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input 
@@ -692,6 +825,13 @@ export default function TrackingPage() {
                     className="pl-9 pr-4 py-2 text-sm border rounded-lg w-[250px] focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={exportTableToCsv}
+                  className="inline-flex items-center px-3 py-2 text-xs font-medium rounded-md border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 shadow-sm cursor-pointer"
+                >
+                  Export CSV
+                </button>
               </div>
             </div>
           </CardHeader>
@@ -831,6 +971,8 @@ export default function TrackingPage() {
             </PaginationContent>
           </Pagination>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

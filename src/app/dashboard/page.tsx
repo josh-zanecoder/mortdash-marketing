@@ -138,7 +138,7 @@ export default function DashboardPage() {
 
       {/* Hero Section */}
       <section className="w-full max-w-4xl text-center mb-8">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-[#232323] mb-2 drop-shadow-sm leading-tight">Welcome to Mortdash Marketing</h1>
+        <h1 className="text-4xl md:text-5xl font-extrabold text-[#232323] mb-2 drop-shadow-sm leading-tight">Welcome to Convere Marketing</h1>
         <p className="text-lg md:text-xl text-[#6d6d6d] mb-4 font-medium">Build targeted marketing lists, launch effective campaigns, and track performance—all in one place.</p>
       </section>
       {/* Templates & Marketing Ideas Section */}
