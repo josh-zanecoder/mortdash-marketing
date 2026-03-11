@@ -94,7 +94,7 @@ export default function TrackingPage() {
     fetchTrackingData
   } = useTrackingStore();
 
-  const [dateRange, setDateRange] = useState("All Time");
+  const [dateRange, setDateRange] = useState("Last 90 Days");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,9 +111,13 @@ export default function TrackingPage() {
     const today = new Date();
     const startDate = new Date();
 
-    if (range === "All Time") {
+    if (range === "Last 90 Days") {
       return {
-        startDate: "1970-01-01",
+        startDate: (() => {
+          const d = new Date();
+          d.setDate(d.getDate() - 90);
+          return d.toISOString().split("T")[0];
+        })(),
         endDate: today.toISOString().split("T")[0],
       };
     }
@@ -414,7 +418,7 @@ export default function TrackingPage() {
     const { startDate, endDate } = getDateRange(dateRange);
     let dates: string[] = [];
 
-    if (dateRange === "All Time") {
+    if (dateRange === "Last 90 Days") {
       const collectDates = (emails: any) => {
         emailsToArray(emails).forEach((email: any) => {
           if (!emailMatchesCampaign(email, selectedCampaignCode)) return;
@@ -669,7 +673,7 @@ export default function TrackingPage() {
               }}
               className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-[140px]"
             >
-              <option value="All Time">All Time</option>
+              <option value="Last 90 Days">Last 90 Days</option>
               <option value="Today">Today</option>
               <option value="Yesterday">Yesterday</option>
               <option value="Last 7 Days">Last 7 Days</option>
