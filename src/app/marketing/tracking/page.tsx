@@ -398,17 +398,83 @@ export default function TrackingPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Calculate percentages for stats
-  const total = stats.total || 1; // Avoid division by zero
+  // Calculate stats for cards, adjusted by campaign filter
+  const campaignScopedEmails = allEmails.filter((email) =>
+    emailMatchesCampaign(email, selectedCampaignCode)
+  );
+
+  const deliveredCount = campaignScopedEmails.filter(
+    (e) => e.event === "delivered"
+  ).length;
+  const openedCount = campaignScopedEmails.filter(
+    (e) => e.event === "opened"
+  ).length;
+  const clicksCount = campaignScopedEmails.filter(
+    (e) => e.event === "clicks"
+  ).length;
+  const softBouncesCount = campaignScopedEmails.filter(
+    (e) => e.event === "softBounces"
+  ).length;
+  const hardBouncesCount = campaignScopedEmails.filter(
+    (e) => e.event === "hardBounces"
+  ).length;
+  const blockedCount = campaignScopedEmails.filter(
+    (e) => e.event === "blocked"
+  ).length;
+  const requestsCount = campaignScopedEmails.filter(
+    (e) => e.event === "requests"
+  ).length;
+
+  const displayStats = {
+    delivered: deliveredCount,
+    opened: openedCount,
+    unique_clickers: clicksCount,
+    soft_bounces: softBouncesCount,
+    hard_bounces: hardBouncesCount,
+    blocked: blockedCount,
+    total: requestsCount || 1, // avoid division by zero
+  };
+
+  const total = displayStats.total || 1; // Avoid division by zero
   const getPercentage = (value: number) => Math.round((value / total) * 100);
 
   const statsConfig = [
-    { label: "Delivered", value: stats.delivered, color: "bg-green-200", percentage: getPercentage(stats.delivered) },
-    { label: "Opened", value: stats.opened ?? 0, color: "bg-cyan-200", percentage: getPercentage(stats.opened ?? 0) },
-    { label: "Unique Clickers", value: stats.unique_clickers, color: "bg-blue-200", percentage: getPercentage(stats.unique_clickers) },
-    { label: "Soft Bounces", value: stats.soft_bounces, color: "bg-orange-200", percentage: getPercentage(stats.soft_bounces) },
-    { label: "Hard Bounces", value: stats.hard_bounces, color: "bg-gray-400", percentage: getPercentage(stats.hard_bounces) },
-    { label: "Blocked", value: stats.blocked, color: "bg-pink-300", percentage: getPercentage(stats.blocked) },
+    {
+      label: "Delivered",
+      value: displayStats.delivered,
+      color: "bg-green-200",
+      percentage: getPercentage(displayStats.delivered),
+    },
+    {
+      label: "Opened",
+      value: displayStats.opened ?? 0,
+      color: "bg-cyan-200",
+      percentage: getPercentage(displayStats.opened ?? 0),
+    },
+    {
+      label: "Unique Clickers",
+      value: displayStats.unique_clickers,
+      color: "bg-blue-200",
+      percentage: getPercentage(displayStats.unique_clickers),
+    },
+    {
+      label: "Soft Bounces",
+      value: displayStats.soft_bounces,
+      color: "bg-orange-200",
+      percentage: getPercentage(displayStats.soft_bounces),
+    },
+    {
+      label: "Hard Bounces",
+      value: displayStats.hard_bounces,
+      color: "bg-gray-400",
+      percentage: getPercentage(displayStats.hard_bounces),
+    },
+    {
+      label: "Blocked",
+      value: displayStats.blocked,
+      color: "bg-pink-300",
+      percentage: getPercentage(displayStats.blocked),
+    },
   ];
 
   // Prepare chart data
@@ -437,14 +503,16 @@ export default function TrackingPage() {
       collectDates(data.hardBounces?.emails ?? data.hardBounce?.emails);
       collectDates(data.blocked?.emails);
 
-      if (dates.length === 0) {
-        return null;
+      if (dates.length > 0) {
+        const uniqueSorted = Array.from(new Set(dates)).sort();
+        dates = uniqueSorted;
       }
+    }
 
-      const uniqueSorted = Array.from(new Set(dates)).sort();
-      dates = uniqueSorted;
-    } else {
-      // Bounded ranges (Today, Last 7 Days, etc.) – generate all dates in the range
+    // If we still have no dates (no data for this range/campaign),
+    // generate dates from the range so the chart shows an empty series
+    // instead of an infinite loading spinner.
+    if (dates.length === 0) {
       const start = new Date(startDate);
       const end = new Date(endDate);
 
