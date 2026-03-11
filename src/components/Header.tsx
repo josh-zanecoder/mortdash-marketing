@@ -52,7 +52,7 @@ export default function Header() {
     >
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-8 py-4">
         <Link href="/" className="text-3xl font-extrabold tracking-tight text-[#18181a]">
-          Mortdash
+         Convere
         </Link>
         {/* Hamburger for mobile */}
         <button
@@ -73,7 +73,7 @@ export default function Header() {
               !baseUrl ? 'opacity-50 cursor-not-allowed' : ''
             } text-[#18181a] hover:text-[#ff6600] transition-colors`}
           >
-            Back to Mortdash CRM
+            Back to Convere CRM
           </a>
           <Link href="/dashboard" className={`px-3 py-1 text-base font-semibold transition-colors rounded-md ${
             pathname === '/dashboard' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'
@@ -105,7 +105,7 @@ export default function Header() {
               } text-[#ff6600] hover:text-[#e65c00] border-b border-[#f3ede7]`}
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Mortdash CRM
+              Back to Convere CRM
             </a>
             <Link href="/dashboard" className={`py-2 text-lg font-semibold w-full text-center transition-colors ${
               pathname === '/dashboard' ? 'text-[#ff6600]' : 'text-[#18181a] hover:text-[#ff6600]'

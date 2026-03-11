@@ -12,6 +12,7 @@ interface TrackingData {
 
 interface TrackingStats {
   delivered: number;
+  opened: number;
   unique_clickers: number;
   soft_bounces: number;
   hard_bounces: number;
@@ -45,7 +46,7 @@ interface TrackingStore {
   dashboardStats: TrackingStats;
   
   // Actions
-  fetchTrackingData: (startDate: string, endDate: string, page?: number, ratesheetId?: string) => Promise<void>;
+  fetchTrackingData: (startDate: string, endDate: string, page?: number, ratesheetId?: string, campaignCode?: string) => Promise<void>;
   fetchDashboardStats: () => Promise<void>;
   setSelectedRatesheetId: (ratesheetId: string | null) => void;
   setLoading: (loading: boolean) => void;
@@ -57,6 +58,7 @@ const initialState = {
   data: {},
   stats: {
     delivered: 0,
+    opened: 0,
     unique_clickers: 0,
     soft_bounces: 0,
     hard_bounces: 0,
@@ -65,6 +67,7 @@ const initialState = {
   },
   dashboardStats: {
     delivered: 0,
+    opened: 0,
     unique_clickers: 0,
     soft_bounces: 0,
     hard_bounces: 0,
@@ -84,16 +87,23 @@ const initialState = {
 export const useTrackingStore = create<TrackingStore>((set, get) => ({
   ...initialState,
 
-  fetchTrackingData: async (startDate: string, endDate: string, page = 1, ratesheetId?: string) => {
+  fetchTrackingData: async (startDate: string, endDate: string, page = 1, ratesheetId?: string, campaignCode?: string) => {
     set({ loading: true, error: null });
     
     try {
       const params = new URLSearchParams({
-        start_date: startDate,
         end_date: endDate,
         page: page.toString(),
         limit: '10'
       });
+
+      if (startDate) {
+        params.append('start_date', startDate);
+      }
+
+      if (campaignCode) {
+        params.append('campaign_code', campaignCode);
+      }
 
       // Use ratesheet endpoint if ratesheetId is provided
       const endpoint = ratesheetId 
@@ -114,6 +124,7 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
         data: trackingData, 
         stats: {
           delivered: trackingData.delivered?.count || 0,
+          opened: trackingData.opened?.count || 0,
           unique_clickers: trackingData.clicks?.count || 0,
           soft_bounces: trackingData.softBounces?.count || trackingData.softBounce?.count || 0,
           hard_bounces: trackingData.hardBounces?.count || trackingData.hardBounce?.count || 0,
@@ -172,6 +183,7 @@ export const useTrackingStore = create<TrackingStore>((set, get) => ({
       // Calculate stats from the data structure (matching tracking page logic)
       const dashboardStats = {
         delivered: trackingData.delivered?.count || 0,
+        opened: trackingData.opened?.count || 0,
         unique_clickers: trackingData.clicks?.count || 0,
         soft_bounces: trackingData.softBounces?.count || trackingData.softBounce?.count || 0,
         hard_bounces: trackingData.hardBounces?.count || trackingData.hardBounce?.count || 0,
