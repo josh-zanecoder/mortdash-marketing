@@ -113,7 +113,7 @@ export default function TrackingPage() {
 
     if (range === "All Time") {
       return {
-        startDate: "",
+        startDate: "1970-01-01",
         endDate: today.toISOString().split("T")[0],
       };
     }
@@ -414,8 +414,7 @@ export default function TrackingPage() {
     const { startDate, endDate } = getDateRange(dateRange);
     let dates: string[] = [];
 
-    if (!startDate) {
-      // "All Time" – build the x-axis purely from the dates present in the data
+    if (dateRange === "All Time") {
       const collectDates = (emails: any) => {
         emailsToArray(emails).forEach((email: any) => {
           if (!emailMatchesCampaign(email, selectedCampaignCode)) return;
@@ -707,7 +706,7 @@ export default function TrackingPage() {
                 setSelectedCampaignCode(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-[180px]"
+              className="bg-transparent text-sm focus:outline-none cursor-pointer min-w-0 w-fit max-w-[200px]"
             >
               <option value="all">All Campaigns</option>
               {campaigns
@@ -717,11 +716,20 @@ export default function TrackingPage() {
                   const nameB = (b.template_name || b.campaign_code).toLowerCase();
                   return nameA.localeCompare(nameB);
                 })
-                .map((campaign) => (
-                  <option key={campaign.id} value={campaign.campaign_code}>
-                    {campaign.template_name || campaign.campaign_code}
-                  </option>
-                ))}
+                .map((campaign) => {
+                  const fullName = campaign.template_name || campaign.campaign_code;
+                  const displayName =
+                    fullName.length > 32 ? `${fullName.slice(0, 29)}...` : fullName;
+                  return (
+                    <option
+                      key={campaign.id}
+                      value={campaign.campaign_code}
+                      title={fullName}
+                    >
+                      {displayName}
+                    </option>
+                  );
+                })}
             </select>
           </div>
         </div>
