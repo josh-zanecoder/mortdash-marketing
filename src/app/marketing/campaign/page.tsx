@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import ConfirmModal from '@/components/ui/confirm-modal';
 import { Archive, Eye, X, Plus, Search, ChevronDown } from 'lucide-react';
 import { useListsStore } from '@/store/listsStore';
-import { useCampaignStore } from '@/store/useCampaignStore';
+import { useCampaignStore, isTemplateArchived } from '@/store/useCampaignStore';
 import axios from 'axios';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
@@ -153,15 +153,18 @@ function CampaignPageContent() {
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [archivingTemplate, setArchivingTemplate] = useState<number | null>(null);
 
-  // Clear templates when component unmounts or when selectedList changes to empty
+  // Clear only when no list is selected; do not clear on every list switch (causes races)
   useEffect(() => {
     if (!selectedList) {
       clearTemplates();
     }
-    return () => {
-      clearTemplates(); // Clear templates on unmount
-    };
   }, [selectedList, clearTemplates]);
+
+  useEffect(() => {
+    return () => {
+      clearTemplates();
+    };
+  }, [clearTemplates]);
 
   useEffect(() => {
     const fetchLists = async () => {
@@ -197,17 +200,23 @@ function CampaignPageContent() {
 
   // Fetch templates when a list is selected or archived status changes
   useEffect(() => {
+    if (!selectedList) return;
     const list = lists.find(l => String(l.id) === String(selectedList));
     const audience_type_id = list?.audience_type_id || null;
+    if (!audience_type_id) {
+      clearTemplates();
+      return;
+    }
     fetchTemplates(audience_type_id, showArchived);
-  }, [selectedList, lists, showArchived, fetchTemplates]);
+  }, [selectedList, lists, showArchived, fetchTemplates, clearTemplates]);
 
-  // Filter templates by search, filter, and archive status
+  // Backend already filters by archive status; loose check handles 0/1 vs boolean payloads.
   const filteredTemplates = templates
     .filter((tpl) => {
       const matchesFilter = activeFilter === 'all' || tpl.email_template_category_id === activeFilter;
       const matchesSearch = tpl.name?.toLowerCase().includes(search.toLowerCase());
-      const matchesArchiveStatus = showArchived ? tpl.is_archived === 1 : tpl.is_archived === 0;
+      const archived = isTemplateArchived(tpl.is_archived);
+      const matchesArchiveStatus = showArchived ? archived : !archived;
       return matchesFilter && matchesSearch && matchesArchiveStatus;
     });
 

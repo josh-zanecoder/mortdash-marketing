@@ -10,7 +10,7 @@ interface CampaignTemplate {
   email_template_category_id: number | null;
   date_created: string;
   date_updated: string;
-  is_archived: number;
+  is_archived: number | boolean;
   is_archived_by_user: boolean;
   html: string;
 }
@@ -23,11 +23,23 @@ interface CampaignStore {
   clearTemplates: () => void;
 }
 
+let fetchAbortController: AbortController | null = null;
+let fetchRequestId = 0;
+
+function isTemplateArchived(value: number | boolean | string | null | undefined): boolean {
+  return value === true || value === 1 || value === '1' || value === 'true';
+}
+
 export const useCampaignStore = create<CampaignStore>((set) => ({
   templates: [],
   loading: false,
   error: null,
   fetchTemplates: async (audience_type_id, is_archived = false) => {
+    fetchAbortController?.abort();
+    const requestId = ++fetchRequestId;
+    const controller = new AbortController();
+    fetchAbortController = controller;
+
     // If no audience_type_id, clear templates and return
     if (!audience_type_id) {
       set({ templates: [], loading: false, error: null });
@@ -38,25 +50,38 @@ export const useCampaignStore = create<CampaignStore>((set) => ({
     try {
       const params = new URLSearchParams();
       params.set('audience_type_id', String(audience_type_id));
-      
+
       // Use different endpoint for archived templates
       const endpoint = is_archived ? '/api/campaign/get-archived-templates' : '/api/campaign';
-      
+
       if (is_archived) {
         params.set('is_archived', '1');
       } else {
         params.set('is_archived', '0');
       }
-      
-      const res = await fetch(`${endpoint}?${params.toString()}`);
+
+      const res = await fetch(`${endpoint}?${params.toString()}`, {
+        signal: controller.signal,
+      });
       if (!res.ok) throw new Error('Failed to fetch templates');
       const data = await res.json();
-      set({ templates: Array.isArray(data.data) ? data.data : [], loading: false });
+
+      // Ignore stale responses from earlier Prospect/Client switches
+      if (requestId !== fetchRequestId) return;
+
+      const templates = Array.isArray(data.data) ? data.data : [];
+      set({ templates, loading: false });
     } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      if (requestId !== fetchRequestId) return;
       set({ error: err.message || 'Unknown error', loading: false });
     }
   },
   clearTemplates: () => {
+    fetchAbortController?.abort();
+    fetchRequestId += 1;
     set({ templates: [], loading: false, error: null });
   },
 }));
+
+export { isTemplateArchived };
