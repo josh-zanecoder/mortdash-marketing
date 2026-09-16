@@ -1,4 +1,4 @@
-name: Marketing Staging Deployment
+name: Old Marketing Staging Deployment
 
 on:
   push:
@@ -6,16 +6,16 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_ID: ameritrust
-  SERVICE_NAME: ameritrust-mortdash-marketing-staging
+  PROJECT_ID: crm-convere
+  SERVICE_NAME: am-marketing-v1-stg
   REGION: us-west1
-  ARTIFACT_REGISTRY: us-west1-docker.pkg.dev/ameritrust/ameritrust-mortdash-marketing-staging
-  SERVICE_ACCOUNT: 448528717330-compute@developer.gserviceaccount.com
-  SECRET_NAME: ameritrust-mortdash-marketing-staging
+  ARTIFACT_REGISTRY: us-west1-docker.pkg.dev/crm-convere/am-marketing-v1-stg
+  SERVICE_ACCOUNT: 401745812644-compute@developer.gserviceaccount.com
+  SECRET_NAME: am-marketing-v1-stg
     
 jobs:
   deploy:
-    name: Marketing Staging Deployment
+    name: Old Marketing Staging Deployment
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,7 +39,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY_AMERITRUST }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_CONVERE }}
 
       - name: Fetch environment variables from Secret Manager
         id: secrets
